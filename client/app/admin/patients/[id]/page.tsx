@@ -4,7 +4,7 @@ import PatientFormContent from "./user-form-content";
 export default async function PatientFormPage({
   params,
 }: {
-  params: { id: string };
+  params: { id: any };
 }) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
