@@ -1,10 +1,16 @@
 import { Suspense } from "react";
 import WardFormContent from "./ward-form-content";
 
-export default function WardFormPage({ params }: { params: { id: any } }) {
+export default async function WardFormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <WardFormContent wardId={params.id} />
+      <WardFormContent wardId={id} />
     </Suspense>
   );
 }

@@ -4,12 +4,13 @@ import PatientFormContent from "./user-form-content";
 export default async function PatientFormPage({
   params,
 }: {
-  params: { id: any };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <PatientFormContent patientId={params?.id} />
+      <PatientFormContent patientId={id} />
     </Suspense>
   );
 }
-
