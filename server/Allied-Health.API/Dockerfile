@@ -8,19 +8,11 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Copy the main API project file
-COPY ["Allied-Health.API/Allied-Health.API.csproj", "Allied-Health.API/"]
-
-# Copy other project files if they're referenced
-COPY ["AlliedHealth.Common/AlliedHealth.Common.csproj", "AlliedHealth.Common/"]
-COPY ["AlliedHealth.Model/AlliedHealth.Model.csproj", "AlliedHealth.Model/"]
-COPY ["AlliedHealth.Service/AlliedHealth.Service.csproj", "AlliedHealth.Service/"]
-
-# Restore dependencies
-RUN dotnet restore "Allied-Health.API/Allied-Health.API.csproj"
-
-# Copy all source code
+# Copy everything first (simpler approach)
 COPY . .
+
+# Restore dependencies for the main API project
+RUN dotnet restore "Allied-Health.API/Allied-Health.API.csproj"
 
 # Build the application
 WORKDIR "/src/Allied-Health.API"
