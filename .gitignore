@@ -1,0 +1,42 @@
+# -------------------------
+# OS files
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Node / Next.js (frontend)
+node_modules/
+.next/
+out/
+dist/
+.env
+.env.local
+.env.*.local
+
+# -------------------------
+# .NET (backend)
+bin/
+obj/
+*.user
+*.suo
+*.vsidx
+*.vscode/
+*.swp
+
+# -------------------------
+# IDE-specific
+.vs/
+.idea/
+
+# -------------------------
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# -------------------------
+# Build artifacts
+coverage/
