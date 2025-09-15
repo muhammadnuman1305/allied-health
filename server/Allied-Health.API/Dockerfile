@@ -24,4 +24,4 @@ RUN dotnet publish "Allied-Health.API/AlliedHealth.API.csproj" -c Release -o /ap
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "Allied-Health.API.dll"]
+ENTRYPOINT ["dotnet", "AlliedHealth.API.dll"]
