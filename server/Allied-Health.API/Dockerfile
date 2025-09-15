@@ -12,13 +12,13 @@ WORKDIR /app
 COPY . .
 
 # Restore dependencies for the main API project
-RUN dotnet restore "Allied-Health.API/Allied-Health.API/AlliedHealth.API.csproj"
+RUN dotnet restore "Allied-Health.API/AlliedHealth.API/AlliedHealth.API.csproj"
 
 # Build the application
-RUN dotnet build "Allied-Health.API/Allied-Health.API/AlliedHealth.API.csproj" -c Release -o /app/build
+RUN dotnet build "Allied-Health.API/AlliedHealth.API/AlliedHealth.API.csproj" -c Release -o /app/build
 
 # Publish the application
-RUN dotnet publish "Allied-Health.API/Allied-Health.API/AlliedHealth.API.csproj" -c Release -o /app/publish
+RUN dotnet publish "Allied-Health.API/AlliedHealth.API/AlliedHealth.API.csproj" -c Release -o /app/publish
 
 # Final stage
 FROM base AS final
