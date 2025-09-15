@@ -1,5 +1,6 @@
 import { Patient, PatientFormData, PatientSummary } from "./_model";
 
+
 // Mock data for development
 const MOCK_PATIENTS: Patient[] = [
   {
@@ -167,7 +168,7 @@ export const update$ = async (patient: PatientFormData): Promise<{ data: Patient
     throw new Error("Patient not found");
   }
   
-  const updatedPatient: Patient = {
+  const updatedPatient: any = {
     ...MOCK_PATIENTS[index],
     ...patient,
     updatedAt: new Date().toISOString()

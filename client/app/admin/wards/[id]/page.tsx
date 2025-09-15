@@ -8,3 +8,4 @@ export default function WardFormPage({ params }: { params: { id: string } }) {
     </Suspense>
   );
 }
+

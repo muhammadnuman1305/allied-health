@@ -1,5 +1,6 @@
 // Referral data models
 
+
 export interface Referral {
   id: string;
   patientId: string;

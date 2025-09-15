@@ -1,5 +1,6 @@
 import { Referral, ReferralFormData, ReferralSummary } from "./_model";
 
+
 // Mock data for development
 const MOCK_REFERRALS: Referral[] = [
   {
@@ -213,7 +214,7 @@ export const update$ = async (referral: ReferralFormData): Promise<{ data: Refer
     throw new Error("Referral not found");
   }
   
-  const updatedReferral: Referral = {
+  const updatedReferral: any = {
     ...MOCK_REFERRALS[index],
     ...referral,
     updatedAt: new Date().toISOString()
@@ -251,5 +252,6 @@ export const completeReferral$ = async (id: string, outcomeNotes: string): Promi
   
   return { data: referral };
 };
+
 
 

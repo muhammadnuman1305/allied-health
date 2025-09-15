@@ -317,3 +317,4 @@ export const getAvailableBeds$ = async () => {
   }));
   return { data: availableBeds };
 };
+

@@ -743,3 +743,4 @@ function TaskDetailView({ task }: { task: Task }) {
     </div>
   );
 }
+

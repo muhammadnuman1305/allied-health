@@ -753,3 +753,4 @@ function PatientHistoryView({ patient }: { patient: Patient }) {
     </div>
   );
 }
+

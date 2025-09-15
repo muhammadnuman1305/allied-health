@@ -8,3 +8,4 @@ export default function UserFormPage({ params }: { params: { id: string } }) {
     </Suspense>
   );
 }
+
