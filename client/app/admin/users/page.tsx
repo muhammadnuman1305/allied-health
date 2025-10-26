@@ -240,8 +240,6 @@ export default function AdminUsersPage() {
     setCurrentPage(1);
   };
 
-  // Statistics are now fetched from API via summary state
-
   // Handle filter application on focus out
   const applyPendingFilters = () => {
     setFilters((prev) => ({
@@ -905,4 +903,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

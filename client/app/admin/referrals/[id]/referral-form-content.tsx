@@ -32,6 +32,7 @@ import {
   ReferralFormData,
   Referral,
   INTERVENTIONS,
+  DEPARTMENTS,
 } from "@/lib/api/admin/referrals/_model";
 import { Patient } from "@/lib/api/admin/patients/_model";
 import { toast } from "@/hooks/use-toast";
@@ -55,6 +56,19 @@ const createReferralFormSchema = () =>
     status: z.enum(["S", "A", "D", "U", "X"], {
       required_error: "Please select a status",
     }),
+    // Department workflow fields
+    originDepartment: z.string().min(1, "Origin department is required"),
+    destinationDepartment: z
+      .string()
+      .min(1, "Destination department is required"),
+    triageStatus: z
+      .enum(["pending", "accepted", "rejected", "redirected"])
+      .optional(),
+    triageNotes: z.string().optional(),
+    triagedBy: z.string().optional(),
+    triagedAt: z.string().optional(),
+    redirectToDepartment: z.string().optional(),
+    // Original fields
     notes: z.string().optional(),
     outcomeNotes: z.string().optional(),
     completedDate: z.string().optional(),
@@ -103,6 +117,15 @@ export default function ReferralFormContent({
       priority: "P2",
       interventions: [],
       status: "A",
+      // Department workflow fields
+      originDepartment: "",
+      destinationDepartment: "",
+      triageStatus: "pending",
+      triageNotes: "",
+      triagedBy: "",
+      triagedAt: "",
+      redirectToDepartment: "",
+      // Original fields
       notes: "",
       outcomeNotes: "",
       completedDate: "",
@@ -157,6 +180,21 @@ export default function ReferralFormContent({
           setValue("priority", referralData.priority);
           setValue("interventions", referralData.interventions);
           setValue("status", referralData.status);
+          // Department workflow fields
+          setValue("originDepartment", referralData.originDepartment || "");
+          setValue(
+            "destinationDepartment",
+            referralData.destinationDepartment || ""
+          );
+          setValue("triageStatus", referralData.triageStatus || "pending");
+          setValue("triageNotes", referralData.triageNotes || "");
+          setValue("triagedBy", referralData.triagedBy || "");
+          setValue("triagedAt", referralData.triagedAt || "");
+          setValue(
+            "redirectToDepartment",
+            referralData.redirectToDepartment || ""
+          );
+          // Original fields
           setValue("notes", referralData.notes || "");
           setValue("outcomeNotes", referralData.outcomeNotes || "");
           setValue("completedDate", referralData.completedDate || "");
@@ -207,6 +245,15 @@ export default function ReferralFormContent({
         priority: data.priority,
         interventions: data.interventions,
         status: data.status,
+        // Department workflow fields
+        originDepartment: data.originDepartment,
+        destinationDepartment: data.destinationDepartment,
+        triageStatus: data.triageStatus,
+        triageNotes: data.triageNotes,
+        triagedBy: data.triagedBy,
+        triagedAt: data.triagedAt,
+        redirectToDepartment: data.redirectToDepartment,
+        // Original fields
         notes: data.notes,
         outcomeNotes: data.outcomeNotes,
         completedDate: data.completedDate,
@@ -304,8 +351,7 @@ export default function ReferralFormContent({
                       <SelectContent>
                         {patients.map((patient) => (
                           <SelectItem key={patient.id} value={patient.id}>
-                            {patient.firstName} {patient.lastName} (
-                            {patient.umrn})
+                            {patient.fullName} ({patient.mrn})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -325,22 +371,102 @@ export default function ReferralFormContent({
                   <Label>Patient Details</Label>
                   <div className="p-3 bg-muted rounded-md">
                     <p className="text-sm">
-                      <strong>UMRN:</strong> {selectedPatient.umrn}
+                      <strong>MRN:</strong> {selectedPatient.mrn}
                     </p>
                     <p className="text-sm">
-                      <strong>Age/Gender:</strong> {selectedPatient.age} /{" "}
-                      {selectedPatient.gender}
+                      <strong>Gender:</strong> {selectedPatient.gender}
                     </p>
+                    {selectedPatient.dateOfBirth && (
+                      <p className="text-sm">
+                        <strong>Date of Birth:</strong>{" "}
+                        {new Date(
+                          selectedPatient.dateOfBirth
+                        ).toLocaleDateString()}
+                      </p>
+                    )}
+                    {selectedPatient.primaryPhone && (
+                      <p className="text-sm">
+                        <strong>Phone:</strong> {selectedPatient.primaryPhone}
+                      </p>
+                    )}
                     <p className="text-sm">
-                      <strong>Ward:</strong> {selectedPatient.ward} - Bed{" "}
-                      {selectedPatient.bedNumber}
-                    </p>
-                    <p className="text-sm">
-                      <strong>Diagnosis:</strong> {selectedPatient.diagnosis}
+                      <strong>Active Tasks:</strong>{" "}
+                      {selectedPatient.activeTasks}
                     </p>
                   </div>
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Department Workflow */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Department Workflow
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Origin Department */}
+              <div className="space-y-2">
+                <Label htmlFor="originDepartment">Origin Department *</Label>
+                <Controller
+                  name="originDepartment"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select origin department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEPARTMENTS.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.originDepartment && (
+                  <p className="text-sm text-destructive">
+                    {errors.originDepartment.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Destination Department */}
+              <div className="space-y-2">
+                <Label htmlFor="destinationDepartment">
+                  Destination Department *
+                </Label>
+                <Controller
+                  name="destinationDepartment"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select destination department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEPARTMENTS.map((dept) => (
+                          <SelectItem key={dept} value={dept}>
+                            {dept}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.destinationDepartment && (
+                  <p className="text-sm text-destructive">
+                    {errors.destinationDepartment.message}
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -492,7 +618,6 @@ export default function ReferralFormContent({
             <div className="space-y-6">
               {/* Intervention Selection */}
               <div className="space-y-4">
-                <Label>Select Interventions *</Label>
                 {Object.entries(INTERVENTIONS).map(
                   ([discipline, interventions]) => (
                     <div key={discipline} className="space-y-2">
@@ -544,72 +669,6 @@ export default function ReferralFormContent({
           </CardContent>
         </Card>
 
-        {/* Ward-Specific Information */}
-        {selectedPatient && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Ward-Specific Information ({selectedPatient.ward})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {selectedPatient.ward === "Geriatrics" && (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="dementiaNotes">Dementia Notes</Label>
-                    <Textarea
-                      id="dementiaNotes"
-                      {...register("dementiaNotes")}
-                      placeholder="Enter dementia-related notes"
-                      rows={3}
-                    />
-                  </div>
-                )}
-
-                {selectedPatient.ward === "Stroke" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="limbWeakness">Limb Weakness</Label>
-                      <Textarea
-                        id="limbWeakness"
-                        {...register("limbWeakness")}
-                        placeholder="Describe limb weakness"
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="communicationChallenges">
-                        Communication Challenges
-                      </Label>
-                      <Textarea
-                        id="communicationChallenges"
-                        {...register("communicationChallenges")}
-                        placeholder="Describe communication challenges"
-                        rows={3}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {selectedPatient.ward === "Orthopaedic" && (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="weightBearingTolerance">
-                      Weight Bearing Tolerance
-                    </Label>
-                    <Textarea
-                      id="weightBearingTolerance"
-                      {...register("weightBearingTolerance")}
-                      placeholder="Describe weight bearing tolerance"
-                      rows={3}
-                    />
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Form Actions */}
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={isLoading}>
@@ -638,4 +697,3 @@ export default function ReferralFormContent({
     </div>
   );
 }
-

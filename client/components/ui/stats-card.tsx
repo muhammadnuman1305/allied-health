@@ -6,7 +6,7 @@ interface StatsCardProps {
   value: number | string;
   description?: string;
   icon?: LucideIcon;
-  variant?: "default" | "primary" | "secondary" | "destructive" | "outline";
+  variant?: "default" | "primary" | "secondary" | "destructive";
 }
 
 export function StatsCard({
@@ -24,8 +24,6 @@ export function StatsCard({
         return "border-secondary/20 bg-secondary/5";
       case "destructive":
         return "border-destructive/20 bg-destructive/5";
-      case "outline":
-        return "border-border bg-background";
       default:
         return "";
     }

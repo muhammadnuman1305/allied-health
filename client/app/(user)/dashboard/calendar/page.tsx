@@ -923,4 +923,3 @@ function RescheduleEventForm({
     </form>
   );
 }
-

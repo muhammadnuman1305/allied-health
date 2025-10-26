@@ -19,6 +19,11 @@ import {
   LineChart,
   User,
   Building2,
+  Bed,
+  ClipboardList,
+  Plus,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -65,10 +70,17 @@ export function AdminSidebar({
         roles: "User Management",
         permissions: "User Management",
         patients: "Patient Management",
-        referrals: "Patient Management",
+        tasks: "Patient Management",
         content: "Patient Management",
         media: "Patient Management",
-        wards: "Ward Management",
+        referrals: "Referral Management",
+        "create-referral": "Referral Management",
+        incoming: "Referral Management",
+        outgoing: "Referral Management",
+        setup: "Clinical Setup",
+        departments: "Clinical Setup",
+        wards: "Clinical Setup",
+        coverage: "Clinical Setup",
         system: "System Management",
         logs: "System Management",
         security: "System Management",
@@ -144,9 +156,9 @@ export function AdminSidebar({
           icon: <User className="h-5 w-5" />,
         },
         {
-          title: "Referrals",
-          href: "/admin/referrals",
-          icon: <FileText className="h-5 w-5" />,
+          title: "Tasks",
+          href: "/admin/tasks",
+          icon: <ClipboardList className="h-5 w-5" />,
         },
         // {
         //   title: "Health Resources",
@@ -156,66 +168,76 @@ export function AdminSidebar({
       ],
     },
     {
-      title: "Ward Management",
+      title: "Referral Management",
       items: [
         {
-          title: "Wards",
-          href: "/admin/wards",
+          title: "Create Referral",
+          href: "/admin/referrals/0",
+          icon: <Plus className="h-5 w-5" />,
+        },
+        {
+          title: "Incoming Referrals",
+          href: "/admin/referrals/incoming",
+          icon: <ArrowDown className="h-5 w-5" />,
+        },
+        {
+          title: "Outgoing Referrals",
+          href: "/admin/referrals/outgoing",
+          icon: <ArrowUp className="h-5 w-5" />,
+        },
+      ],
+    },
+    {
+      title: "Clinical Setup",
+      items: [
+        {
+          title: "Departments",
+          href: "/admin/setup/departments",
           icon: <Building2 className="h-5 w-5" />,
+        },
+        {
+          title: "Wards",
+          href: "/admin/setup/wards",
+          icon: <Bed className="h-5 w-5" />,
+        },
+        {
+          title: "Coverage Mapping",
+          href: "/admin/setup/coverage",
+          icon: <Database className="h-5 w-5" />,
         },
       ],
     },
     // {
-    //   title: "Billing",
+    //   title: "System Management",
     //   items: [
     //     {
-    //       title: "Payments",
-    //       href: "/admin/billing",
-    //       icon: <Wallet className="h-5 w-5" />,
+    //       title: "Logs",
+    //       href: "/admin/logs",
+    //       icon: <Database className="h-5 w-5" />,
     //     },
     //     {
-    //       title: "Plans",
-    //       href: "/admin/plans",
-    //       icon: <Medal className="h-5 w-5" />,
+    //       title: "Roles & Permissions",
+    //       href: "/admin/roles",
+    //       icon: <ShieldAlert className="h-5 w-5" />,
     //     },
     //   ],
     // },
-    {
-      title: "System Management",
-      items: [
-        {
-          title: "Logs",
-          href: "/admin/logs",
-          icon: <Database className="h-5 w-5" />,
-        },
-        {
-          title: "Roles & Permissions",
-          href: "/admin/roles",
-          icon: <ShieldAlert className="h-5 w-5" />,
-        },
-      ],
-    },
-    {
-      title: "Settings",
-      items: [
-        {
-          title: "General",
-          href: "/admin/settings",
-          icon: <Settings className="h-5 w-5" />,
-        },
-        {
-          title: "Notifications",
-          href: "/admin/notifications",
-          icon: <BellRing className="h-5 w-5" />,
-        },
-      ],
-    },
+    // {
+    //   title: "Settings",
+    //   items: [
+    //     {
+    //       title: "General",
+    //       href: "/admin/settings",
+    //       icon: <Settings className="h-5 w-5" />,
+    //     },
+    //   ],
+    // },
   ];
 
   return (
     <aside
       className={cn(
-        "flex flex-col bg-card border-r transition-all duration-300 ease-in-out",
+        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen",
         isCollapsed ? "w-[70px]" : "w-72",
         className
       )}
@@ -235,7 +257,7 @@ export function AdminSidebar({
 
       {/* Navigation Section */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        <div className="space-y-1">
+        <div className="space-y-2">
           {adminSections.map((section) => (
             <div key={section.title}>
               {!isCollapsed && (
@@ -262,7 +284,7 @@ export function AdminSidebar({
 
               <div
                 className={cn(
-                  "space-y-1 mt-1",
+                  "space-y-1.5 mt-1",
                   isCollapsed ? "pl-0" : "pl-2",
                   isCollapsed
                     ? "block"

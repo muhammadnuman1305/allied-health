@@ -58,7 +58,6 @@ export function UserSidebar({
       patients: "Patient Management",
       referrals: "Referral Management",
       feedback: "Feedback Management",
-      reports: "Report Management",
       settings: "Account",
       profile: "Account",
       support: "Account",
@@ -91,11 +90,6 @@ export function UserSidebar({
           title: "Overview",
           href: "/dashboard",
           icon: <LayoutDashboard className="h-5 w-5" />,
-        },
-        {
-          title: "Reports",
-          href: "/dashboard/reports",
-          icon: <BarChart className="h-5 w-5" />,
         },
         {
           title: "Calendar",
@@ -165,31 +159,6 @@ export function UserSidebar({
       ],
     },
     {
-      title: "Report Management",
-      items: [
-        {
-          title: "Task Reports",
-          href: "/reports/tasks",
-          icon: <BarChart className="h-5 w-5" />,
-        },
-        {
-          title: "Patient Reports",
-          href: "/reports/patients",
-          icon: <BarChart className="h-5 w-5" />,
-        },
-        {
-          title: "Referral Reports",
-          href: "/reports/referrals",
-          icon: <BarChart className="h-5 w-5" />,
-        },
-        {
-          title: "Performance Reports",
-          href: "/reports/performance",
-          icon: <BarChart className="h-5 w-5" />,
-        },
-      ],
-    },
-    {
       title: "Account",
       items: [
         // {
@@ -219,7 +188,7 @@ export function UserSidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col bg-card border-r transition-all duration-300 ease-in-out",
+        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen",
         isCollapsed ? "w-[70px]" : "w-64",
         className
       )}
@@ -239,7 +208,7 @@ export function UserSidebar({
 
       {/* Navigation Section */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        <div className="space-y-1">
+        <div className="space-y-2">
           {userSections.map((section) => (
             <div key={section.title}>
               {!isCollapsed && (
@@ -266,7 +235,7 @@ export function UserSidebar({
 
               <div
                 className={cn(
-                  "space-y-1 mt-1",
+                  "space-y-1.5 mt-1",
                   isCollapsed ? "pl-0" : "pl-2",
                   isCollapsed
                     ? "block"
@@ -313,35 +282,6 @@ export function UserSidebar({
           ))}
         </div>
       </nav>
-
-      {/* User Info Section */}
-      <div className="border-t py-3 px-3">
-        <div
-          className={cn(
-            "flex items-center rounded-md bg-muted/40 px-3 py-2",
-            isCollapsed ? "justify-center" : "justify-between"
-          )}
-        >
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium truncate">John Doe</span>
-                <span className="text-xs text-muted-foreground">
-                  Premium Plan
-                </span>
-              </div>
-            </div>
-          )}
-          {isCollapsed && (
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-              <User className="h-4 w-4 text-primary" />
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Footer Section */}
       <div className="mt-auto border-t py-4 px-3">

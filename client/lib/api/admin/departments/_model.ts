@@ -1,0 +1,157 @@
+// Department data models
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  serviceLine: ServiceLineType;
+  headAHP: string; // User ID of the head AHP
+  headAHPName?: string; // Display name for the head AHP
+  status: "A" | "X"; // A=Active, X=Inactive
+  defaultTaskPriority: TaskPriority;
+  coverageWards: string[]; // Array of ward IDs
+  coverageWardNames?: string[]; // Display names for coverage wards
+  activeAHPs: number; // Count of active AHPs
+  activeAHAs: number; // Count of active AHAs
+  openTasks: number; // Count of open tasks
+  overdueTasks: number; // Count of overdue tasks
+  incomingReferralsToday: number; // Count of incoming referrals today
+  contactNumber: string;
+  email: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DepartmentFormData {
+  id?: string | null;
+  name: string;
+  code: string;
+  description: string;
+  serviceLine: ServiceLineType;
+  headAHP: string;
+  status: "A" | "X";
+  defaultTaskPriority: TaskPriority;
+  coverageWards: string[];
+  contactNumber: string;
+  email: string;
+  notes?: string;
+}
+
+export interface DepartmentSummary {
+  totalDepartments: number;
+  activeDepartments: number;
+  serviceLineBreakdown: {
+    physiotherapy: number;
+    occupationalTherapy: number;
+    speechTherapy: number;
+    dietetics: number;
+  };
+  statusBreakdown: {
+    active: number;
+    inactive: number;
+  };
+  totalOpenTasks: number;
+  totalOverdueTasks: number;
+  totalIncomingReferralsToday: number;
+}
+
+// Service Line types (renamed from DisciplineType for clarity)
+export type ServiceLineType = "Physiotherapy" | "Occupational Therapy" | "Speech Therapy" | "Dietetics";
+
+export const SERVICE_LINES: ServiceLineType[] = [
+  "Physiotherapy",
+  "Occupational Therapy", 
+  "Speech Therapy",
+  "Dietetics"
+] as const;
+
+// Task priority levels
+export type TaskPriority = "Low" | "Medium" | "High" | "Urgent";
+
+export const TASK_PRIORITIES: TaskPriority[] = [
+  "Low",
+  "Medium", 
+  "High",
+  "Urgent"
+] as const;
+
+// Service Line-specific interventions
+export const INTERVENTIONS_BY_SERVICE_LINE: Record<ServiceLineType, string[]> = {
+  "Physiotherapy": [
+    "Mobilisation",
+    "Strength exercises", 
+    "Balance exercises",
+    "Gait training",
+    "Joint mobilization",
+    "Manual therapy",
+    "Exercise therapy",
+    "Postural training",
+    "Pain management",
+    "Respiratory physiotherapy"
+  ],
+  "Occupational Therapy": [
+    "Cognitive intervention",
+    "Function retraining", 
+    "Pressure care management",
+    "Activities of daily living training",
+    "Adaptive equipment assessment",
+    "Home safety evaluation",
+    "Workplace assessment",
+    "Sensory integration",
+    "Hand therapy",
+    "Splinting"
+  ],
+  "Speech Therapy": [
+    "Articulation therapy",
+    "Swallowing therapy", 
+    "Communication support",
+    "Language therapy",
+    "Voice therapy",
+    "Fluency therapy",
+    "Cognitive communication therapy",
+    "Augmentative and alternative communication",
+    "Hearing assessment",
+    "Auditory processing therapy"
+  ],
+  "Dietetics": [
+    "Nutrition screening",
+    "Feeding support", 
+    "Dietary education",
+    "Meal planning",
+    "Weight management",
+    "Nutritional counseling",
+    "Enteral nutrition support",
+    "Food safety education",
+    "Therapeutic diet planning",
+    "Nutrition assessment"
+  ]
+};
+
+// Helper function to get interventions for a specific service line
+export const getInterventionsForServiceLine = (serviceLine: ServiceLineType): string[] => {
+  return INTERVENTIONS_BY_SERVICE_LINE[serviceLine] || [];
+};
+
+// Status descriptions
+export const STATUS_DESCRIPTIONS = {
+  A: "Active - Department operational",
+  X: "Inactive - Department not operational"
+} as const;
+
+// Helper function to get service line display name
+export const getServiceLineDisplayName = (serviceLine: ServiceLineType): string => {
+  const displayNames = {
+    "Physiotherapy": "Physiotherapy",
+    "Occupational Therapy": "Occupational Therapy",
+    "Speech Therapy": "Speech Pathology", 
+    "Dietetics": "Dietitians"
+  };
+  return displayNames[serviceLine] || serviceLine;
+};
+
+// Helper function to get department name from service line
+export const getDepartmentName = (serviceLine: ServiceLineType): string => {
+  return `${getServiceLineDisplayName(serviceLine)} Department`;
+};

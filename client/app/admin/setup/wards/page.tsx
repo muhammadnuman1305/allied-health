@@ -23,29 +23,19 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Building2,
   Bed,
   Users,
-  AlertTriangle,
   Activity,
   Settings,
   Edit,
   RotateCcw,
   Plus,
-  Wrench,
-  UserPlus,
-  UserMinus,
   CheckCircle,
+  Eye,
+  Download,
+  Filter,
+  MapPin,
+  Building2,
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
@@ -53,14 +43,12 @@ import {
   getAll$,
   toggleActive$,
   getSummary$,
-  updateOccupancy$,
 } from "@/lib/api/admin/wards/_request";
 import {
   Ward,
   WardSummary,
-  STATUS_DESCRIPTIONS,
-  getOccupancyVariant,
-  getOccupancyLabel,
+  WARD_STATUS_DESCRIPTIONS,
+  getWardLocationDisplayName,
 } from "@/lib/api/admin/wards/_model";
 
 // Status badge variants
@@ -68,10 +56,6 @@ const getStatusBadgeVariant = (status: string) => {
   switch (status) {
     case "A":
       return "default"; // Active - green
-    case "M":
-      return "secondary"; // Maintenance - yellow
-    case "C":
-      return "destructive"; // Closed - red
     case "X":
       return "outline"; // Inactive - gray
     default:
@@ -81,30 +65,20 @@ const getStatusBadgeVariant = (status: string) => {
 
 const ITEMS_PER_PAGE = 10;
 
-export default function AdminWardsPage() {
+export default function AdminWardsSetupPage() {
   const router = useRouter();
   const [wards, setWards] = useState<Ward[]>([]);
   const [summary, setSummary] = useState<WardSummary>({
     totalWards: 0,
     activeWards: 0,
-    totalCapacity: 0,
-    totalOccupancy: 0,
-    occupancyRate: 0,
-    wardTypeBreakdown: {
-      generalMedical: 0,
-      surgical: 0,
-      icu: 0,
-      emergency: 0,
-      specialized: 0,
-    },
+    totalBeds: 0,
+    occupiedBeds: 0,
     statusBreakdown: {
       active: 0,
-      maintenance: 0,
-      closed: 0,
       inactive: 0,
     },
-    wardsInMaintenance: 0,
-    availableBeds: 0,
+    totalOpenTasks: 0,
+    totalOverdueTasks: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,33 +87,19 @@ export default function AdminWardsPage() {
     isOpen: boolean;
     wardId: string;
     wardName: string;
-    action: "activate" | "deactivate" | "maintenance" | "close";
+    action: "activate" | "deactivate";
   }>({
     isOpen: false,
     wardId: "",
     wardName: "",
     action: "deactivate",
   });
-  const [occupancyDialog, setOccupancyDialog] = useState<{
-    isOpen: boolean;
-    wardId: string;
-    wardName: string;
-    currentOccupancy: number;
-    capacity: number;
-    newOccupancy: string;
-  }>({
-    isOpen: false,
-    wardId: "",
-    wardName: "",
-    currentOccupancy: 0,
-    capacity: 0,
-    newOccupancy: "",
-  });
   const [filters, setFilters] = useState<FilterState>({
     name: "",
-    department: "all",
-    wardType: "all",
     status: "all",
+    defaultDepartment: "all",
+    coverageDepartment: "all",
+    location: "all",
     sortField: null,
     sortDirection: null,
   });
@@ -174,86 +134,117 @@ export default function AdminWardsPage() {
   const columns: Column<Ward>[] = [
     {
       key: "name",
-      label: "Ward Name",
+      label: "Name",
       width: "w-[180px]",
       sortable: true,
       filterable: true,
       filterType: "text",
     },
     {
-      key: "department",
-      label: "Department",
-      width: "w-[150px]",
+      key: "code",
+      label: "Code",
+      width: "w-[80px]",
       sortable: true,
       filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Internal Medicine", label: "Internal Medicine" },
-        { value: "Surgery", label: "Surgery" },
-        { value: "Cardiology", label: "Cardiology" },
-        { value: "Neurology", label: "Neurology" },
-        { value: "Orthopedics", label: "Orthopedics" },
-        { value: "Emergency Medicine", label: "Emergency Medicine" },
-        { value: "Critical Care", label: "Critical Care" },
-        { value: "Rehabilitation", label: "Rehabilitation" },
-      ],
-    },
-    {
-      key: "wardType",
-      label: "Ward Type",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "General Medical", label: "General Medical" },
-        { value: "Surgical", label: "Surgical" },
-        { value: "ICU", label: "ICU" },
-        { value: "Emergency", label: "Emergency" },
-        { value: "Specialized", label: "Specialized" },
-      ],
+      filterType: "text",
     },
     {
       key: "location",
       label: "Location",
-      width: "w-[120px]",
-    },
-    {
-      key: "capacity",
-      label: "Capacity",
-      width: "w-[80px]",
+      width: "w-[140px]",
       sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "Ground Floor", label: "Ground Floor" },
+        { value: "First Floor", label: "First Floor" },
+        { value: "Second Floor", label: "Second Floor" },
+        { value: "Third Floor", label: "Third Floor" },
+        { value: "ICU", label: "ICU" },
+        { value: "Emergency", label: "Emergency" },
+        { value: "Surgery", label: "Surgery" },
+        { value: "Rehabilitation", label: "Rehabilitation" },
+      ],
       render: (ward) => (
-        <div className="text-center font-medium">{ward.capacity}</div>
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          {getWardLocationDisplayName(ward.location as any)}
+        </div>
       ),
     },
     {
-      key: "occupancy",
-      label: "Occupancy",
-      width: "w-[120px]",
-      render: (ward) => {
-        const occupancyRate = Math.round(
-          (ward.currentOccupancy / ward.capacity) * 100
-        );
-        return (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">
-              {ward.currentOccupancy}/{ward.capacity}
-            </span>
-            <Badge
-              variant={getOccupancyVariant(occupancyRate)}
-              className="text-xs"
-            >
-              {occupancyRate}%
-            </Badge>
-          </div>
-        );
-      },
+      key: "bedCount",
+      label: "Bed Count",
+      width: "w-[100px]",
+      sortable: true,
+      render: (ward) => (
+        <Badge variant="secondary" className="text-xs">
+          {ward.bedCount} beds
+        </Badge>
+      ),
     },
     {
-      key: "wardManager",
-      label: "Manager",
-      width: "w-[150px]",
+      key: "defaultDepartmentName",
+      label: "Default Department",
+      width: "w-[160px]",
+      sortable: true,
+      filterable: true,
+      filterType: "text",
+      render: (ward) => (
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          {ward.defaultDepartmentName || "Not assigned"}
+        </div>
+      ),
+    },
+    {
+      key: "coverageDepartmentNames",
+      label: "Coverage Departments",
+      width: "w-[160px]",
+      render: (ward) => (
+        <div className="flex flex-wrap gap-1">
+          {ward.coverageDepartmentNames?.slice(0, 2).map((dept, index) => (
+            <Badge key={index} variant="outline" className="text-xs">
+              {dept}
+            </Badge>
+          ))}
+          {ward.coverageDepartmentNames &&
+            ward.coverageDepartmentNames.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{ward.coverageDepartmentNames.length - 2}
+              </Badge>
+            )}
+        </div>
+      ),
+    },
+    {
+      key: "currentPatients",
+      label: "Current Patients",
+      width: "w-[120px]",
+      sortable: true,
+      render: (ward) => (
+        <Badge variant="secondary" className="text-xs">
+          {ward.currentPatients}
+        </Badge>
+      ),
+    },
+    {
+      key: "openTasks",
+      label: "Open/Overdue Tasks",
+      width: "w-[140px]",
+      sortable: true,
+      render: (ward) => (
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {ward.openTasks} open
+          </Badge>
+          {ward.overdueTasks > 0 && (
+            <Badge variant="destructive" className="text-xs">
+              {ward.overdueTasks} overdue
+            </Badge>
+          )}
+        </div>
+      ),
     },
     {
       key: "status",
@@ -264,16 +255,14 @@ export default function AdminWardsPage() {
       filterType: "select",
       filterOptions: [
         { value: "A", label: "Active" },
-        { value: "M", label: "Maintenance" },
-        { value: "C", label: "Closed" },
         { value: "X", label: "Inactive" },
       ],
       render: (ward) => (
         <Badge
           variant={getStatusBadgeVariant(ward.status)}
-          title={STATUS_DESCRIPTIONS[ward.status]}
+          title={WARD_STATUS_DESCRIPTIONS[ward.status]}
         >
-          {ward.status}
+          {ward.status === "A" ? "Active" : "Inactive"}
         </Badge>
       ),
     },
@@ -282,37 +271,21 @@ export default function AdminWardsPage() {
   // Handle ward actions
   const handleWardAction = (action: string, wardId: string) => {
     switch (action) {
-      case "edit":
-        router.push(`/admin/wards/${wardId}`);
+      case "view":
+        router.push(`/admin/setup/wards/${wardId}`);
         break;
-      case "update-occupancy":
-        const ward = wards.find((w) => w.id === wardId);
-        if (ward) {
-          setOccupancyDialog({
-            isOpen: true,
-            wardId: wardId,
-            wardName: ward.name,
-            currentOccupancy: ward.currentOccupancy,
-            capacity: ward.capacity,
-            newOccupancy: ward.currentOccupancy.toString(),
-          });
-        }
+      case "edit":
+        router.push(`/admin/setup/wards/${wardId}/edit`);
         break;
       case "activate":
       case "deactivate":
-      case "maintenance":
-      case "close":
-        const w = wards.find((w) => w.id === wardId);
-        if (w) {
+        const ward = wards.find((w) => w.id === wardId);
+        if (ward) {
           setActionDialog({
             isOpen: true,
             wardId: wardId,
-            wardName: w.name,
-            action: action as
-              | "activate"
-              | "deactivate"
-              | "maintenance"
-              | "close",
+            wardName: ward.name,
+            action: action as "activate" | "deactivate",
           });
         }
         break;
@@ -334,6 +307,19 @@ export default function AdminWardsPage() {
             : ward
         )
       );
+
+      // Update summary
+      const updatedSummary = { ...summary };
+      if (actionDialog.action === "activate") {
+        updatedSummary.activeWards++;
+        updatedSummary.statusBreakdown.active++;
+        updatedSummary.statusBreakdown.inactive--;
+      } else {
+        updatedSummary.activeWards--;
+        updatedSummary.statusBreakdown.active--;
+        updatedSummary.statusBreakdown.inactive++;
+      }
+      setSummary(updatedSummary);
     } catch (err) {
       setError("Failed to update ward status. Please try again.");
       console.error("Error toggling ward status:", err);
@@ -347,49 +333,14 @@ export default function AdminWardsPage() {
     });
   };
 
-  // Handle occupancy update
-  const handleOccupancyUpdate = async () => {
-    const { wardId, newOccupancy, capacity } = occupancyDialog;
-    const occupancyNumber = parseInt(newOccupancy);
-
-    if (occupancyNumber < 0 || occupancyNumber > capacity) {
-      setError(`Occupancy must be between 0 and ${capacity}`);
-      return;
-    }
-
-    try {
-      await updateOccupancy$(wardId, occupancyNumber);
-
-      // Update local state
-      setWards((prev) =>
-        prev.map((ward) =>
-          ward.id === wardId
-            ? { ...ward, currentOccupancy: occupancyNumber }
-            : ward
-        )
-      );
-
-      setOccupancyDialog({
-        isOpen: false,
-        wardId: "",
-        wardName: "",
-        currentOccupancy: 0,
-        capacity: 0,
-        newOccupancy: "",
-      });
-    } catch (err) {
-      setError("Failed to update occupancy. Please try again.");
-      console.error("Error updating occupancy:", err);
-    }
-  };
-
   // Clear all filters
   const clearAllFilters = () => {
     setFilters({
       name: "",
-      department: "all",
-      wardType: "all",
       status: "all",
+      defaultDepartment: "all",
+      coverageDepartment: "all",
+      location: "all",
       sortField: null,
       sortDirection: null,
     });
@@ -399,18 +350,20 @@ export default function AdminWardsPage() {
   // Check if filters are active
   const hasActiveFilters =
     filters.name ||
-    filters.department !== "all" ||
-    filters.wardType !== "all" ||
     filters.status !== "all" ||
+    filters.defaultDepartment !== "all" ||
+    filters.coverageDepartment !== "all" ||
+    filters.location !== "all" ||
     filters.sortField;
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Ward Management</h1>
+          <h1 className="text-3xl font-bold">Wards</h1>
           <p className="text-muted-foreground">
-            Manage hospital wards and bed capacity
+            Manage hospital locations where patients reside; multiple
+            departments can cover a ward
           </p>
         </div>
         <div className="flex items-center justify-center py-10">
@@ -427,9 +380,10 @@ export default function AdminWardsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Ward Management</h1>
+          <h1 className="text-3xl font-bold">Wards</h1>
           <p className="text-muted-foreground">
-            Manage hospital wards and bed capacity
+            Manage hospital locations where patients reside; multiple
+            departments can cover a ward
           </p>
         </div>
         <div className="flex items-center justify-center py-10">
@@ -445,64 +399,40 @@ export default function AdminWardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Ward Management</h1>
+        <h1 className="text-3xl font-bold">Wards</h1>
         <p className="text-muted-foreground">
-          Manage hospital wards and bed capacity
+          Manage hospital locations where patients reside; multiple departments
+          can cover a ward
         </p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatsCard
           title="Total Wards"
           value={summary.totalWards}
           description="All wards"
-          icon={Building2}
+          icon={Bed}
         />
         <StatsCard
           title="Active Wards"
           value={summary.activeWards}
           description="Currently operational"
           icon={Activity}
-          variant="primary"
         />
         <StatsCard
           title="Total Beds"
-          value={summary.totalCapacity}
-          description="Bed capacity"
-          icon={Bed}
-        />
-        <StatsCard
-          title="Available Beds"
-          value={summary.availableBeds}
-          description="Ready for admission"
+          value={summary.totalBeds}
+          description="Available capacity"
           icon={Users}
-          variant="secondary"
         />
-      </div>
-
-      {/* Occupancy Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatsCard
-          title="Overall Occupancy"
-          value={`${Math.round(summary.occupancyRate)}%`}
-          description={`${summary.totalOccupancy} of ${summary.totalCapacity} beds`}
+          title="Occupied Beds"
+          value={summary.occupiedBeds}
+          description={`${Math.round(
+            (summary.occupiedBeds / summary.totalBeds) * 100
+          )}% occupancy`}
           icon={Users}
-          variant={getOccupancyVariant(summary.occupancyRate)}
-        />
-        <StatsCard
-          title="Maintenance"
-          value={summary.wardsInMaintenance}
-          description="Wards under maintenance"
-          icon={Wrench}
-          variant="secondary"
-        />
-        <StatsCard
-          title="Occupancy Level"
-          value={getOccupancyLabel(summary.occupancyRate)}
-          description="Current capacity status"
-          icon={AlertTriangle}
-          variant={getOccupancyVariant(summary.occupancyRate)}
         />
       </div>
 
@@ -516,16 +446,20 @@ export default function AdminWardsPage() {
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                  <Filter className="h-4 w-4 mr-2" />
                   Clear Filters
                 </Button>
               )}
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
               <Button
-                onClick={() => router.push("/admin/wards/0")}
+                onClick={() => router.push("/admin/setup/wards/0")}
                 className="bg-primary hover:bg-primary/90"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Ward
+                New Ward
               </Button>
             </div>
           </div>
@@ -549,18 +483,16 @@ export default function AdminWardsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
+                    onClick={() => handleWardAction("view", ward.id)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => handleWardAction("edit", ward.id)}
                   >
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit Ward
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      handleWardAction("update-occupancy", ward.id)
-                    }
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Update Occupancy
+                    Edit
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -579,12 +511,12 @@ export default function AdminWardsPage() {
                     {ward.status === "X" ? (
                       <>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Activate Ward
+                        Activate
                       </>
                     ) : (
                       <>
                         <RotateCcw className="mr-2 h-4 w-4" />
-                        Deactivate Ward
+                        Deactivate
                       </>
                     )}
                   </DropdownMenuItem>
@@ -618,8 +550,8 @@ export default function AdminWardsPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionDialog.action === "activate"
-                ? `Are you sure you want to activate "${actionDialog.wardName}"? This will make the ward operational and available for patient admissions.`
-                : `Are you sure you want to deactivate "${actionDialog.wardName}"? This will mark the ward as inactive and prevent new patient admissions.`}
+                ? `Are you sure you want to activate "${actionDialog.wardName}"? This will make the ward operational and available for patient assignments.`
+                : `Are you sure you want to deactivate "${actionDialog.wardName}"? This will mark the ward as inactive and prevent new patient assignments.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -639,85 +571,6 @@ export default function AdminWardsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Occupancy Update Dialog */}
-      <Dialog
-        open={occupancyDialog.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setOccupancyDialog({
-              isOpen: false,
-              wardId: "",
-              wardName: "",
-              currentOccupancy: 0,
-              capacity: 0,
-              newOccupancy: "",
-            });
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Ward Occupancy</DialogTitle>
-            <DialogDescription>
-              Update the current occupancy for "{occupancyDialog.wardName}".
-              Capacity: {occupancyDialog.capacity} beds.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="occupancy">Current Occupancy</Label>
-              <Input
-                id="occupancy"
-                type="number"
-                min="0"
-                max={occupancyDialog.capacity}
-                value={occupancyDialog.newOccupancy}
-                onChange={(e) =>
-                  setOccupancyDialog((prev) => ({
-                    ...prev,
-                    newOccupancy: e.target.value,
-                  }))
-                }
-                placeholder="Enter number of occupied beds"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter a number between 0 and {occupancyDialog.capacity}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() =>
-                setOccupancyDialog({
-                  isOpen: false,
-                  wardId: "",
-                  wardName: "",
-                  currentOccupancy: 0,
-                  capacity: 0,
-                  newOccupancy: "",
-                })
-              }
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleOccupancyUpdate}
-              disabled={
-                !occupancyDialog.newOccupancy ||
-                parseInt(occupancyDialog.newOccupancy) < 0 ||
-                parseInt(occupancyDialog.newOccupancy) >
-                  occupancyDialog.capacity
-              }
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Update Occupancy
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
-

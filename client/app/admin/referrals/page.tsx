@@ -45,7 +45,6 @@ import {
   RotateCcw,
   Plus,
   Clock,
-  Users,
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
@@ -59,6 +58,7 @@ import {
   Referral,
   ReferralSummary,
   STATUS_DESCRIPTIONS,
+  TRIAGE_STATUS_DESCRIPTIONS,
 } from "@/lib/api/admin/referrals/_model";
 
 // Priority badge variants
@@ -93,6 +93,21 @@ const getStatusBadgeVariant = (status: string) => {
   }
 };
 
+// Triage status badge variants
+const getTriageBadgeVariant = (triageStatus: string) => {
+  switch (triageStatus) {
+    case "accepted":
+      return "default"; // Accepted - green
+    case "rejected":
+      return "destructive"; // Rejected - red
+    case "redirected":
+      return "secondary"; // Redirected - blue
+    case "pending":
+    default:
+      return "outline"; // Pending - gray
+  }
+};
+
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminReferralsPage() {
@@ -116,6 +131,7 @@ export default function AdminReferralsPage() {
     },
     pendingOutcomes: 0,
     completedReferrals: 0,
+    pendingTriage: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,6 +255,40 @@ export default function AdminReferralsPage() {
       width: "w-[150px]",
     },
     {
+      key: "originDepartment",
+      label: "From",
+      width: "w-[120px]",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "Physiotherapy", label: "Physiotherapy" },
+        { value: "Occupational Therapy", label: "Occupational Therapy" },
+        { value: "Speech Therapy", label: "Speech Therapy" },
+        { value: "Dietetics", label: "Dietetics" },
+        { value: "Podiatry", label: "Podiatry" },
+        { value: "Psychology", label: "Psychology" },
+        { value: "Social Work", label: "Social Work" },
+      ],
+    },
+    {
+      key: "destinationDepartment",
+      label: "To",
+      width: "w-[120px]",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "Physiotherapy", label: "Physiotherapy" },
+        { value: "Occupational Therapy", label: "Occupational Therapy" },
+        { value: "Speech Therapy", label: "Speech Therapy" },
+        { value: "Dietetics", label: "Dietetics" },
+        { value: "Podiatry", label: "Podiatry" },
+        { value: "Psychology", label: "Psychology" },
+        { value: "Social Work", label: "Social Work" },
+      ],
+    },
+    {
       key: "referralDate",
       label: "Referral Date",
       width: "w-[120px]",
@@ -306,6 +356,31 @@ export default function AdminReferralsPage() {
         </Badge>
       ),
     },
+    {
+      key: "triageStatus",
+      label: "Triage",
+      width: "w-[100px]",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "pending", label: "Pending" },
+        { value: "accepted", label: "Accepted" },
+        { value: "declined", label: "Declined" },
+        { value: "redirected", label: "Redirected" },
+      ],
+      render: (referral) => {
+        const triageStatus = referral.triageStatus || "pending";
+        return (
+          <Badge
+            variant={getTriageBadgeVariant(triageStatus)}
+            title={TRIAGE_STATUS_DESCRIPTIONS[triageStatus]}
+          >
+            {triageStatus.charAt(0).toUpperCase() + triageStatus.slice(1)}
+          </Badge>
+        );
+      },
+    },
   ];
 
   // Handle referral actions
@@ -317,6 +392,22 @@ export default function AdminReferralsPage() {
       case "view-notes":
         console.log(`View notes for referral ${referralId}`);
         // Here you would open a notes dialog or navigate to notes page
+        break;
+      case "triage":
+        console.log(`Triage referral ${referralId}`);
+        // Here you would open a triage dialog or navigate to triage page
+        break;
+      case "accept":
+        console.log(`Accept referral ${referralId}`);
+        // Here you would open an accept dialog
+        break;
+      case "reject":
+        console.log(`Reject referral ${referralId}`);
+        // Here you would open a reject dialog
+        break;
+      case "redirect":
+        console.log(`Redirect referral ${referralId}`);
+        // Here you would open a redirect dialog
         break;
       case "complete":
         const referral = referrals.find((r) => r.id === referralId);
@@ -475,8 +566,8 @@ export default function AdminReferralsPage() {
         </p>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
           title="Total Referrals"
           value={summary.totalReferrals}
@@ -502,12 +593,11 @@ export default function AdminReferralsPage() {
           value={summary.statusBreakdown.active}
           description="In progress"
           icon={Clock}
-          variant="secondary"
         />
         <StatsCard
-          title="Pending Outcomes"
-          value={summary.pendingOutcomes}
-          description="Awaiting completion"
+          title="Pending Triage"
+          value={summary.pendingTriage || 0}
+          description="Awaiting triage"
           icon={ClipboardList}
           variant="secondary"
         />
@@ -519,33 +609,37 @@ export default function AdminReferralsPage() {
         />
       </div>
 
-      {/* Discipline Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Physiotherapy"
-          value={summary.disciplineBreakdown.physiotherapy}
-          description="Active referrals"
-          icon={Stethoscope}
-        />
-        <StatsCard
-          title="Occupational Therapy"
-          value={summary.disciplineBreakdown.occupationalTherapy}
-          description="Active referrals"
-          icon={Stethoscope}
-        />
-        <StatsCard
-          title="Speech Therapy"
-          value={summary.disciplineBreakdown.speechTherapy}
-          description="Active referrals"
-          icon={Stethoscope}
-        />
-        <StatsCard
-          title="Dietetics"
-          value={summary.disciplineBreakdown.dietetics}
-          description="Active referrals"
-          icon={Stethoscope}
-        />
-      </div>
+      {/* Triage Inbox */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Triage Inbox
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Referrals awaiting triage decisions - sort by urgency/SLA
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Bulk Triage
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Triage functionality will be implemented in the next phase</p>
+            <p className="text-sm">
+              This will include bulk triage, SLA tracking, and priority sorting
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Referrals Table */}
       <Card>
@@ -602,6 +696,12 @@ export default function AdminReferralsPage() {
                   >
                     <FileText className="mr-2 h-4 w-4" />
                     View Notes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleReferralAction("triage", referral.id)}
+                  >
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    Triage Referral
                   </DropdownMenuItem>
                   {referral.status === "A" && (
                     <>
@@ -762,6 +862,3 @@ export default function AdminReferralsPage() {
     </div>
   );
 }
-
-
-

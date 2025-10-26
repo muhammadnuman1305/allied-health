@@ -3,17 +3,17 @@
 export interface Ward {
   id: string;
   name: string;
-  description: string;
-  capacity: number;
-  currentOccupancy: number;
-  wardType: "General Medical" | "Surgical" | "ICU" | "Emergency" | "Specialized";
-  department: string;
-  location: string; // Building/Floor
-  contactNumber: string;
-  wardManager: string;
-  status: "A" | "M" | "C" | "X"; // A=Active, M=Maintenance, C=Closed, X=Inactive
-  specializations: string[];
-  equipment: string[];
+  code: string;
+  location: string;
+  bedCount: number;
+  defaultDepartment: string; // Department ID
+  defaultDepartmentName?: string; // Display name for default department
+  coverageDepartments: string[]; // Array of department IDs
+  coverageDepartmentNames?: string[]; // Display names for coverage departments
+  currentPatients: number; // Count of current patients
+  openTasks: number; // Count of open tasks
+  overdueTasks: number; // Count of overdue tasks
+  status: "A" | "X"; // A=Active, X=Inactive
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -22,120 +22,50 @@ export interface Ward {
 export interface WardFormData {
   id?: string | null;
   name: string;
-  description: string;
-  capacity: number;
-  currentOccupancy: number;
-  wardType: "General Medical" | "Surgical" | "ICU" | "Emergency" | "Specialized";
-  department: string;
+  code: string;
   location: string;
-  contactNumber: string;
-  wardManager: string;
-  status: "A" | "M" | "C" | "X";
-  specializations: string[];
-  equipment: string[];
+  bedCount: number;
+  defaultDepartment: string;
+  coverageDepartments: string[];
+  status: "A" | "X";
   notes?: string;
 }
 
 export interface WardSummary {
   totalWards: number;
   activeWards: number;
-  totalCapacity: number;
-  totalOccupancy: number;
-  occupancyRate: number;
-  wardTypeBreakdown: {
-    generalMedical: number;
-    surgical: number;
-    icu: number;
-    emergency: number;
-    specialized: number;
-  };
+  totalBeds: number;
+  occupiedBeds: number;
   statusBreakdown: {
     active: number;
-    maintenance: number;
-    closed: number;
     inactive: number;
   };
-  wardsInMaintenance: number;
-  availableBeds: number;
+  totalOpenTasks: number;
+  totalOverdueTasks: number;
 }
 
-// Ward types
-export const WARD_TYPES = [
-  "General Medical",
-  "Surgical", 
+// Ward location types
+export type WardLocationType = "Ground Floor" | "First Floor" | "Second Floor" | "Third Floor" | "ICU" | "Emergency" | "Surgery" | "Rehabilitation" | "Other";
+
+export const WARD_LOCATIONS: WardLocationType[] = [
+  "Ground Floor",
+  "First Floor", 
+  "Second Floor",
+  "Third Floor",
   "ICU",
   "Emergency",
-  "Specialized"
-] as const;
-
-// Departments
-export const DEPARTMENTS = [
-  "Internal Medicine",
   "Surgery",
-  "Cardiology",
-  "Neurology",
-  "Orthopedics",
-  "Pediatrics",
-  "Geriatrics",
-  "Emergency Medicine",
-  "Critical Care",
   "Rehabilitation",
-  "Psychiatry",
-  "Oncology"
-] as const;
-
-// Common specializations
-export const SPECIALIZATIONS = [
-  "Geriatrics",
-  "Stroke Care",
-  "Orthopaedic",
-  "Cardiology",
-  "Respiratory",
-  "Rehabilitation",
-  "Palliative Care",
-  "Dementia Care",
-  "Post-Surgical",
-  "Trauma",
-  "Intensive Care"
-] as const;
-
-// Common equipment
-export const EQUIPMENT = [
-  "Cardiac Monitors",
-  "Ventilators",
-  "Defibrillators",
-  "IV Pumps",
-  "Patient Lifts",
-  "Wheelchairs",
-  "Walking Aids",
-  "Oxygen Supply",
-  "Suction Equipment",
-  "Blood Pressure Monitors",
-  "Pulse Oximeters",
-  "Feeding Pumps",
-  "Dialysis Equipment",
-  "X-Ray Equipment"
+  "Other"
 ] as const;
 
 // Status descriptions
-export const STATUS_DESCRIPTIONS = {
+export const WARD_STATUS_DESCRIPTIONS = {
   A: "Active - Ward operational",
-  M: "Maintenance - Under maintenance",
-  C: "Closed - Temporarily closed",
-  X: "Inactive - Not in use"
+  X: "Inactive - Ward not operational"
 } as const;
 
-// Occupancy level variants for UI
-export const getOccupancyVariant = (occupancyRate: number) => {
-  if (occupancyRate >= 90) return "destructive"; // Red - Critical
-  if (occupancyRate >= 80) return "secondary"; // Yellow - High
-  if (occupancyRate >= 60) return "default"; // Blue - Moderate
-  return "outline"; // Gray - Low
-};
-
-export const getOccupancyLabel = (occupancyRate: number) => {
-  if (occupancyRate >= 90) return "Critical";
-  if (occupancyRate >= 80) return "High";
-  if (occupancyRate >= 60) return "Moderate";
-  return "Low";
+// Helper function to get ward location display name
+export const getWardLocationDisplayName = (location: WardLocationType): string => {
+  return location;
 };

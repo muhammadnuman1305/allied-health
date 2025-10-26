@@ -1,3 +1,5 @@
+// /patients/[id]/user-form-content.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,7 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -14,25 +25,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft,
   Save,
   User,
-  Users,
-  Calendar,
-  Stethoscope,
-  FileText,
+  ClipboardList,
+  GitBranch,
+  MessageSquare,
 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getById$, create$, update$ } from "@/lib/api/admin/patients/_request";
+import {
+  getById$,
+  create$,
+  update$,
+  getPatientTasks$,
+  getPatientReferrals$,
+  getPatientFeedback$,
+} from "@/lib/api/admin/patients/_request";
 import {
   PatientFormData,
   Patient,
-  INTERVENTIONS,
-  WARDS,
+  PatientTask,
+  PatientReferral,
+  PatientFeedback,
+  GENDER_OPTIONS,
+  TASK_STATUS_OPTIONS,
+  REFERRAL_STATUS_OPTIONS,
 } from "@/lib/api/admin/patients/_model";
 import { toast } from "@/hooks/use-toast";
 
@@ -40,55 +60,44 @@ import { toast } from "@/hooks/use-toast";
 const createPatientFormSchema = () =>
   z.object({
     id: z.string().nullable().optional(),
-    umrn: z
+    fullName: z
       .string()
-      .min(1, "UMRN is required")
-      .max(20, "UMRN must be less than 20 characters"),
-    firstName: z
+      .min(1, "Full name is required")
+      .max(100, "Full name must be less than 100 characters"),
+    mrn: z
       .string()
-      .min(1, "First name is required")
-      .max(50, "First name must be less than 50 characters"),
-    lastName: z
+      .min(3, "MRN must be at least 3 characters")
+      .max(20, "MRN must be less than 20 characters")
+      .regex(
+        /^[a-zA-Z0-9-]+$/,
+        "MRN can only contain letters, numbers, and hyphens"
+      ),
+    dateOfBirth: z
       .string()
-      .min(1, "Last name is required")
-      .max(50, "Last name must be less than 50 characters"),
-    age: z
-      .number()
-      .min(1, "Age must be at least 1")
-      .max(150, "Age must be less than 150"),
-    gender: z.enum(["M", "F", "Other"], {
+      .optional()
+      .refine((val) => {
+        if (!val) return true; // Optional field
+        const date = new Date(val);
+        return date <= new Date();
+      }, "Date of birth must be in the past"),
+    gender: z.enum(["Female", "Male", "Other", "PreferNotSay"], {
       required_error: "Please select a gender",
     }),
-    ward: z.string().min(1, "Ward is required"),
-    bedNumber: z
+    primaryPhone: z
       .string()
-      .min(1, "Bed number is required")
-      .max(10, "Bed number must be less than 10 characters"),
-    admissionDate: z.string().min(1, "Admission date is required"),
-    diagnosis: z
+      .optional()
+      .refine((val) => {
+        if (!val) return true; // Optional field
+        return /^\+[1-9]\d{1,14}$/.test(val);
+      }, "Phone must be in E.164 format (e.g., +447700900123)"),
+    emergencyContactName: z.string().optional(),
+    emergencyContactPhone: z
       .string()
-      .min(1, "Diagnosis is required")
-      .max(500, "Diagnosis must be less than 500 characters"),
-    referringTherapist: z
-      .string()
-      .min(1, "Referring therapist is required")
-      .max(100, "Therapist name must be less than 100 characters"),
-    referralDate: z.string().min(1, "Referral date is required"),
-    priority: z.enum(["P1", "P2", "P3"], {
-      required_error: "Please select a priority",
-    }),
-    interventions: z
-      .array(z.string())
-      .min(1, "At least one intervention is required"),
-    status: z.enum(["S", "A", "D", "U", "X"], {
-      required_error: "Please select a status",
-    }),
-    notes: z.string().optional(),
-    // Ward-specific fields
-    dementiaNotes: z.string().optional(),
-    limbWeakness: z.string().optional(),
-    communicationChallenges: z.string().optional(),
-    weightBearingTolerance: z.string().optional(),
+      .optional()
+      .refine((val) => {
+        if (!val) return true; // Optional field
+        return /^\+[1-9]\d{1,14}$/.test(val);
+      }, "Phone must be in E.164 format (e.g., +447700900123)"),
   });
 
 type FormData = z.infer<ReturnType<typeof createPatientFormSchema>>;
@@ -104,6 +113,10 @@ export default function PatientFormContent({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPatient, setIsLoadingPatient] = useState(!isNewPatient);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [tasks, setTasks] = useState<PatientTask[]>([]);
+  const [referrals, setReferrals] = useState<PatientReferral[]>([]);
+  const [feedback, setFeedback] = useState<PatientFeedback[]>([]);
+  const [activeTab, setActiveTab] = useState("details");
 
   const {
     register,
@@ -116,30 +129,15 @@ export default function PatientFormContent({
     resolver: zodResolver(createPatientFormSchema()),
     defaultValues: {
       id: isNewPatient ? null : patientId,
-      umrn: "",
-      firstName: "",
-      lastName: "",
-      age: 0,
-      gender: "M",
-      ward: "",
-      bedNumber: "",
-      admissionDate: "",
-      diagnosis: "",
-      referringTherapist: "",
-      referralDate: new Date().toISOString().split("T")[0],
-      priority: "P2",
-      interventions: [],
-      status: "A",
-      notes: "",
-      dementiaNotes: "",
-      limbWeakness: "",
-      communicationChallenges: "",
-      weightBearingTolerance: "",
+      fullName: "",
+      mrn: "",
+      dateOfBirth: "",
+      gender: "Male",
+      primaryPhone: "",
+      emergencyContactName: "",
+      emergencyContactPhone: "",
     },
   });
-
-  const watchedWard = watch("ward");
-  const watchedInterventions = watch("interventions");
 
   // Load patient data for editing
   useEffect(() => {
@@ -147,36 +145,38 @@ export default function PatientFormContent({
       if (!isNewPatient) {
         try {
           setIsLoadingPatient(true);
-          const response = await getById$(patientId);
-          const patientData = response.data;
+          const [
+            patientResponse,
+            tasksResponse,
+            referralsResponse,
+            feedbackResponse,
+          ] = await Promise.all([
+            getById$(patientId),
+            getPatientTasks$(patientId),
+            getPatientReferrals$(patientId),
+            getPatientFeedback$(patientId),
+          ]);
+
+          const patientData = patientResponse.data;
           setPatient(patientData);
+          setTasks(tasksResponse.data);
+          setReferrals(referralsResponse.data);
+          setFeedback(feedbackResponse.data);
 
           // Populate form with patient data
           setValue("id", patientData.id);
-          setValue("umrn", patientData.umrn);
-          setValue("firstName", patientData.firstName);
-          setValue("lastName", patientData.lastName);
-          setValue("age", patientData.age);
+          setValue("fullName", patientData.fullName);
+          setValue("mrn", patientData.mrn);
+          setValue("dateOfBirth", patientData.dateOfBirth || "");
           setValue("gender", patientData.gender);
-          setValue("ward", patientData.ward);
-          setValue("bedNumber", patientData.bedNumber);
-          setValue("admissionDate", patientData.admissionDate);
-          setValue("diagnosis", patientData.diagnosis);
-          setValue("referringTherapist", patientData.referringTherapist);
-          setValue("referralDate", patientData.referralDate);
-          setValue("priority", patientData.priority);
-          setValue("interventions", patientData.interventions);
-          setValue("status", patientData.status);
-          setValue("notes", patientData.notes || "");
-          setValue("dementiaNotes", patientData.dementiaNotes || "");
-          setValue("limbWeakness", patientData.limbWeakness || "");
+          setValue("primaryPhone", patientData.primaryPhone || "");
           setValue(
-            "communicationChallenges",
-            patientData.communicationChallenges || ""
+            "emergencyContactName",
+            patientData.emergencyContactName || ""
           );
           setValue(
-            "weightBearingTolerance",
-            patientData.weightBearingTolerance || ""
+            "emergencyContactPhone",
+            patientData.emergencyContactPhone || ""
           );
         } catch (error) {
           console.error("Error loading patient:", error);
@@ -201,25 +201,13 @@ export default function PatientFormContent({
       // Prepare payload according to backend model
       const payload: PatientFormData = {
         id: isNewPatient ? null : data.id || patientId,
-        umrn: data.umrn,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        age: data.age,
+        fullName: data.fullName,
+        mrn: data.mrn,
+        dateOfBirth: data.dateOfBirth || undefined,
         gender: data.gender,
-        ward: data.ward,
-        bedNumber: data.bedNumber,
-        admissionDate: data.admissionDate,
-        diagnosis: data.diagnosis,
-        referringTherapist: data.referringTherapist,
-        referralDate: data.referralDate,
-        priority: data.priority,
-        interventions: data.interventions,
-        status: data.status,
-        notes: data.notes,
-        dementiaNotes: data.dementiaNotes,
-        limbWeakness: data.limbWeakness,
-        communicationChallenges: data.communicationChallenges,
-        weightBearingTolerance: data.weightBearingTolerance,
+        primaryPhone: data.primaryPhone || undefined,
+        emergencyContactName: data.emergencyContactName || undefined,
+        emergencyContactPhone: data.emergencyContactPhone || undefined,
       };
 
       if (isNewPatient) {
@@ -252,6 +240,37 @@ export default function PatientFormContent({
     }
   };
 
+  // Helper to format status badge
+  const getTaskStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      NotAssigned: "outline",
+      Assigned: "secondary",
+      InProgress: "default",
+      Completed: "default",
+      Cancelled: "destructive",
+    };
+    return variants[status] || "outline";
+  };
+
+  const getReferralStatusBadge = (status: string) => {
+    const variants: Record<string, any> = {
+      Pending: "outline",
+      Accepted: "default",
+      Declined: "destructive",
+      Completed: "default",
+    };
+    return variants[status] || "outline";
+  };
+
+  const getFeedbackTypeBadge = (type: string) => {
+    const variants: Record<string, any> = {
+      Positive: "default",
+      Concern: "destructive",
+      Neutral: "secondary",
+    };
+    return variants[type] || "outline";
+  };
+
   // Show loading state while fetching patient data
   if (isLoadingPatient) {
     return (
@@ -279,455 +298,534 @@ export default function PatientFormContent({
           </h1>
           <p className="text-muted-foreground">
             {isNewPatient
-              ? "Create a new patient record and referral"
-              : "Update patient information and referral details"}
+              ? "Create a new patient master identity record"
+              : "Update patient information and view history"}
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Patient Demographics */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Patient Demographics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* UMRN */}
-              <div className="space-y-2">
-                <Label htmlFor="umrn">UMRN *</Label>
-                <Input
-                  id="umrn"
-                  {...register("umrn")}
-                  placeholder="Enter UMRN"
-                />
-                {errors.umrn && (
-                  <p className="text-sm text-destructive">
-                    {errors.umrn.message}
-                  </p>
-                )}
-              </div>
-
-              {/* First Name */}
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  {...register("firstName")}
-                  placeholder="Enter first name"
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-destructive">
-                    {errors.firstName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Last Name */}
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  {...register("lastName")}
-                  placeholder="Enter last name"
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-destructive">
-                    {errors.lastName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Age */}
-              <div className="space-y-2">
-                <Label htmlFor="age">Age *</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  {...register("age", { valueAsNumber: true })}
-                  placeholder="Enter age"
-                />
-                {errors.age && (
-                  <p className="text-sm text-destructive">
-                    {errors.age.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Gender */}
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gender *</Label>
-                <Controller
-                  name="gender"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="M">Male</SelectItem>
-                        <SelectItem value="F">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.gender && (
-                  <p className="text-sm text-destructive">
-                    {errors.gender.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Ward */}
-              <div className="space-y-2">
-                <Label htmlFor="ward">Ward *</Label>
-                <Controller
-                  name="ward"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select ward" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WARDS.map((ward) => (
-                          <SelectItem key={ward} value={ward}>
-                            {ward}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.ward && (
-                  <p className="text-sm text-destructive">
-                    {errors.ward.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Bed Number */}
-              <div className="space-y-2">
-                <Label htmlFor="bedNumber">Bed Number *</Label>
-                <Input
-                  id="bedNumber"
-                  {...register("bedNumber")}
-                  placeholder="Enter bed number"
-                />
-                {errors.bedNumber && (
-                  <p className="text-sm text-destructive">
-                    {errors.bedNumber.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Admission Date */}
-              <div className="space-y-2">
-                <Label htmlFor="admissionDate">Admission Date *</Label>
-                <Input
-                  id="admissionDate"
-                  type="date"
-                  {...register("admissionDate")}
-                />
-                {errors.admissionDate && (
-                  <p className="text-sm text-destructive">
-                    {errors.admissionDate.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Diagnosis */}
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="diagnosis">
-                  Diagnosis / Admission Reason *
-                </Label>
-                <Textarea
-                  id="diagnosis"
-                  {...register("diagnosis")}
-                  placeholder="Enter diagnosis or admission reason"
-                  rows={3}
-                />
-                {errors.diagnosis && (
-                  <p className="text-sm text-destructive">
-                    {errors.diagnosis.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Referral Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Referral Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Referring Therapist */}
-              <div className="space-y-2">
-                <Label htmlFor="referringTherapist">
-                  Referring Therapist *
-                </Label>
-                <Input
-                  id="referringTherapist"
-                  {...register("referringTherapist")}
-                  placeholder="Enter therapist name"
-                />
-                {errors.referringTherapist && (
-                  <p className="text-sm text-destructive">
-                    {errors.referringTherapist.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Referral Date */}
-              <div className="space-y-2">
-                <Label htmlFor="referralDate">Referral Date *</Label>
-                <Input
-                  id="referralDate"
-                  type="date"
-                  {...register("referralDate")}
-                />
-                {errors.referralDate && (
-                  <p className="text-sm text-destructive">
-                    {errors.referralDate.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Priority */}
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
-                <Controller
-                  name="priority"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="P1">P1 - High Priority</SelectItem>
-                        <SelectItem value="P2">P2 - Medium Priority</SelectItem>
-                        <SelectItem value="P3">P3 - Low Priority</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.priority && (
-                  <p className="text-sm text-destructive">
-                    {errors.priority.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A">Active</SelectItem>
-                        <SelectItem value="S">Success</SelectItem>
-                        <SelectItem value="D">Discharged</SelectItem>
-                        <SelectItem value="U">Unavailable</SelectItem>
-                        <SelectItem value="X">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.status && (
-                  <p className="text-sm text-destructive">
-                    {errors.status.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  {...register("notes")}
-                  placeholder="Enter additional notes"
-                  rows={3}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Interventions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Stethoscope className="h-5 w-5" />
-              Interventions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Intervention Selection */}
-              <div className="space-y-4">
-                <Label>Select Interventions *</Label>
-                {Object.entries(INTERVENTIONS).map(
-                  ([discipline, interventions]) => (
-                    <div key={discipline} className="space-y-2">
-                      <h4 className="font-medium capitalize">
-                        {discipline.replace(/([A-Z])/g, " $1").trim()}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {interventions.map((intervention) => (
-                          <div
-                            key={intervention}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={intervention}
-                              checked={watchedInterventions.includes(
-                                intervention
-                              )}
-                              onCheckedChange={(checked) => {
-                                const current = watchedInterventions;
-                                if (checked) {
-                                  setValue("interventions", [
-                                    ...current,
-                                    intervention,
-                                  ]);
-                                } else {
-                                  setValue(
-                                    "interventions",
-                                    current.filter((i) => i !== intervention)
-                                  );
-                                }
-                              }}
-                            />
-                            <Label htmlFor={intervention} className="text-sm">
-                              {intervention}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )}
-                {errors.interventions && (
-                  <p className="text-sm text-destructive">
-                    {errors.interventions.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ward-Specific Information */}
-        {watchedWard && (
+      {isNewPatient ? (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Patient Details */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Ward-Specific Information ({watchedWard})
+                <User className="h-5 w-5" />
+                Patient Details
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {watchedWard === "Geriatrics" && (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="dementiaNotes">Dementia Notes</Label>
-                    <Textarea
-                      id="dementiaNotes"
-                      {...register("dementiaNotes")}
-                      placeholder="Enter dementia-related notes"
-                      rows={3}
-                    />
-                  </div>
-                )}
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Input
+                    id="fullName"
+                    {...register("fullName")}
+                    placeholder="Enter full name"
+                  />
+                  {errors.fullName && (
+                    <p className="text-sm text-destructive">
+                      {errors.fullName.message}
+                    </p>
+                  )}
+                </div>
 
-                {watchedWard === "Stroke" && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="limbWeakness">Limb Weakness</Label>
-                      <Textarea
-                        id="limbWeakness"
-                        {...register("limbWeakness")}
-                        placeholder="Describe limb weakness"
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="communicationChallenges">
-                        Communication Challenges
-                      </Label>
-                      <Textarea
-                        id="communicationChallenges"
-                        {...register("communicationChallenges")}
-                        placeholder="Describe communication challenges"
-                        rows={3}
-                      />
-                    </div>
-                  </>
-                )}
+                {/* MRN */}
+                <div className="space-y-2">
+                  <Label htmlFor="mrn">Medical Record Number (MRN) *</Label>
+                  <Input
+                    id="mrn"
+                    {...register("mrn")}
+                    placeholder="e.g., MRN001234"
+                  />
+                  {errors.mrn && (
+                    <p className="text-sm text-destructive">
+                      {errors.mrn.message}
+                    </p>
+                  )}
+                </div>
 
-                {watchedWard === "Orthopaedic" && (
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="weightBearingTolerance">
-                      Weight Bearing Tolerance
-                    </Label>
-                    <Textarea
-                      id="weightBearingTolerance"
-                      {...register("weightBearingTolerance")}
-                      placeholder="Describe weight bearing tolerance"
-                      rows={3}
-                    />
-                  </div>
-                )}
+                {/* Date of Birth */}
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    {...register("dateOfBirth")}
+                  />
+                  {errors.dateOfBirth && (
+                    <p className="text-sm text-destructive">
+                      {errors.dateOfBirth.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Optional but recommended for age calculation
+                  </p>
+                </div>
+
+                {/* Gender */}
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gender *</Label>
+                  <Controller
+                    name="gender"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GENDER_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.label}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.gender && (
+                    <p className="text-sm text-destructive">
+                      {errors.gender.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Primary Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="primaryPhone">Primary Phone</Label>
+                  <Input
+                    id="primaryPhone"
+                    {...register("primaryPhone")}
+                    placeholder="+447700900123"
+                  />
+                  {errors.primaryPhone && (
+                    <p className="text-sm text-destructive">
+                      {errors.primaryPhone.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    E.164 format (e.g., +447700900123)
+                  </p>
+                </div>
+
+                {/* Emergency Contact Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="emergencyContactName">
+                    Emergency Contact Name
+                  </Label>
+                  <Input
+                    id="emergencyContactName"
+                    {...register("emergencyContactName")}
+                    placeholder="Enter contact name"
+                  />
+                </div>
+
+                {/* Emergency Contact Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="emergencyContactPhone">
+                    Emergency Contact Phone
+                  </Label>
+                  <Input
+                    id="emergencyContactPhone"
+                    {...register("emergencyContactPhone")}
+                    placeholder="+447700900123"
+                  />
+                  {errors.emergencyContactPhone && (
+                    <p className="text-sm text-destructive">
+                      {errors.emergencyContactPhone.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    E.164 format (e.g., +447700900123)
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Form Actions */}
-        <div className="flex items-center gap-4">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                {isNewPatient ? "Creating..." : "Updating..."}
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                {isNewPatient ? "Create Patient" : "Update Patient"}
-              </>
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/admin/patients")}
-            disabled={isLoading}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
+          {/* Form Actions */}
+          <div className="flex items-center gap-4">
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Create Patient
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push("/admin/patients")}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6 w-full h-full"
+        >
+          <TabsList>
+            <TabsTrigger value="details">
+              <User className="h-4 w-4 mr-2" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="tasks">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Task History
+            </TabsTrigger>
+            <TabsTrigger value="referrals">
+              <GitBranch className="h-4 w-4 mr-2" />
+              Referral History
+            </TabsTrigger>
+            <TabsTrigger value="feedback">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Feedback Summary
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Details Tab */}
+          <TabsContent value="details">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Patient Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Full Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full Name *</Label>
+                      <Input
+                        id="fullName"
+                        {...register("fullName")}
+                        placeholder="Enter full name"
+                      />
+                      {errors.fullName && (
+                        <p className="text-sm text-destructive">
+                          {errors.fullName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* MRN */}
+                    <div className="space-y-2">
+                      <Label htmlFor="mrn">Medical Record Number (MRN) *</Label>
+                      <Input
+                        id="mrn"
+                        {...register("mrn")}
+                        placeholder="e.g., MRN001234"
+                      />
+                      {errors.mrn && (
+                        <p className="text-sm text-destructive">
+                          {errors.mrn.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                      <Input
+                        id="dateOfBirth"
+                        type="date"
+                        {...register("dateOfBirth")}
+                      />
+                      {errors.dateOfBirth && (
+                        <p className="text-sm text-destructive">
+                          {errors.dateOfBirth.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Optional but recommended for age calculation
+                      </p>
+                    </div>
+
+                    {/* Gender */}
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">Gender *</Label>
+                      <Controller
+                        name="gender"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GENDER_OPTIONS.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.label}
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.gender && (
+                        <p className="text-sm text-destructive">
+                          {errors.gender.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Primary Phone */}
+                    <div className="space-y-2">
+                      <Label htmlFor="primaryPhone">Primary Phone</Label>
+                      <Input
+                        id="primaryPhone"
+                        {...register("primaryPhone")}
+                        placeholder="+447700900123"
+                      />
+                      {errors.primaryPhone && (
+                        <p className="text-sm text-destructive">
+                          {errors.primaryPhone.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        E.164 format (e.g., +447700900123)
+                      </p>
+                    </div>
+
+                    {/* Emergency Contact Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContactName">
+                        Emergency Contact Name
+                      </Label>
+                      <Input
+                        id="emergencyContactName"
+                        {...register("emergencyContactName")}
+                        placeholder="Enter contact name"
+                      />
+                    </div>
+
+                    {/* Emergency Contact Phone */}
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyContactPhone">
+                        Emergency Contact Phone
+                      </Label>
+                      <Input
+                        id="emergencyContactPhone"
+                        {...register("emergencyContactPhone")}
+                        placeholder="+447700900123"
+                      />
+                      {errors.emergencyContactPhone && (
+                        <p className="text-sm text-destructive">
+                          {errors.emergencyContactPhone.message}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        E.164 format (e.g., +447700900123)
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Form Actions */}
+              <div className="flex items-center gap-4">
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Update Patient
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/admin/patients")}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+
+          {/* Task History Tab */}
+          <TabsContent value="tasks">
+            <Card>
+              <CardHeader>
+                <CardTitle>Task History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {tasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No tasks found for this patient
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Task</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>AHA(s)</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Last Activity</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tasks.map((task) => (
+                        <TableRow key={task.id}>
+                          <TableCell className="font-medium">
+                            {task.taskName}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getTaskStatusBadge(task.status)}>
+                              {task.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{task.assignedTo.join(", ")}</TableCell>
+                          <TableCell>
+                            {new Date(task.dueDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(task.lastActivity).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm">
+                              Open
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Referral History Tab */}
+          <TabsContent value="referrals">
+            <Card>
+              <CardHeader>
+                <CardTitle>Referral History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {referrals.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No referrals found for this patient
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>From Department</TableHead>
+                        <TableHead>To Department</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {referrals.map((referral) => (
+                        <TableRow key={referral.id}>
+                          <TableCell>{referral.fromDepartment}</TableCell>
+                          <TableCell>{referral.toDepartment}</TableCell>
+                          <TableCell>
+                            {new Date(referral.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {referral.notes}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getReferralStatusBadge(referral.status)}
+                            >
+                              {referral.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Feedback Summary Tab */}
+          <TabsContent value="feedback">
+            <Card>
+              <CardHeader>
+                <CardTitle>Feedback Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {feedback.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No feedback found for this patient
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Task</TableHead>
+                        <TableHead>AHA</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Comment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {feedback.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            {new Date(item.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{item.taskName}</TableCell>
+                          <TableCell>{item.ahp}</TableCell>
+                          <TableCell>
+                            <Badge variant={getFeedbackTypeBadge(item.type)}>
+                              {item.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-md">
+                            <div className="truncate" title={item.fullComment}>
+                              {item.commentPreview}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
-

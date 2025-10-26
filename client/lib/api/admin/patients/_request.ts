@@ -1,130 +1,107 @@
-import { Patient, PatientFormData, PatientSummary } from "./_model";
+import { Patient, PatientFormData, PatientSummary, PatientTask, PatientReferral, PatientFeedback } from "./_model";
 
+// Helper function to calculate age from date of birth
+const calculateAge = (dateOfBirth: string): number => {
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 // Mock data for development
 const MOCK_PATIENTS: Patient[] = [
   {
     id: "1",
-    umrn: "MRN001234",
-    firstName: "John",
-    lastName: "Smith",
-    age: 75,
-    gender: "M",
-    ward: "Geriatrics",
-    bedNumber: "G12",
-    admissionDate: "2024-01-15",
-    diagnosis: "Dementia with mobility issues",
-    referringTherapist: "Dr. Sarah Wilson",
-    referralDate: "2024-01-16",
-    priority: "P2",
-    interventions: ["Mobilisation", "Cognitive Assessment"],
-    status: "A",
-    notes: "Patient requires assistance with daily activities",
-    dementiaNotes: "Moderate dementia, responsive to familiar faces",
+    fullName: "John Smith",
+    mrn: "MRN001234",
+    dateOfBirth: "1949-03-15",
+    gender: "Male",
+    primaryPhone: "+447700900123",
+    emergencyContactName: "Sarah Smith",
+    emergencyContactPhone: "+447700900456",
+    activeTasks: 3,
+    lastUpdated: "2024-10-18T14:30:00Z",
     createdAt: "2024-01-16T09:00:00Z",
-    updatedAt: "2024-01-16T09:00:00Z"
+    updatedAt: "2024-10-18T14:30:00Z"
   },
   {
     id: "2",
-    umrn: "MRN001235",
-    firstName: "Mary",
-    lastName: "Johnson",
-    age: 68,
-    gender: "F",
-    ward: "Stroke",
-    bedNumber: "S08",
-    admissionDate: "2024-01-14",
-    diagnosis: "Acute stroke - left hemisphere",
-    referringTherapist: "Dr. Michael Brown",
-    referralDate: "2024-01-15",
-    priority: "P1",
-    interventions: ["Articulation Therapy", "Function Retraining"],
-    status: "A",
-    notes: "High priority - significant communication difficulties",
-    limbWeakness: "Right side weakness, moderate severity",
-    communicationChallenges: "Expressive aphasia, understands well",
+    fullName: "Mary Johnson",
+    mrn: "MRN001235",
+    dateOfBirth: "1956-07-22",
+    gender: "Female",
+    primaryPhone: "+447700900789",
+    emergencyContactName: "Robert Johnson",
+    emergencyContactPhone: "+447700900012",
+    activeTasks: 5,
+    lastUpdated: "2024-10-19T09:15:00Z",
     createdAt: "2024-01-15T14:30:00Z",
-    updatedAt: "2024-01-15T14:30:00Z"
+    updatedAt: "2024-10-19T09:15:00Z"
   },
   {
     id: "3",
-    umrn: "MRN001236",
-    firstName: "Robert",
-    lastName: "Davis",
-    age: 82,
-    gender: "M",
-    ward: "Orthopaedic",
-    bedNumber: "O15",
-    admissionDate: "2024-01-13",
-    diagnosis: "Hip fracture post-surgery",
-    referringTherapist: "Dr. Lisa Chen",
-    referralDate: "2024-01-14",
-    priority: "P2",
-    interventions: ["Mobilisation", "Strength Training"],
-    status: "A",
-    notes: "Post-operative day 3, cleared for mobilisation",
-    weightBearingTolerance: "Partial weight bearing - 50%",
+    fullName: "Robert Davis",
+    mrn: "MRN001236",
+    dateOfBirth: "1942-11-08",
+    gender: "Male",
+    primaryPhone: "+447700900345",
+    emergencyContactName: "Margaret Davis",
+    emergencyContactPhone: "+447700900678",
+    activeTasks: 2,
+    lastUpdated: "2024-10-17T16:45:00Z",
     createdAt: "2024-01-14T11:15:00Z",
-    updatedAt: "2024-01-14T11:15:00Z"
+    updatedAt: "2024-10-17T16:45:00Z"
   },
   {
     id: "4",
-    umrn: "MRN001237",
-    firstName: "Elizabeth",
-    lastName: "Wilson",
-    age: 79,
-    gender: "F",
-    ward: "Geriatrics",
-    bedNumber: "G05",
-    admissionDate: "2024-01-12",
-    diagnosis: "Malnutrition and dehydration",
-    referringTherapist: "Dr. James Taylor",
-    referralDate: "2024-01-13",
-    priority: "P3",
-    interventions: ["Nutrition Screening", "Feeding Support"],
-    status: "S",
-    notes: "Nutrition goals achieved, ready for discharge",
+    fullName: "Elizabeth Wilson",
+    mrn: "MRN001237",
+    dateOfBirth: "1945-05-30",
+    gender: "Female",
+    primaryPhone: "+447700900901",
+    emergencyContactName: "James Wilson",
+    emergencyContactPhone: "+447700900234",
+    activeTasks: 0,
+    lastUpdated: "2024-10-16T11:20:00Z",
     createdAt: "2024-01-13T08:45:00Z",
-    updatedAt: "2024-01-16T16:20:00Z"
+    updatedAt: "2024-10-16T11:20:00Z"
   },
   {
     id: "5",
-    umrn: "MRN001238",
-    firstName: "William",
-    lastName: "Anderson",
-    age: 71,
-    gender: "M",
-    ward: "Cardiology",
-    bedNumber: "C22",
-    admissionDate: "2024-01-16",
-    diagnosis: "Myocardial infarction",
-    referringTherapist: "Dr. Emma Thompson",
-    referralDate: "2024-01-16",
-    priority: "P1",
-    interventions: ["Respiratory Physiotherapy", "Activities of Daily Living"],
-    status: "A",
-    notes: "Recent MI, requires cardiac rehabilitation",
+    fullName: "William Anderson",
+    mrn: "MRN001238",
+    dateOfBirth: "1953-09-12",
+    gender: "Male",
+    primaryPhone: "+447700900567",
+    emergencyContactName: "Linda Anderson",
+    emergencyContactPhone: "+447700900890",
+    activeTasks: 4,
+    lastUpdated: "2024-10-19T10:00:00Z",
     createdAt: "2024-01-16T13:20:00Z",
-    updatedAt: "2024-01-16T13:20:00Z"
+    updatedAt: "2024-10-19T10:00:00Z"
+  },
+  {
+    id: "6",
+    fullName: "Patricia Brown",
+    mrn: "MRN001239",
+    dateOfBirth: "1960-12-03",
+    gender: "Female",
+    activeTasks: 1,
+    lastUpdated: "2024-10-18T08:30:00Z",
+    createdAt: "2024-02-10T10:00:00Z",
+    updatedAt: "2024-10-18T08:30:00Z"
   }
 ];
 
 const MOCK_SUMMARY: PatientSummary = {
-  totalPatients: 45,
-  referralsToday: 8,
-  priorityBreakdown: {
-    P1: 12,
-    P2: 18,
-    P3: 15
-  },
-  disciplineBreakdown: {
-    physiotherapy: 25,
-    occupationalTherapy: 18,
-    speechTherapy: 12,
-    dietetics: 8
-  },
-  pendingOutcomes: 32,
-  completedReferrals: 13
+  totalPatients: 6,
+  newPatientsToday: 2,
+  activeTasks: 15,
+  completedTasks: 42
 };
 
 // Simulate API delay
@@ -135,7 +112,7 @@ export const getAll$ = async (): Promise<{ data: Patient[] }> => {
   return { data: MOCK_PATIENTS };
 };
 
-export const getById$ = async (id: string): Promise<{ data: Patient }> => {
+export const getById$ = async (id: any): Promise<{ data: Patient }> => {
   await delay(300);
   const patient = MOCK_PATIENTS.find(p => p.id === id);
   if (!patient) {
@@ -152,8 +129,16 @@ export const getSummary$ = async (): Promise<{ data: PatientSummary }> => {
 export const create$ = async (patient: PatientFormData): Promise<{ data: Patient }> => {
   await delay(800);
   const newPatient: Patient = {
-    ...patient,
     id: Math.random().toString(36).substr(2, 9),
+    fullName: patient.fullName,
+    mrn: patient.mrn,
+    dateOfBirth: patient.dateOfBirth,
+    gender: patient.gender,
+    primaryPhone: patient.primaryPhone,
+    emergencyContactName: patient.emergencyContactName,
+    emergencyContactPhone: patient.emergencyContactPhone,
+    activeTasks: 0,
+    lastUpdated: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -163,14 +148,24 @@ export const create$ = async (patient: PatientFormData): Promise<{ data: Patient
 
 export const update$ = async (patient: PatientFormData): Promise<{ data: Patient }> => {
   await delay(800);
+  if (!patient.id) {
+    throw new Error("Patient ID is required for update");
+  }
+  
   const index = MOCK_PATIENTS.findIndex(p => p.id === patient.id);
   if (index === -1) {
     throw new Error("Patient not found");
   }
   
-  const updatedPatient: any = {
+  const updatedPatient: Patient = {
     ...MOCK_PATIENTS[index],
-    ...patient,
+    fullName: patient.fullName,
+    mrn: patient.mrn,
+    dateOfBirth: patient.dateOfBirth,
+    gender: patient.gender,
+    primaryPhone: patient.primaryPhone,
+    emergencyContactName: patient.emergencyContactName,
+    emergencyContactPhone: patient.emergencyContactPhone,
     updatedAt: new Date().toISOString()
   };
   
@@ -178,16 +173,109 @@ export const update$ = async (patient: PatientFormData): Promise<{ data: Patient
   return { data: updatedPatient };
 };
 
-export const toggleActive$ = async (id: string): Promise<{ data: Patient }> => {
+export const delete$ = async (id: string): Promise<{ data: { success: boolean } }> => {
+  await delay(500);
+  const index = MOCK_PATIENTS.findIndex(p => p.id === id);
+  if (index === -1) {
+    throw new Error("Patient not found");
+  }
+  
+  MOCK_PATIENTS.splice(index, 1);
+  return { data: { success: true } };
+};
+
+export const toggleActive$ = async (id: string): Promise<{ data: { success: boolean } }> => {
   await delay(500);
   const patient = MOCK_PATIENTS.find(p => p.id === id);
   if (!patient) {
     throw new Error("Patient not found");
   }
-  
-  // Toggle between active and cancelled status
-  patient.status = patient.status === "X" ? "A" : "X";
-  patient.updatedAt = new Date().toISOString();
-  
-  return { data: patient };
+  // In a real implementation, this might toggle an isActive flag
+  // For now, we'll just return success
+  return { data: { success: true } };
+};
+
+// Get patient tasks
+export const getPatientTasks$ = async (patientId: string): Promise<{ data: PatientTask[] }> => {
+  await delay(300);
+  // Mock task data
+  const mockTasks: PatientTask[] = [
+    {
+      id: "1",
+      taskName: "Initial Assessment - Physiotherapy",
+      status: "InProgress",
+      assignedTo: ["Dr. Sarah Wilson", "John Doe PT"],
+      dueDate: "2024-10-25",
+      lastActivity: "2024-10-18T14:30:00Z"
+    },
+    {
+      id: "2",
+      taskName: "Occupational Therapy Consultation",
+      status: "Assigned",
+      assignedTo: ["Jane Smith OT"],
+      dueDate: "2024-10-22",
+      lastActivity: "2024-10-17T10:15:00Z"
+    },
+    {
+      id: "3",
+      taskName: "Nutrition Assessment",
+      status: "Completed",
+      assignedTo: ["Dr. Emma Thompson"],
+      dueDate: "2024-10-15",
+      lastActivity: "2024-10-15T16:45:00Z"
+    }
+  ];
+  return { data: mockTasks };
+};
+
+// Get patient referrals
+export const getPatientReferrals$ = async (patientId: string): Promise<{ data: PatientReferral[] }> => {
+  await delay(300);
+  // Mock referral data
+  const mockReferrals: PatientReferral[] = [
+    {
+      id: "1",
+      fromDepartment: "Emergency",
+      toDepartment: "Physiotherapy",
+      date: "2024-10-15T09:00:00Z",
+      notes: "Patient requires immediate mobilization assessment",
+      status: "Accepted"
+    },
+    {
+      id: "2",
+      fromDepartment: "Physiotherapy",
+      toDepartment: "Occupational Therapy",
+      date: "2024-10-16T14:30:00Z",
+      notes: "ADL assessment needed for discharge planning",
+      status: "Pending"
+    }
+  ];
+  return { data: mockReferrals };
+};
+
+// Get patient feedback
+export const getPatientFeedback$ = async (patientId: string): Promise<{ data: PatientFeedback[] }> => {
+  await delay(300);
+  // Mock feedback data
+  const mockFeedback: PatientFeedback[] = [
+    {
+      id: "1",
+      date: "2024-10-17T11:30:00Z",
+      taskName: "Initial Assessment - Physiotherapy",
+      ahp: "Dr. Sarah Wilson",
+      type: "Positive",
+      commentPreview: "Patient showed excellent cooperation during assessment. Good progress with mobility exercises...",
+      fullComment: "Patient showed excellent cooperation during assessment. Good progress with mobility exercises. Continue with current treatment plan."
+    },
+    {
+      id: "2",
+      date: "2024-10-16T15:20:00Z",
+      taskName: "Nutrition Assessment",
+      ahp: "Dr. Emma Thompson",
+      type: "Concern",
+      commentPreview: "Patient showing signs of inadequate nutritional intake. Recommend dietary supplements...",
+      fullComment: "Patient showing signs of inadequate nutritional intake. Recommend dietary supplements and close monitoring."
+    }
+  ];
+  return { data: mockFeedback };
 };

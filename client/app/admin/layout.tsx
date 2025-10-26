@@ -70,12 +70,10 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="flex min-h-screen flex-col">
       {/* Desktop Sidebar */}
       <AdminSidebar
-        className={`border-r ${
-          isSidebarCollapsed ? "lg:w-[70px]" : "lg:w-64"
-        } hidden lg:block`}
+        className="hidden lg:block"
         isCollapsed={isSidebarCollapsed}
       />
 
@@ -95,7 +93,11 @@ export default function AdminLayout({
         </div>
       )}
 
-      <div className="flex flex-col flex-1">
+      <div
+        className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${
+          isSidebarCollapsed ? "lg:ml-[70px]" : "lg:ml-72"
+        }`}
+      >
         <Navbar
           onToggleSidebar={toggleSidebar}
           isSidebarCollapsed={isSidebarCollapsed}

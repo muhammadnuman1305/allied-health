@@ -1,10 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Removed output: "export" to support dynamic backend integration
-  eslint: {
-    ignoreDuringBuilds: true,
+  // Basic configuration for stability
+  experimental: {
+    // Disable experimental features that might cause issues
+    memoryBasedWorkersCount: false,
   },
-  images: { unoptimized: true },
+  // Optimize images
+  images: {
+    domains: ["localhost"],
+  },
+  // Ensure proper module resolution
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig;

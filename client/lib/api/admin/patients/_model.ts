@@ -1,123 +1,95 @@
 // Patient data models
 
+// Master identity only - no episode/task context
 export interface Patient {
   id: string;
-  umrn: string; // Unique Medical Record Number
-  firstName: string;
-  lastName: string;
-  age: number;
-  gender: "M" | "F" | "Other";
-  ward: string;
-  bedNumber: string;
-  admissionDate: string;
-  diagnosis: string;
-  referringTherapist: string;
-  referralDate: string;
-  priority: "P1" | "P2" | "P3";
-  interventions: string[];
-  status: "S" | "A" | "D" | "U" | "X"; // S=Success, A=Active, D=Discharged, U=Unavailable, X=Cancelled
-  notes?: string;
-  // Ward-specific fields
-  dementiaNotes?: string; // Geriatric
-  limbWeakness?: string; // Stroke
-  communicationChallenges?: string; // Stroke
-  weightBearingTolerance?: string; // Orthopaedic
+  fullName: string;
+  mrn: string; // Medical Record Number (3-20 alnum + hyphen)
+  dateOfBirth?: string; // Optional but recommended
+  gender: "Female" | "Male" | "Other" | "PreferNotSay";
+  primaryPhone?: string; // E.164 format
+  emergencyContactName?: string;
+  emergencyContactPhone?: string; // E.164 format
+  // Computed fields
+  activeTasks: number; // Count of tasks with status in [NotAssigned, Assigned, InProgress]
+  lastUpdated: string; // ISO timestamp
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PatientFormData {
   id?: string | null;
-  umrn: string;
-  firstName: string;
-  lastName: string;
-  age: number;
-  gender: "M" | "F" | "Other";
-  ward: string;
-  bedNumber: string;
-  admissionDate: string;
-  diagnosis: string;
-  referringTherapist: string;
-  referralDate: string;
-  priority: "P1" | "P2" | "P3";
-  interventions: string[];
-  status: "S" | "A" | "D" | "U" | "X";
-  notes?: string;
-  // Ward-specific fields
-  dementiaNotes?: string;
-  limbWeakness?: string;
-  communicationChallenges?: string;
-  weightBearingTolerance?: string;
+  fullName: string;
+  mrn: string;
+  dateOfBirth?: string;
+  gender: "Female" | "Male" | "Other" | "PreferNotSay";
+  primaryPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
 }
 
 export interface PatientSummary {
   totalPatients: number;
-  referralsToday: number;
-  priorityBreakdown: {
-    P1: number;
-    P2: number;
-    P3: number;
-  };
-  disciplineBreakdown: {
-    physiotherapy: number;
-    occupationalTherapy: number;
-    speechTherapy: number;
-    dietetics: number;
-  };
-  pendingOutcomes: number;
-  completedReferrals: number;
+  newPatientsToday: number;
+  activeTasks: number;
+  completedTasks: number;
 }
 
-// Intervention options by discipline
-export const INTERVENTIONS = {
-  physiotherapy: [
-    "Mobilisation",
-    "Strength Training",
-    "Balance Training",
-    "Pain Management",
-    "Respiratory Physiotherapy"
-  ],
-  occupationalTherapy: [
-    "Cognitive Assessment",
-    "Function Retraining",
-    "Pressure Care",
-    "Activities of Daily Living",
-    "Home Assessment"
-  ],
-  speechTherapy: [
-    "Articulation Therapy",
-    "Swallowing Assessment",
-    "Communication Aids",
-    "Voice Therapy",
-    "Language Therapy"
-  ],
-  dietetics: [
-    "Nutrition Screening",
-    "Feeding Support",
-    "Nutrition Education",
-    "Weight Management",
-    "Dietary Planning"
-  ]
-} as const;
+// Task-related interfaces (episode context lives here)
+export interface PatientTask {
+  id: string;
+  taskName: string;
+  status: "NotAssigned" | "Assigned" | "InProgress" | "Completed" | "Cancelled";
+  assignedTo: string[]; // Array of AHP names
+  dueDate: string;
+  lastActivity: string;
+  // Episode context
+  admissionDate?: string;
+  ward?: string;
+  clinicalArea?: string;
+  condition?: string;
+  priority?: "P1" | "P2" | "P3";
+}
 
-// Ward options
-export const WARDS = [
-  "Geriatrics",
-  "Stroke",
-  "Orthopaedic",
-  "Cardiology",
-  "Respiratory",
-  "General Medical",
-  "Surgical",
-  "ICU",
-  "Emergency"
+export interface PatientReferral {
+  id: string;
+  fromDepartment: string;
+  toDepartment: string;
+  date: string;
+  notes: string;
+  status: "Pending" | "Accepted" | "Declined" | "Completed";
+}
+
+export interface PatientFeedback {
+  id: string;
+  date: string;
+  taskName: string;
+  ahp: string; // Allied Health Professional name
+  type: "Positive" | "Concern" | "Neutral";
+  commentPreview: string;
+  fullComment: string;
+}
+
+// Gender options
+export const GENDER_OPTIONS = [
+  { value: 0, label: "Male" },
+  { value: 1, label: "Female" },
+  { value: 2, label: "Other" },
 ] as const;
 
-// Status descriptions
-export const STATUS_DESCRIPTIONS = {
-  S: "Success - Outcome achieved",
-  A: "Active - Treatment ongoing",
-  D: "Discharged - Patient discharged",
-  U: "Unavailable - Patient unavailable",
-  X: "Cancelled - Referral cancelled"
-} as const;
+// Task status options
+export const TASK_STATUS_OPTIONS = [
+  { value: "NotAssigned", label: "Not Assigned" },
+  { value: "Assigned", label: "Assigned" },
+  { value: "InProgress", label: "In Progress" },
+  { value: "Completed", label: "Completed" },
+  { value: "Cancelled", label: "Cancelled" }
+] as const;
+
+// Referral status options
+export const REFERRAL_STATUS_OPTIONS = [
+  { value: "Pending", label: "Pending" },
+  { value: "Accepted", label: "Accepted" },
+  { value: "Declined", label: "Declined" },
+  { value: "Completed", label: "Completed" }
+] as const;

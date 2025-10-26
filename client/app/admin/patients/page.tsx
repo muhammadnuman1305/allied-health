@@ -1,10 +1,11 @@
+// /patients/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +26,6 @@ import {
 import {
   Users,
   Calendar,
-  AlertTriangle,
-  Stethoscope,
   ClipboardList,
   CheckCircle,
   Settings,
@@ -44,41 +43,44 @@ import {
   getSummary$,
 } from "@/lib/api/admin/patients/_request";
 import {
+  GENDER_OPTIONS,
   Patient,
   PatientSummary,
-  STATUS_DESCRIPTIONS,
 } from "@/lib/api/admin/patients/_model";
 
-// Priority badge variants
-const getPriorityBadgeVariant = (priority: string) => {
-  switch (priority) {
-    case "P1":
-      return "destructive";
-    case "P2":
-      return "default";
-    case "P3":
-      return "secondary";
-    default:
-      return "outline";
+// Helper to calculate age from date of birth
+const calculateAge = (dateOfBirth: string | undefined): string => {
+  if (!dateOfBirth) return "—";
+
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
+    age--;
   }
+
+  return age.toString();
 };
 
-// Status badge variants
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case "S":
-      return "default"; // Success - green
-    case "A":
-      return "secondary"; // Active - blue
-    case "D":
-      return "outline"; // Discharged - gray
-    case "U":
-      return "secondary"; // Unavailable - yellow
-    case "X":
-      return "destructive"; // Cancelled - red
-    default:
-      return "outline";
-  }
+// Helper to format relative time
+const formatRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -88,16 +90,9 @@ export default function AdminPatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [summary, setSummary] = useState<PatientSummary>({
     totalPatients: 0,
-    referralsToday: 0,
-    priorityBreakdown: { P1: 0, P2: 0, P3: 0 },
-    disciplineBreakdown: {
-      physiotherapy: 0,
-      occupationalTherapy: 0,
-      speechTherapy: 0,
-      dietetics: 0,
-    },
-    pendingOutcomes: 0,
-    completedReferrals: 0,
+    newPatientsToday: 0,
+    activeTasks: 0,
+    completedTasks: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,19 +101,16 @@ export default function AdminPatientsPage() {
     isOpen: boolean;
     patientId: string;
     patientName: string;
-    action: "activate" | "cancel";
+    action: "delete";
   }>({
     isOpen: false,
     patientId: "",
     patientName: "",
-    action: "cancel",
+    action: "delete",
   });
   const [filters, setFilters] = useState<FilterState>({
-    umrn: "",
+    mrn: "",
     name: "",
-    ward: "all",
-    priority: "all",
-    status: "all",
     sortField: null,
     sortDirection: null,
   });
@@ -152,109 +144,91 @@ export default function AdminPatientsPage() {
   // Define table columns
   const columns: Column<Patient>[] = [
     {
-      key: "umrn",
-      label: "UMRN",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "text",
-    },
-    {
-      key: "name",
+      key: "fullName",
       label: "Name",
-      width: "w-[180px]",
+      width: "w-[200px]",
       sortable: true,
       filterable: true,
       filterType: "text",
-      render: (patient) => `${patient.firstName} ${patient.lastName}`,
-    },
-    {
-      key: "age",
-      label: "Age / Gender",
-      width: "w-[100px]",
-      render: (patient) => `${patient.age} / ${patient.gender}`,
-    },
-    {
-      key: "ward",
-      label: "Ward",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Geriatrics", label: "Geriatrics" },
-        { value: "Stroke", label: "Stroke" },
-        { value: "Orthopaedic", label: "Orthopaedic" },
-        { value: "Cardiology", label: "Cardiology" },
-        { value: "Respiratory", label: "Respiratory" },
-      ],
-    },
-    {
-      key: "bedNumber",
-      label: "Bed No.",
-      width: "w-[80px]",
-    },
-    {
-      key: "diagnosis",
-      label: "Diagnosis",
-      width: "w-[200px]",
       render: (patient) => (
-        <div className="truncate max-w-[200px]" title={patient.diagnosis}>
-          {patient.diagnosis}
-        </div>
+        <button
+          onClick={() => router.push(`/admin/patients/${patient.id}`)}
+          className="text-primary hover:underline text-left font-medium"
+        >
+          {patient.fullName}
+        </button>
       ),
     },
     {
-      key: "admissionDate",
-      label: "Admission Date",
-      width: "w-[120px]",
-      sortable: true,
-      render: (patient) => new Date(patient.admissionDate).toLocaleDateString(),
-    },
-    {
-      key: "status",
-      label: "Status",
-      width: "w-[100px]",
+      key: "mrn",
+      label: "MRN",
+      width: "w-[140px]",
       sortable: true,
       filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "S", label: "Success" },
-        { value: "A", label: "Active" },
-        { value: "D", label: "Discharged" },
-        { value: "U", label: "Unavailable" },
-        { value: "X", label: "Cancelled" },
-      ],
+      filterType: "text",
+    },
+    {
+      key: "age",
+      label: "Age",
+      width: "w-[80px]",
+      sortable: true,
+      render: (patient) => calculateAge(patient.dateOfBirth),
+    },
+    {
+      key: "gender",
+      label: "Gender",
+      width: "w-[80px]",
+      sortable: true,
+      render: (patient) => {
+        // Find the option that matches the patient's gender string
+        return (
+          GENDER_OPTIONS.find((option) => option.label === patient.gender)
+            ?.label || patient.gender
+        );
+      },
+    },
+    // {
+    //   key: "activeTasks",
+    //   label: "Active Tasks",
+    //   width: "w-[120px]",
+    //   sortable: true,
+    //   render: (patient) => patient.activeTasks.toString(),
+    // },
+    {
+      key: "lastUpdated",
+      label: "Last Updated",
+      width: "w-[140px]",
+      sortable: true,
       render: (patient) => (
-        <Badge
-          variant={getStatusBadgeVariant(patient.status)}
-          title={STATUS_DESCRIPTIONS[patient.status]}
-        >
-          {patient.status}
-        </Badge>
+        <span title={new Date(patient.lastUpdated).toLocaleString()}>
+          {formatRelativeTime(patient.lastUpdated)}
+        </span>
       ),
     },
   ];
 
   // Handle patient actions
   const handlePatientAction = (action: string, patientId: string) => {
+    const patient = patients.find((p) => p.id === patientId);
+
     switch (action) {
       case "edit":
         router.push(`/admin/patients/${patientId}`);
         break;
-      case "view-notes":
-        console.log(`View notes for patient ${patientId}`);
-        // Here you would open a notes dialog or navigate to notes page
+      case "newTask":
+        router.push(`/admin/tasks/0?patientId=${patientId}`);
         break;
-      case "cancel":
-      case "activate":
-        const patient = patients.find((p) => p.id === patientId);
+      case "refer":
+        // TODO: Open ReferralModal (select target department + note)
+        router.push(`/admin/referrals/0?patientId=${patientId}`);
+        break;
+      case "delete":
         if (patient) {
           setActionDialog({
             isOpen: true,
             patientId: patientId,
-            patientName: `${patient.firstName} ${patient.lastName}`,
-            action: patient.status === "X" ? "activate" : "cancel",
+            patientName: patient.fullName,
+            action: "delete",
           });
         }
         break;
@@ -268,35 +242,27 @@ export default function AdminPatientsPage() {
     try {
       await toggleActive$(patientId);
 
-      // Update local state to reflect the change
-      setPatients((prev) =>
-        prev.map((patient) =>
-          patient.id === patientId
-            ? { ...patient, status: patient.status === "X" ? "A" : "X" }
-            : patient
-        )
-      );
+      // Refresh the patient list
+      const response = await getAll$();
+      setPatients(response.data);
     } catch (err) {
-      setError("Failed to update patient status. Please try again.");
-      console.error("Error toggling patient status:", err);
+      setError("Failed to delete patient. Please try again.");
+      console.error("Error deleting patient:", err);
     }
 
     setActionDialog({
       isOpen: false,
       patientId: "",
       patientName: "",
-      action: "cancel",
+      action: "delete",
     });
   };
 
   // Clear all filters
   const clearAllFilters = () => {
     setFilters({
-      umrn: "",
+      mrn: "",
       name: "",
-      ward: "all",
-      priority: "all",
-      status: "all",
       sortField: null,
       sortDirection: null,
     });
@@ -304,13 +270,7 @@ export default function AdminPatientsPage() {
   };
 
   // Check if filters are active
-  const hasActiveFilters =
-    filters.umrn ||
-    filters.name ||
-    filters.ward !== "all" ||
-    filters.priority !== "all" ||
-    filters.status !== "all" ||
-    filters.sortField;
+  const hasActiveFilters = filters.mrn || filters.name || filters.sortField;
 
   if (loading) {
     return (
@@ -364,27 +324,25 @@ export default function AdminPatientsPage() {
         <StatsCard
           title="Total Patients"
           value={summary.totalPatients}
-          description="Active patients"
+          description="Registered patients"
           icon={Users}
         />
         <StatsCard
-          title="New Admissions"
-          value={summary.referralsToday}
-          description="Today"
+          title="New Patients"
+          value={summary.newPatientsToday}
+          description="Added today"
           icon={Calendar}
-          variant="primary"
         />
         <StatsCard
-          title="Active Referrals"
-          value={summary.pendingOutcomes}
+          title="Active Tasks"
+          value={summary.activeTasks}
           description="In progress"
           icon={ClipboardList}
-          variant="secondary"
         />
         <StatsCard
-          title="Completed"
-          value={summary.completedReferrals}
-          description="Successful outcomes"
+          title="Completed Tasks"
+          value={summary.completedTasks}
+          description="Successfully completed"
           icon={CheckCircle}
         />
       </div>
@@ -438,46 +396,24 @@ export default function AdminPatientsPage() {
                     Edit Patient
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() =>
-                      handlePatientAction("view-notes", patient.id)
-                    }
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Notes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      router.push(`/admin/referrals/0?patientId=${patient.id}`)
-                    }
+                    onClick={() => handlePatientAction("newTask", patient.id)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
+                    New Task
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handlePatientAction("refer", patient.id)}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
                     Create Referral
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() =>
-                      handlePatientAction(
-                        patient.status === "X" ? "activate" : "cancel",
-                        patient.id
-                      )
-                    }
-                    className={
-                      patient.status === "X"
-                        ? "text-green-600"
-                        : "text-destructive"
-                    }
+                    onClick={() => handlePatientAction("delete", patient.id)}
+                    className="text-destructive"
                   >
-                    {patient.status === "X" ? (
-                      <>
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Activate Patient
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Deactivate Patient
-                      </>
-                    )}
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Patient
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -495,37 +431,26 @@ export default function AdminPatientsPage() {
               isOpen: false,
               patientId: "",
               patientName: "",
-              action: "cancel",
+              action: "delete",
             });
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {actionDialog.action === "activate"
-                ? "Activate Patient"
-                : "Deactivate Patient"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
             <AlertDialogDescription>
-              {actionDialog.action === "activate"
-                ? `Are you sure you want to activate "${actionDialog.patientName}"? This will make the patient record active again and available for new referrals.`
-                : `Are you sure you want to deactivate "${actionDialog.patientName}"? This will mark the patient as inactive and prevent new referrals.`}
+              Are you sure you want to delete "{actionDialog.patientName}"? This
+              action cannot be undone and will remove all patient data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedAction}
-              className={
-                actionDialog.action === "activate"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-destructive hover:bg-destructive/90"
-              }
+              className="bg-destructive hover:bg-destructive/90"
             >
-              {actionDialog.action === "activate"
-                ? "Activate Patient"
-                : "Deactivate Patient"}
+              Delete Patient
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -533,4 +458,3 @@ export default function AdminPatientsPage() {
     </div>
   );
 }
-

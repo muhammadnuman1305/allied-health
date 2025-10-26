@@ -65,13 +65,11 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Model.Entities.Patient", b =>
                 {
-                    b.Property<Guid>("UMRN")
+                    b.Property<int>("MRN")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
 
-                    b.Property<string>("BedNumber")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("MRN"));
 
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
@@ -84,50 +82,39 @@ namespace AlliedHealth.Domain.Migrations
                     b.Property<DateOnly?>("DateOfBirth")
                         .HasColumnType("date");
 
-                    b.Property<string>("Diagnosis")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                    b.Property<string>("EmergencyContactName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
 
-                    b.Property<string>("FirstName")
+                    b.Property<string>("EmergencyContactPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
-                    b.Property<char>("Gender")
-                        .HasColumnType("character(1)");
-
-                    b.Property<string>("Goal")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
-                    b.Property<bool>("Hidden")
-                        .HasColumnType("boolean");
+                    b.Property<int>("Gender")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("LastModifiedBy")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("LastModifiedDate")
-                        .HasColumnType("timestamp with time zone");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("timezone('utc', now())");
 
-                    b.Property<string>("LastName")
+                    b.Property<string>("PrimaryPhone")
                         .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid?>("PriorityId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ReferralDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ReferringAHP")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("UMRN");
+                    b.HasKey("MRN");
 
                     b.HasIndex("CreatedBy");
 
@@ -135,11 +122,42 @@ namespace AlliedHealth.Domain.Migrations
 
                     b.HasIndex("PriorityId");
 
-                    b.HasIndex("ReferringAHP");
-
-                    b.HasIndex("LastName", "FirstName");
-
                     b.ToTable("Patient", (string)null);
+                });
+
+            modelBuilder.Entity("AlliedHealth.Model.Entities.PatientOutcome", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdditionalNote")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<bool>("AttemptMade")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Declined")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Refer")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Seen")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Unseen")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("PatientOutcome", (string)null);
                 });
 
             modelBuilder.Entity("AlliedHealth.Model.Entities.Priority", b =>
@@ -231,41 +249,6 @@ namespace AlliedHealth.Domain.Migrations
                     b.ToTable("Ward", (string)null);
                 });
 
-            modelBuilder.Entity("PatientOutcome", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdditionalNote")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<bool>("AttemptMade")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Declined")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("PatientId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Refer")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Seen")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Unseen")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PatientId");
-
-                    b.ToTable("PatientOutcome", (string)null);
-                });
-
             modelBuilder.Entity("AlliedHealth.Model.Entities.AhaRoleCategory", b =>
                 {
                     b.HasOne("AlliedHealth.Model.Entities.AhaRole", "Role")
@@ -289,26 +272,16 @@ namespace AlliedHealth.Domain.Migrations
                         .HasForeignKey("LastModifiedBy")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("AlliedHealth.Model.Entities.Priority", "Priority")
+                    b.HasOne("AlliedHealth.Model.Entities.Priority", null)
                         .WithMany("Patients")
-                        .HasForeignKey("PriorityId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("AlliedHealth.Model.Entities.User", "ReferringAHPUser")
-                        .WithMany()
-                        .HasForeignKey("ReferringAHP")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("PriorityId");
 
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("LastModifiedByUser");
-
-                    b.Navigation("Priority");
-
-                    b.Navigation("ReferringAHPUser");
                 });
 
-            modelBuilder.Entity("PatientOutcome", b =>
+            modelBuilder.Entity("AlliedHealth.Model.Entities.PatientOutcome", b =>
                 {
                     b.HasOne("AlliedHealth.Model.Entities.Patient", "Patient")
                         .WithMany("Outcomes")
