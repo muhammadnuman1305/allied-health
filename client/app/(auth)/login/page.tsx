@@ -47,7 +47,7 @@ export default function LoginPage() {
       const payload: LoginPayload = {
         username,
         password,
-        isAdmin: false,
+        role: 1,
       };
       const response = await login$(payload);
       if (response && response.data.accessToken) {
@@ -61,7 +61,6 @@ export default function LoginPage() {
             lastName: response.data.lastName,
             accessToken: response.data.accessToken,
             role: response.data.role,
-            isAdmin: response.data.isAdmin,
           })
         );
         toast({

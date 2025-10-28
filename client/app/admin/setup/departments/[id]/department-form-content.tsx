@@ -30,10 +30,13 @@ import {
   getById$,
   create$,
   update$,
+  getDepartmentHeads$,
 } from "@/lib/api/admin/departments/_request";
 import {
   Department,
   DepartmentFormData,
+  DepartmentHead,
+  PRIORITY_TO_ID,
   SERVICE_LINES,
   TASK_PRIORITIES,
 } from "@/lib/api/admin/departments/_model";
@@ -41,17 +44,14 @@ import {
 // Form validation schema
 const departmentFormSchema = z.object({
   name: z.string().min(1, "Department name is required"),
+  purpose: z.string().min(1, "Purpose is required"),
   code: z
     .string()
     .min(1, "Department code is required")
     .max(10, "Code must be 10 characters or less"),
+  operatingFrom: z.string().min(1, "Operating From is required"),
+  operatingTo: z.string().min(1, "Operating To is required"),
   description: z.string().min(1, "Description is required"),
-  serviceLine: z.enum([
-    "Physiotherapy",
-    "Occupational Therapy",
-    "Speech Therapy",
-    "Dietetics",
-  ]),
   headAHP: z.string().min(1, "Head AHP is required"),
   status: z.enum(["A", "X"]),
   defaultTaskPriority: z.enum(["Low", "Medium", "High", "Urgent"]),
@@ -75,7 +75,10 @@ export default function DepartmentFormContent({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [department, setDepartment] = useState<Department | null>(null);
-  const [initialLoading, setInitialLoading] = useState(isEdit);
+  const [departmentHeads, setDepartmentHeads] = useState<DepartmentHead[]>([]);
+  const [initialLoading, setInitialLoading] = useState(
+    isEdit && departmentId !== "0"
+  );
 
   const form = useForm<DepartmentFormValues>({
     resolver: zodResolver(departmentFormSchema),
@@ -83,7 +86,6 @@ export default function DepartmentFormContent({
       name: "",
       code: "",
       description: "",
-      serviceLine: "Physiotherapy",
       headAHP: "",
       status: "A",
       defaultTaskPriority: "Medium",
@@ -94,12 +96,26 @@ export default function DepartmentFormContent({
     },
   });
 
-  // Load department data for editing
+  // Load department data for editing and department heads
   useEffect(() => {
-    if (isEdit && departmentId !== "0") {
-      const fetchDepartment = async () => {
+    const fetchData = async () => {
+      try {
+        setInitialLoading(true);
+
+        // Fetch department heads first
         try {
-          setInitialLoading(true);
+          const headsResponse = await getDepartmentHeads$();
+          console.log("Department heads fetched:", headsResponse.data);
+          console.log("First head structure:", headsResponse.data[0]);
+          setDepartmentHeads(headsResponse.data);
+        } catch (headsError) {
+          console.error("Error fetching department heads:", headsError);
+          // Set empty array as fallback
+          setDepartmentHeads([]);
+        }
+
+        // Only fetch department data if editing
+        if (isEdit && departmentId !== "0") {
           const response = await getById$(departmentId);
           const dept = response.data;
           setDepartment(dept);
@@ -109,7 +125,6 @@ export default function DepartmentFormContent({
             name: dept.name,
             code: dept.code,
             description: dept.description,
-            serviceLine: dept.serviceLine,
             headAHP: dept.headAHP,
             status: dept.status,
             defaultTaskPriority: dept.defaultTaskPriority,
@@ -118,20 +133,27 @@ export default function DepartmentFormContent({
             email: dept.email,
             notes: dept.notes || "",
           });
-        } catch (error) {
-          console.error("Error fetching department:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load department data",
-            variant: "destructive",
-          });
-        } finally {
-          setInitialLoading(false);
         }
-      };
+      } catch (error: any) {
+        console.error("Error fetching data:", error);
 
-      fetchDepartment();
-    }
+        // Handle specific error messages from API
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to load data";
+
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    fetchData();
   }, [departmentId, isEdit, form]);
 
   const onSubmit = async (data: DepartmentFormValues) => {
@@ -142,37 +164,27 @@ export default function DepartmentFormContent({
         id: isEdit ? departmentId : undefined,
         name: data.name,
         code: data.code,
+        purpose: data.purpose,
         description: data.description,
-        serviceLine: data.serviceLine,
-        headAHP: data.headAHP,
-        status: data.status,
-        defaultTaskPriority: data.defaultTaskPriority,
-        coverageWards: data.coverageWards,
+        deptHeadId: data.headAHP,
+        defaultTaskPriority: PRIORITY_TO_ID[data.defaultTaskPriority],
         contactNumber: data.contactNumber,
         email: data.email,
-        notes: data.notes,
+        operatingFrom: data.operatingFrom,
+        operatingTo: data.operatingTo,
       };
-
-      if (isEdit) {
-        await update$(departmentId, formData);
-        toast({
-          title: "Success",
-          description: "Department updated successfully",
-        });
-      } else {
-        await create$(formData);
-        toast({
-          title: "Success",
-          description: "Department created successfully",
-        });
-      }
-
-      router.push("/admin/setup/departments");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving department:", error);
+
+      // Handle specific error messages from API
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to save department. Please try again.";
+
       toast({
         title: "Error",
-        description: "Failed to save department. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -246,34 +258,6 @@ export default function DepartmentFormContent({
 
                 <FormField
                   control={form.control}
-                  name="serviceLine"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Service Line *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select service line" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {SERVICE_LINES.map((serviceLine) => (
-                            <SelectItem key={serviceLine} value={serviceLine}>
-                              {serviceLine}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -306,7 +290,7 @@ export default function DepartmentFormContent({
                       <FormLabel>Head AHP *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -314,16 +298,19 @@ export default function DepartmentFormContent({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="user-1">
-                            Dr. Sarah Mitchell
-                          </SelectItem>
-                          <SelectItem value="user-2">
-                            Ms. Jennifer Thompson
-                          </SelectItem>
-                          <SelectItem value="user-3">
-                            Dr. Michael Rodriguez
-                          </SelectItem>
-                          <SelectItem value="user-4">Ms. Lisa Chen</SelectItem>
+                          {departmentHeads.length === 0 ? (
+                            <SelectItem value="" disabled>
+                              {initialLoading
+                                ? "Loading department heads..."
+                                : "No department heads available"}
+                            </SelectItem>
+                          ) : (
+                            departmentHeads.map((head) => (
+                              <SelectItem key={head.id} value={head.id}>
+                                {head.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

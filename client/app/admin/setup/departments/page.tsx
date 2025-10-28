@@ -4,7 +4,41 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Building2,
+  Activity,
+  Settings,
+  Plus,
+  Download,
+  Filter,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { StatsCard } from "@/components/ui/stats-card";
+import { DataTable, Column, FilterState } from "@/components/ui/data-table";
+import {
+  getAll$,
+  getSummary$,
+  toggleActive$,
+} from "@/lib/api/admin/departments/_request";
+import {
+  Department,
+  DepartmentSummary,
+} from "@/lib/api/admin/departments/_model";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,52 +49,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Building2,
-  Users,
-  Activity,
-  Settings,
-  Edit,
-  RotateCcw,
-  Plus,
-  CheckCircle,
-  Stethoscope,
-  Eye,
-  Download,
-  Filter,
-} from "lucide-react";
-import { StatsCard } from "@/components/ui/stats-card";
-import { DataTable, Column, FilterState } from "@/components/ui/data-table";
-import {
-  getAll$,
-  toggleActive$,
-  getSummary$,
-} from "@/lib/api/admin/departments/_request";
-import {
-  Department,
-  DepartmentSummary,
-  STATUS_DESCRIPTIONS,
-  getServiceLineDisplayName,
-} from "@/lib/api/admin/departments/_model";
-
-// Status badge variants
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case "A":
-      return "default"; // Active - green
-    case "X":
-      return "outline"; // Inactive - gray
-    default:
-      return "outline";
-  }
-};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -70,38 +58,31 @@ export default function AdminDepartmentsSetupPage() {
   const [summary, setSummary] = useState<DepartmentSummary>({
     totalDepartments: 0,
     activeDepartments: 0,
-    serviceLineBreakdown: {
-      physiotherapy: 0,
-      occupationalTherapy: 0,
-      speechTherapy: 0,
-      dietetics: 0,
-    },
-    statusBreakdown: {
-      active: 0,
-      inactive: 0,
-    },
-    totalOpenTasks: 0,
-    totalOverdueTasks: 0,
-    totalIncomingReferralsToday: 0,
+    openTasks: 0,
+    overdueTasks: 0,
+    incomingReferrals: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
+    "All"
+  );
   const [actionDialog, setActionDialog] = useState<{
     isOpen: boolean;
     departmentId: string;
     departmentName: string;
-    action: "activate" | "deactivate";
+    action: "delete" | "restore";
+    isHidden: boolean;
   }>({
     isOpen: false,
     departmentId: "",
     departmentName: "",
-    action: "deactivate",
+    action: "delete",
+    isHidden: false,
   });
   const [filters, setFilters] = useState<FilterState>({
     name: "",
-    serviceLine: "all",
-    status: "all",
     headAHP: "all",
     hasOverdueTasks: "all",
     ward: "all",
@@ -118,22 +99,29 @@ export default function AdminDepartmentsSetupPage() {
 
         // Fetch both departments and summary data in parallel
         const [departmentsResponse, summaryResponse] = await Promise.all([
-          getAll$(),
+          getAll$(statusFilter),
           getSummary$(),
         ]);
 
         setDepartments(departmentsResponse.data);
         setSummary(summaryResponse.data);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again.");
+      } catch (err: any) {
         console.error("Error fetching data:", err);
+
+        // Handle specific error messages from API
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch data. Please try again.";
+
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [statusFilter]);
 
   // Define table columns
   const columns: Column<Department>[] = [
@@ -153,134 +141,90 @@ export default function AdminDepartmentsSetupPage() {
       filterable: true,
       filterType: "text",
     },
+    // {
+    //   key: "serviceLine",
+    //   label: "Service Line",
+    //   width: "w-[160px]",
+    //   sortable: true,
+    //   filterable: true,
+    //   filterType: "select",
+    //   filterOptions: [
+    //     { value: "Physiotherapy", label: "Physiotherapy" },
+    //     { value: "Occupational Therapy", label: "Occupational Therapy" },
+    //     { value: "Speech Therapy", label: "Speech Pathology" },
+    //     { value: "Dietetics", label: "Dietitians" },
+    //   ],
+    //   render: (department) => (
+    //     <div className="flex items-center gap-2">
+    //       <Stethoscope className="h-4 w-4 text-muted-foreground" />
+    //       {getServiceLineDisplayName(department.serviceLine)}
+    //     </div>
+    //   ),
+    // },
     {
-      key: "serviceLine",
-      label: "Service Line",
-      width: "w-[160px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Physiotherapy", label: "Physiotherapy" },
-        { value: "Occupational Therapy", label: "Occupational Therapy" },
-        { value: "Speech Therapy", label: "Speech Pathology" },
-        { value: "Dietetics", label: "Dietitians" },
-      ],
-      render: (department) => (
-        <div className="flex items-center gap-2">
-          <Stethoscope className="h-4 w-4 text-muted-foreground" />
-          {getServiceLineDisplayName(department.serviceLine)}
-        </div>
-      ),
-    },
-    {
-      key: "headAHPName",
-      label: "Head AHP",
+      key: "deptHeadName",
+      label: "Dept Head",
       width: "w-[160px]",
       sortable: true,
       filterable: true,
       filterType: "text",
     },
     {
-      key: "activeAHPs",
-      label: "Active AHPs",
-      width: "w-[100px]",
+      key: "activeAssistants",
+      label: "Active Assistants",
+      width: "w-[120px]",
       sortable: true,
-      render: (department) => (
-        <Badge variant="secondary" className="text-xs">
-          {department.activeAHPs}
-        </Badge>
-      ),
-    },
-    {
-      key: "activeAHAs",
-      label: "Active AHAs",
-      width: "w-[100px]",
-      sortable: true,
-      render: (department) => (
-        <Badge variant="secondary" className="text-xs">
-          {department.activeAHAs}
-        </Badge>
-      ),
-    },
-    {
-      key: "coverageWardNames",
-      label: "Coverage Wards",
-      width: "w-[140px]",
-      render: (department) => (
-        <div className="flex flex-wrap gap-1">
-          {department.coverageWardNames?.slice(0, 2).map((ward, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {ward}
-            </Badge>
-          ))}
-          {department.coverageWardNames &&
-            department.coverageWardNames.length > 2 && (
-              <Badge variant="outline" className="text-xs">
-                +{department.coverageWardNames.length - 2}
-              </Badge>
-            )}
-        </div>
-      ),
+      render: (department) => department.activeAssistants,
     },
     {
       key: "openTasks",
-      label: "Open/Overdue Tasks",
-      width: "w-[140px]",
+      label: "Open Tasks",
+      width: "w-[120px]",
       sortable: true,
-      render: (department) => (
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {department.openTasks} open
-          </Badge>
-          {department.overdueTasks > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {department.overdueTasks} overdue
-            </Badge>
-          )}
-        </div>
-      ),
+      render: (department) => department.openTasks,
     },
     {
-      key: "status",
-      label: "Status",
-      width: "w-[100px]",
+      key: "overdueTasks",
+      label: "Overdue Tasks",
+      width: "w-[120px]",
       sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "A", label: "Active" },
-        { value: "X", label: "Inactive" },
-      ],
-      render: (department) => (
-        <Badge
-          variant={getStatusBadgeVariant(department.status)}
-          title={STATUS_DESCRIPTIONS[department.status]}
-        >
-          {department.status === "A" ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      render: (department) => department.overdueTasks,
+    },
+    {
+      key: "lastUpdated",
+      label: "Last Updated",
+      width: "w-[140px]",
+      sortable: true,
+      render: (department) => {
+        if (!department.lastUpdated) {
+          return <span className="text-muted-foreground">Never</span>;
+        }
+        const date = new Date(department.lastUpdated);
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      },
     },
   ];
 
   // Handle department actions
   const handleDepartmentAction = (action: string, departmentId: string) => {
+    const department = departments.find((d) => d.id === departmentId);
+
     switch (action) {
-      case "view":
+      case "edit":
         router.push(`/admin/setup/departments/${departmentId}`);
         break;
-      case "edit":
-        router.push(`/admin/setup/departments/${departmentId}/edit`);
-        break;
-      case "activate":
-      case "deactivate":
-        const dept = departments.find((d) => d.id === departmentId);
-        if (dept) {
+      case "toggle":
+        if (department) {
           setActionDialog({
             isOpen: true,
             departmentId: departmentId,
-            departmentName: dept.name,
-            action: action as "activate" | "deactivate",
+            departmentName: department.name,
+            action: department.hidden ? "restore" : "delete",
+            isHidden: department.hidden,
           });
         }
         break;
@@ -294,37 +238,29 @@ export default function AdminDepartmentsSetupPage() {
     try {
       await toggleActive$(departmentId);
 
-      // Update local state to reflect the change
-      setDepartments((prev) =>
-        prev.map((dept) =>
-          dept.id === departmentId
-            ? { ...dept, status: dept.status === "X" ? "A" : "X" }
-            : dept
-        )
-      );
-
-      // Update summary
-      const updatedSummary = { ...summary };
-      if (actionDialog.action === "activate") {
-        updatedSummary.activeDepartments++;
-        updatedSummary.statusBreakdown.active++;
-        updatedSummary.statusBreakdown.inactive--;
-      } else {
-        updatedSummary.activeDepartments--;
-        updatedSummary.statusBreakdown.active--;
-        updatedSummary.statusBreakdown.inactive++;
-      }
-      setSummary(updatedSummary);
+      // Refresh the department list
+      const response = await getAll$(statusFilter);
+      setDepartments(response.data);
     } catch (err) {
-      setError("Failed to update department status. Please try again.");
-      console.error("Error toggling department status:", err);
+      setError(
+        actionDialog.action === "restore"
+          ? "Failed to restore department. Please try again."
+          : "Failed to hide department. Please try again."
+      );
+      console.error(
+        `Error ${
+          actionDialog.action === "restore" ? "restoring" : "hiding"
+        } department:`,
+        err
+      );
     }
 
     setActionDialog({
       isOpen: false,
       departmentId: "",
       departmentName: "",
-      action: "deactivate",
+      action: "delete",
+      isHidden: false,
     });
   };
 
@@ -332,8 +268,6 @@ export default function AdminDepartmentsSetupPage() {
   const clearAllFilters = () => {
     setFilters({
       name: "",
-      serviceLine: "all",
-      status: "all",
       headAHP: "all",
       hasOverdueTasks: "all",
       ward: "all",
@@ -346,8 +280,6 @@ export default function AdminDepartmentsSetupPage() {
   // Check if filters are active
   const hasActiveFilters =
     filters.name ||
-    filters.serviceLine !== "all" ||
-    filters.status !== "all" ||
     filters.headAHP !== "all" ||
     filters.hasOverdueTasks !== "all" ||
     filters.ward !== "all" ||
@@ -404,7 +336,7 @@ export default function AdminDepartmentsSetupPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Total Departments"
           value={summary.totalDepartments}
@@ -418,28 +350,16 @@ export default function AdminDepartmentsSetupPage() {
           icon={Activity}
         />
         <StatsCard
-          title="Physiotherapy"
-          value={summary.serviceLineBreakdown.physiotherapy}
-          description="Mobility & strength"
-          icon={Users}
+          title="Open Tasks"
+          value={summary.openTasks}
+          description="Departments with pending tasks"
+          icon={Settings}
         />
         <StatsCard
-          title="Occupational Therapy"
-          value={summary.serviceLineBreakdown.occupationalTherapy}
-          description="Function & cognition"
-          icon={Users}
-        />
-        <StatsCard
-          title="Speech Pathology"
-          value={summary.serviceLineBreakdown.speechTherapy}
-          description="Communication & swallowing"
-          icon={Users}
-        />
-        <StatsCard
-          title="Dietitians"
-          value={summary.serviceLineBreakdown.dietetics}
-          description="Nutrition & feeding"
-          icon={Users}
+          title="Overdue Tasks"
+          value={summary.overdueTasks}
+          description="Requires immediate attention"
+          icon={Activity}
         />
       </div>
 
@@ -457,10 +377,21 @@ export default function AdminDepartmentsSetupPage() {
                   Clear Filters
                 </Button>
               )}
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as "All" | "Active" | "Hidden")
+                }
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Hidden">Hidden</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => router.push("/admin/setup/departments/0")}
                 className="bg-primary hover:bg-primary/90"
@@ -481,6 +412,9 @@ export default function AdminDepartmentsSetupPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
+            getRowClassName={(department) =>
+              department.hidden ? "opacity-50 bg-muted/30 line-through" : ""
+            }
             actions={(department) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -491,45 +425,24 @@ export default function AdminDepartmentsSetupPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() =>
-                      handleDepartmentAction("view", department.id)
-                    }
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
                       handleDepartmentAction("edit", department.id)
                     }
                   >
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    Edit Department
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() =>
-                      handleDepartmentAction(
-                        department.status === "X" ? "activate" : "deactivate",
-                        department.id
-                      )
+                      handleDepartmentAction("toggle", department.id)
                     }
                     className={
-                      department.status === "X"
-                        ? "text-green-600"
-                        : "text-destructive"
+                      department.hidden ? "text-green-600" : "text-destructive"
                     }
                   >
-                    {department.status === "X" ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Activate
-                      </>
-                    ) : (
-                      <>
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Deactivate
-                      </>
-                    )}
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {department.hidden
+                      ? "Restore Department"
+                      : "Delete Department"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -547,7 +460,8 @@ export default function AdminDepartmentsSetupPage() {
               isOpen: false,
               departmentId: "",
               departmentName: "",
-              action: "deactivate",
+              action: "delete",
+              isHidden: false,
             });
           }
         }}
@@ -555,14 +469,14 @@ export default function AdminDepartmentsSetupPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionDialog.action === "activate"
-                ? "Activate Department"
-                : "Deactivate Department"}
+              {actionDialog.action === "restore"
+                ? "Restore Department"
+                : "Delete Department"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionDialog.action === "activate"
-                ? `Are you sure you want to activate "${actionDialog.departmentName}"? This will make the department operational and available for referrals.`
-                : `Are you sure you want to deactivate "${actionDialog.departmentName}"? This will mark the department as inactive and prevent new referrals.`}
+              {actionDialog.action === "restore"
+                ? `Are you sure you want to restore "${actionDialog.departmentName}"? This will make the department visible again.`
+                : `Are you sure you want to delete "${actionDialog.departmentName}"? This action will hide the department.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -570,14 +484,14 @@ export default function AdminDepartmentsSetupPage() {
             <AlertDialogAction
               onClick={handleConfirmedAction}
               className={
-                actionDialog.action === "activate"
+                actionDialog.action === "restore"
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >
-              {actionDialog.action === "activate"
-                ? "Activate Department"
-                : "Deactivate Department"}
+              {actionDialog.action === "restore"
+                ? "Restore Department"
+                : "Hide Department"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -4,14 +4,17 @@
 export interface Patient {
   id: string;
   fullName: string;
-  mrn: string; // Medical Record Number (3-20 alnum + hyphen)
+  age: number;
   dateOfBirth?: string; // Optional but recommended
-  gender: "Female" | "Male" | "Other" | "PreferNotSay";
+  gender: number; // 0 = Male, 1 = Female, 2 = Other
   primaryPhone?: string; // E.164 format
+  email?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string; // E.164 format
+  emergencyContactEmail?: string;
   // Computed fields
   activeTasks: number; // Count of tasks with status in [NotAssigned, Assigned, InProgress]
+  hidden: boolean; // Whether the patient is hidden
   lastUpdated: string; // ISO timestamp
   createdAt: string;
   updatedAt: string;
@@ -20,17 +23,19 @@ export interface Patient {
 export interface PatientFormData {
   id?: string | null;
   fullName: string;
-  mrn: string;
+  // mrn: string;
   dateOfBirth?: string;
-  gender: "Female" | "Male" | "Other" | "PreferNotSay";
+  gender: number; // 0 = Male, 1 = Female, 2 = Other
   primaryPhone?: string;
+  email?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  emergencyContactEmail?: string;
 }
 
 export interface PatientSummary {
   totalPatients: number;
-  newPatientsToday: number;
+  newPatients: number;
   activeTasks: number;
   completedTasks: number;
 }
@@ -76,6 +81,17 @@ export const GENDER_OPTIONS = [
   { value: 1, label: "Female" },
   { value: 2, label: "Other" },
 ] as const;
+
+// Helper functions to convert between gender number and label
+export const getGenderLabel = (gender: number): string => {
+  const option = GENDER_OPTIONS.find(opt => opt.value === gender);
+  return option?.label || "Other";
+};
+
+export const getGenderValue = (label: string): number => {
+  const option = GENDER_OPTIONS.find(opt => opt.label === label);
+  return option?.value ?? 0;
+};
 
 // Task status options
 export const TASK_STATUS_OPTIONS = [

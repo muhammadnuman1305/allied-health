@@ -17,6 +17,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P2",
     interventions: ["Mobilisation", "Cognitive Assessment"],
     status: "A",
+    originDepartment: "Geriatrics",
+    destinationDepartment: "Physiotherapy",
+    triageStatus: "accepted",
     notes: "Patient requires assistance with daily activities",
     dementiaNotes: "Moderate dementia, responsive to familiar faces",
     createdAt: "2024-01-16T09:00:00Z",
@@ -37,6 +40,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P1",
     interventions: ["Articulation Therapy", "Function Retraining"],
     status: "A",
+    originDepartment: "Stroke",
+    destinationDepartment: "Speech Pathology",
+    triageStatus: "accepted",
     notes: "High priority - significant communication difficulties",
     limbWeakness: "Right side weakness, moderate severity",
     communicationChallenges: "Expressive aphasia, understands well",
@@ -58,6 +64,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P2",
     interventions: ["Mobilisation", "Strength Training"],
     status: "A",
+    originDepartment: "Orthopaedic",
+    destinationDepartment: "Physiotherapy",
+    triageStatus: "accepted",
     notes: "Post-operative day 3, cleared for mobilisation",
     weightBearingTolerance: "Partial weight bearing - 50%",
     createdAt: "2024-01-14T11:15:00Z",
@@ -78,6 +87,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P3",
     interventions: ["Nutrition Screening", "Feeding Support"],
     status: "S",
+    originDepartment: "Geriatrics",
+    destinationDepartment: "Dietitians",
+    triageStatus: "accepted",
     notes: "Nutrition goals achieved, ready for discharge",
     outcomeNotes: "Patient achieved target weight and improved nutritional status",
     completedDate: "2024-01-16",
@@ -99,6 +111,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P1",
     interventions: ["Respiratory Physiotherapy", "Activities of Daily Living"],
     status: "A",
+    originDepartment: "Cardiology",
+    destinationDepartment: "Physiotherapy",
+    triageStatus: "accepted",
     notes: "Recent MI, requires cardiac rehabilitation",
     createdAt: "2024-01-16T13:20:00Z",
     updatedAt: "2024-01-16T13:20:00Z"
@@ -118,6 +133,9 @@ const MOCK_REFERRALS: Referral[] = [
     priority: "P1",
     interventions: ["Swallowing Assessment", "Voice Therapy"],
     status: "A",
+    originDepartment: "Stroke",
+    destinationDepartment: "Speech Pathology",
+    triageStatus: "pending",
     notes: "Additional speech therapy referral for swallowing difficulties",
     communicationChallenges: "Dysphagia concerns, requires assessment",
     createdAt: "2024-01-17T10:00:00Z",
@@ -146,7 +164,8 @@ const MOCK_SUMMARY: ReferralSummary = {
     cancelled: 3
   },
   pendingOutcomes: 32,
-  completedReferrals: 13
+  completedReferrals: 13,
+  pendingTriage: 3
 };
 
 // Simulate API delay
@@ -198,6 +217,7 @@ export const create$ = async (referral: ReferralFormData): Promise<{ data: Refer
     ...referral,
     ...patientInfo,
     id: `ref-${Math.random().toString(36).substr(2, 9)}`,
+    triageStatus: referral.triageStatus || "pending",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -208,6 +228,9 @@ export const create$ = async (referral: ReferralFormData): Promise<{ data: Refer
 
 export const update$ = async (referral: ReferralFormData): Promise<{ data: Referral }> => {
   await delay(800);
+  if (!referral.id) {
+    throw new Error("Referral ID is required for update");
+  }
   const index = MOCK_REFERRALS.findIndex(r => r.id === referral.id);
   if (index === -1) {
     throw new Error("Referral not found");
@@ -216,6 +239,8 @@ export const update$ = async (referral: ReferralFormData): Promise<{ data: Refer
   const updatedReferral: Referral = {
     ...MOCK_REFERRALS[index],
     ...referral,
+    id: referral.id,
+    triageStatus: referral.triageStatus || MOCK_REFERRALS[index].triageStatus,
     updatedAt: new Date().toISOString()
   };
   

@@ -1,14 +1,15 @@
 import { Suspense } from "react";
-import PatientFormContent from "./user-form-content";
+import PatientFormContent from "./patient-form-content";
 
 export default async function PatientFormPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <PatientFormContent patientId={params?.id} />
+      <PatientFormContent patientId={id} />
     </Suspense>
   );
 }

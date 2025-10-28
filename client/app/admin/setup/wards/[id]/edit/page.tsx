@@ -1,11 +1,12 @@
 import WardFormContent from "../ward-form-content";
 
 interface EditWardPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function EditWardPage({ params }: EditWardPageProps) {
-  return <WardFormContent wardId={params.id} isEdit={true} />;
+export default async function EditWardPage({ params }: EditWardPageProps) {
+  const { id } = await params;
+  return <WardFormContent wardId={id} isEdit={true} />;
 }

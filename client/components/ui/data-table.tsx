@@ -65,6 +65,7 @@ interface DataTableProps<T> {
   totalItems?: number;
   loading?: boolean;
   actions?: (item: T) => React.ReactNode;
+  getRowClassName?: (item: T) => string;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -78,6 +79,7 @@ export function DataTable<T extends Record<string, any>>({
   totalItems,
   loading = false,
   actions,
+  getRowClassName,
 }: DataTableProps<T>) {
   const [pendingFilters, setPendingFilters] = useState<Record<string, string>>(
     {}
@@ -233,18 +235,37 @@ export function DataTable<T extends Record<string, any>>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedData.map((item, index) => (
-            <TableRow key={item.id || index}>
-              {columns.map((column) => (
-                <TableCell key={String(column.key)}>
-                  {column.render
-                    ? column.render(item)
-                    : String(item[column.key] || "")}
-                </TableCell>
-              ))}
-              {actions && <TableCell>{actions(item)}</TableCell>}
+          {paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={columns.length + (actions ? 1 : 0)}
+                className="text-center py-10"
+              >
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <span className="text-sm font-medium">No records found</span>
+                  <span className="text-xs mt-1">
+                    Try adjusting your filters or add new data
+                  </span>
+                </div>
+              </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            paginatedData.map((item, index) => (
+              <TableRow
+                key={item.id || index}
+                className={getRowClassName ? getRowClassName(item) : undefined}
+              >
+                {columns.map((column) => (
+                  <TableCell key={String(column.key)}>
+                    {column.render
+                      ? column.render(item)
+                      : String(item[column.key] || "")}
+                  </TableCell>
+                ))}
+                {actions && <TableCell>{actions(item)}</TableCell>}
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
 

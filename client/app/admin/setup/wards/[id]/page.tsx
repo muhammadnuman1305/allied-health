@@ -5,7 +5,18 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Bed,
   Users,
@@ -13,6 +24,7 @@ import {
   Settings,
   Edit,
   Plus,
+  Minus,
   ArrowLeft,
   MapPin,
   Building2,
@@ -24,6 +36,17 @@ import {
 import { StatsCard } from "@/components/ui/stats-card";
 import { getById$ } from "@/lib/api/admin/wards/_request";
 import { Ward, getWardLocationDisplayName } from "@/lib/api/admin/wards/_model";
+import {
+  getMatrix$,
+  addMapping$,
+  removeMapping$,
+  validateRemoval$,
+} from "@/lib/api/admin/coverage/_request";
+import {
+  CoverageMatrix,
+  CoverageValidation,
+} from "@/lib/api/admin/coverage/_model";
+import { toast } from "@/hooks/use-toast";
 
 export default function WardDetailPage() {
   const router = useRouter();
@@ -33,6 +56,43 @@ export default function WardDetailPage() {
   const [ward, setWard] = useState<Ward | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [coverageMatrix, setCoverageMatrix] = useState<CoverageMatrix | null>(
+    null
+  );
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [validationDialog, setValidationDialog] = useState<{
+    isOpen: boolean;
+    departmentId: string;
+    wardId: string;
+    validation: CoverageValidation | null;
+  }>({
+    isOpen: false,
+    departmentId: "",
+    wardId: "",
+    validation: null,
+  });
+
+  // Load coverage data
+  useEffect(() => {
+    const fetchCoverageData = async () => {
+      try {
+        setCoverageLoading(true);
+        const response = await getMatrix$();
+        setCoverageMatrix(response.data);
+      } catch (error) {
+        console.error("Error fetching coverage data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load coverage data",
+          variant: "destructive",
+        });
+      } finally {
+        setCoverageLoading(false);
+      }
+    };
+
+    fetchCoverageData();
+  }, []);
 
   useEffect(() => {
     const fetchWard = async () => {
@@ -57,6 +117,111 @@ export default function WardDetailPage() {
 
     fetchWard();
   }, [wardId, router]);
+
+  // Coverage management functions
+  const isCoverageActive = (departmentId: string) => {
+    if (!coverageMatrix || wardId === "0") return false;
+    return coverageMatrix.mappings.some(
+      (mapping) =>
+        mapping.departmentId === departmentId && mapping.wardId === wardId
+    );
+  };
+
+  const handleCoverageToggle = async (departmentId: string) => {
+    if (wardId === "0") return; // Can't manage coverage for new wards
+
+    const isActive = isCoverageActive(departmentId);
+
+    if (isActive) {
+      // Validate removal
+      try {
+        const validation = await validateRemoval$(departmentId, wardId);
+
+        if (!validation.data.canRemove) {
+          setValidationDialog({
+            isOpen: true,
+            departmentId,
+            wardId,
+            validation: validation.data,
+          });
+          return;
+        }
+
+        // Remove coverage
+        await removeMapping$(departmentId, wardId);
+
+        // Update local state
+        setCoverageMatrix((prev) =>
+          prev
+            ? {
+                ...prev,
+                mappings: prev.mappings.filter(
+                  (mapping) =>
+                    !(
+                      mapping.departmentId === departmentId &&
+                      mapping.wardId === wardId
+                    )
+                ),
+              }
+            : null
+        );
+
+        toast({
+          title: "Success",
+          description: "Coverage removed successfully",
+        });
+      } catch (error) {
+        console.error("Error removing coverage:", error);
+        toast({
+          title: "Error",
+          description: "Failed to remove coverage",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Add coverage
+      try {
+        await addMapping$({ departmentId, wardId });
+
+        // Update local state
+        setCoverageMatrix((prev) =>
+          prev
+            ? {
+                ...prev,
+                mappings: [
+                  ...prev.mappings,
+                  {
+                    id: `${departmentId}-${wardId}`,
+                    departmentId,
+                    departmentName:
+                      coverageMatrix?.departments.find(
+                        (d) => d.id === departmentId
+                      )?.name || "",
+                    wardId,
+                    wardName: ward?.name || "",
+                    isDefault: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  },
+                ],
+              }
+            : null
+        );
+
+        toast({
+          title: "Success",
+          description: "Coverage added successfully",
+        });
+      } catch (error) {
+        console.error("Error adding coverage:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add coverage",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -131,7 +296,8 @@ export default function WardDetailPage() {
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1">
-              {getWardLocationDisplayName(ward.location)} • {ward.bedCount} beds
+              {getWardLocationDisplayName(ward.location as any)} •{" "}
+              {ward.bedCount} beds
             </p>
           </div>
         </div>
@@ -167,7 +333,7 @@ export default function WardDetailPage() {
           value={ward.overdueTasks}
           description="Requiring attention"
           icon={AlertTriangle}
-          className={ward.overdueTasks > 0 ? "border-destructive" : ""}
+          variant={ward.overdueTasks > 0 ? "destructive" : "default"}
         />
         <StatsCard
           title="Coverage Departments"
@@ -204,7 +370,9 @@ export default function WardDetailPage() {
                   </label>
                   <div className="flex items-center gap-2 mt-1">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{getWardLocationDisplayName(ward.location)}</span>
+                    <span>
+                      {getWardLocationDisplayName(ward.location as any)}
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -231,22 +399,66 @@ export default function WardDetailPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
                   Coverage Departments
+                  <Badge variant="outline" className="text-xs">
+                    {coverageMatrix?.mappings.filter((m) => m.wardId === wardId)
+                      .length || 0}{" "}
+                    assigned
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {ward.coverageDepartmentNames &&
-                ward.coverageDepartmentNames.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {ward.coverageDepartmentNames.map((dept, index) => (
-                      <Badge key={index} variant="secondary">
-                        {dept}
-                      </Badge>
-                    ))}
+                {coverageLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      Loading departments...
+                    </span>
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">
-                    No departments assigned for coverage
-                  </p>
+                  <div className="space-y-2">
+                    {coverageMatrix?.departments.map((dept) => {
+                      const isCovered = isCoverageActive(dept.id);
+                      return (
+                        <div
+                          key={dept.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            isCovered
+                              ? "bg-green-50 border-green-200"
+                              : "hover:bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={isCovered}
+                              onCheckedChange={() =>
+                                handleCoverageToggle(dept.id)
+                              }
+                            />
+                            <div>
+                              <div className="font-medium text-sm">
+                                {dept.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {dept.serviceLine} • {dept.code}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant={isCovered ? "destructive" : "default"}
+                            onClick={() => handleCoverageToggle(dept.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            {isCovered ? (
+                              <Minus className="h-4 w-4" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -381,6 +593,49 @@ export default function WardDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Validation Dialog */}
+      <AlertDialog
+        open={validationDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setValidationDialog({
+              isOpen: false,
+              departmentId: "",
+              wardId: "",
+              validation: null,
+            });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cannot Remove Coverage
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {validationDialog.validation?.reason ||
+                "This coverage cannot be removed due to existing dependencies."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setValidationDialog({
+                  isOpen: false,
+                  departmentId: "",
+                  wardId: "",
+                  validation: null,
+                });
+              }}
+            >
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

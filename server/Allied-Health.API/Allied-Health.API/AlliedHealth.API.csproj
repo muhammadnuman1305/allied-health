@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\AlliedHealth.Model\AlliedHealth.Domain.csproj" />
+      <ProjectReference Include="..\AlliedHealth.Domain\AlliedHealth.Domain.csproj" />
       <ProjectReference Include="..\AlliedHealth.Service\AlliedHealth.Service.csproj" />
     </ItemGroup>
 

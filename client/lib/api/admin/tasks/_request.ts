@@ -229,7 +229,7 @@ export const create$ = async (task: TaskFormData): Promise<{ data: Task }> => {
   
   // Determine status based on assignment
   let status: Task["status"] = "Not Assigned";
-  if (task.assignedToStaff || task.assignedToDepartment) {
+  if (task.assignedToDepartment) {
     status = "Assigned";
   }
   

@@ -2,7 +2,7 @@
 using AlliedHealth.Common.Helpers;
 using AlliedHealth.Domain;
 using AlliedHealth.Domain.DTOs;
-using AlliedHealth.Model.Entities;
+using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract.Authentication;
 using AlliedHealth.Service.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +25,7 @@ namespace AlliedHealth.Service.Implementation.Authentication
         {
             var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Username == request.Username);
 
-            if (user == null || user.Password == null || user.Hidden || request.IsAdmin != user.IsAdmin)
+            if (user == null || user.Password == null || user.Hidden || request.Role != user.Role)
                 return (null, EMessages.UserNotExists);
 
             var isValidPassword = PasswordHelper.VerifyPassword(request.Password, user.Password);
@@ -41,8 +41,7 @@ namespace AlliedHealth.Service.Implementation.Authentication
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = await TokenHelper.GenerateAccessToken(user, _configuration),
-                IsAdmin = user.IsAdmin,
-                Role = user.Role
+                Role = user.Role,
             };
 
             return (payload, null);

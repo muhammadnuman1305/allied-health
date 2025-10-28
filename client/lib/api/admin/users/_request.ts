@@ -1,9 +1,5 @@
 import api from "../../axios";
 import { UserFormData } from "./_model";
-import { getUser } from "@/lib/auth-utils";
-
-var accessToken = getUser()?.accessToken;
-api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 const BASE_URL = "/api/user";
 
 export const getAll$ = async () => {

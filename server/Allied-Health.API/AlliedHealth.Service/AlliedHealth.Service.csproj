@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AlliedHealth.Common\AlliedHealth.Common.csproj" />
-    <ProjectReference Include="..\AlliedHealth.Model\AlliedHealth.Domain.csproj" />
+    <ProjectReference Include="..\AlliedHealth.Domain\AlliedHealth.Domain.csproj" />
   </ItemGroup>
 
 </Project>

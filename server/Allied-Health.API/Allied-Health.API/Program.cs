@@ -29,6 +29,8 @@ builder.Services.AddScoped<IPrincipal>(provider =>
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPatientService, PatientService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 // Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -100,7 +102,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AlliedHealthDbContext>();
-    db.Database.Migrate();
+    //db.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

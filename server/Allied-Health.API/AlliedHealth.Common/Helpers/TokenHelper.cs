@@ -1,4 +1,5 @@
-﻿using AlliedHealth.Model.Entities;
+﻿using AlliedHealth.Common.Enums;
+using AlliedHealth.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -21,7 +22,11 @@ namespace AlliedHealth.Common.Helpers
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Role, user.IsAdmin ? "Admin" : "User"),
+                    new Claim(ClaimTypes.Role, user.Role == (int)UserRoles.Assistant 
+                                                ? "Assistant" 
+                                                : user.Role == (int)UserRoles.Professional 
+                                                    ? "Professional"
+                                                    : "SuperAdmin"),
                     new Claim("Role", user.Role.ToString())
                 };
 

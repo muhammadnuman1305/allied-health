@@ -1,7 +1,7 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
 using AlliedHealth.Domain.DTOs;
-using AlliedHealth.Model.Entities;
+using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
 using AlliedHealth.Service.Helpers;
@@ -34,8 +34,7 @@ namespace AlliedHealth.Service.Implementation
                                 LastName = t.LastName,
                                 Username = t.Username,
                                 Email = t.Email,
-                                Role = t.IsAdmin ? 3 : t.Role,
-                                IsAdmin = t.IsAdmin,
+                                Role = t.Role,
                                 Hidden = t.Hidden,
                             }).AsQueryable();
 
@@ -52,7 +51,7 @@ namespace AlliedHealth.Service.Implementation
                                  TotalUsers = g.Count(),
                                  TotalProfessionals = g.Count(u => u.Role == (int)UserRoles.Professional),
                                  TotalAssistants = g.Count(u => u.Role == (int)UserRoles.Assistant),
-                                 TotalAdmins = g.Count(u => u.IsAdmin)
+                                 TotalAdmins = g.Count(u => u.Role == (int)UserRoles.SuperAdmin)
                              }).FirstOrDefaultAsync();
 
             return summary ?? new GetUserSummaryDTO();
@@ -70,7 +69,6 @@ namespace AlliedHealth.Service.Implementation
                               Username = t.Username,
                               Email = t.Email,
                               Role = t.Role,
-                              IsAdmin = t.IsAdmin,
                               Hidden = t.Hidden,
                           }).FirstOrDefaultAsync();
 
@@ -93,7 +91,6 @@ namespace AlliedHealth.Service.Implementation
                 Email = request.Email,
                 Password = PasswordHelper.HashPassword(request.Password),
                 Role = request.Role,
-                IsAdmin = request.IsAdmin,
                 Hidden = false
             };
 

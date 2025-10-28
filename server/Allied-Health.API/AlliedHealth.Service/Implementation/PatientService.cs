@@ -1,10 +1,9 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
 using AlliedHealth.Domain.DTOs;
-using AlliedHealth.Model.Entities;
+using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
-using AlliedHealth.Service.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -23,112 +22,115 @@ namespace AlliedHealth.Service.Implementation
             _userContext = userContext;
         }
 
-        public IQueryable<GetUserDTO> GetAll()
+        public IQueryable<GetPatientDTO> GetAll()
         {
-            var users = _dbContext.Users
+            var patientsList = _dbContext.Patients
                             //.Where(t => t.Id != _userContext.UserId)
-                            .Select(t => new GetUserDTO
+                            .Select(t => new GetPatientDTO
                             {
                                 Id = t.Id,
-                                FirstName = t.FirstName,
-                                LastName = t.LastName,
-                                Username = t.Username,
-                                Email = t.Email,
-                                Role = t.IsAdmin ? 3 : t.Role,
-                                IsAdmin = t.IsAdmin,
-                                Hidden = t.Hidden,
+                                FullName = t.FullName,
+                                Age = DateTime.Now.Year - t.DateOfBirth.Year,
+                                Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",
+                                LastUpdated = t.LastModifiedDate,
+                                Hidden = t.Hidden
                             }).AsQueryable();
 
-            return users;
+            return patientsList;
         }
 
-        public async Task<GetUserSummaryDTO> GetSummary()
+        public async Task<GetPatientSummaryDTO> GetSummary()
         {
-            var summary = await _dbContext.Users
+            var summary = await _dbContext.Patients
                              .Where(u => u.Hidden != true)
                              .GroupBy(u => 1)
-                             .Select(g => new GetUserSummaryDTO
+                             .Select(g => new GetPatientSummaryDTO
                              {
-                                 TotalUsers = g.Count(),
-                                 TotalProfessionals = g.Count(u => u.Role == (int)UserRoles.Professional),
-                                 TotalAssistants = g.Count(u => u.Role == (int)UserRoles.Assistant),
-                                 TotalAdmins = g.Count(u => u.IsAdmin)
+                                    TotalPatients = g.Count(),
+                                    NewPatients = g.Count(u => u.CreatedDate >= DateTime.UtcNow.AddDays(-7)),
+                                    ActiveTasks = g.Sum(u => u.Tasks.Count(t => t.Status == (int)ETaskStatus.Active)),
+                                    CompletedTasks = g.Sum(u => u.Tasks.Count(t => t.Status == (int)ETaskStatus.Completed))
                              }).FirstOrDefaultAsync();
 
-            return summary ?? new GetUserSummaryDTO();
+            return summary ?? new GetPatientSummaryDTO();
         }
 
-        public async Task<GetUserDTO> GetUser(Guid id)
+        public async Task<GetPatientDetailsDTO> GetPatient(int id)
         {
-            var user = await _dbContext.Users
+            var patient = await _dbContext.Patients
                           .Where(t => t.Id == id)
-                          .Select(t => new GetUserDTO
+                          .Select(t => new GetPatientDetailsDTO
                           {
                               Id = t.Id,
-                              FirstName = t.FirstName,
-                              LastName = t.LastName,
-                              Username = t.Username,
+                              FullName = t.FullName,
                               Email = t.Email,
-                              Role = t.Role,
-                              IsAdmin = t.IsAdmin,
-                              Hidden = t.Hidden,
+                              Gender = t.Gender,
+                              DateOfBirth = t.DateOfBirth,
+                              PrimaryPhone = t.PrimaryPhone,
+                              EmergencyContactName = t.EmergencyContactName,
+                              EmergencyContactPhone = t.EmergencyContactPhone,
+                              EmergencyContactEmail = t.EmergencyContactEmail
                           }).FirstOrDefaultAsync();
 
-            return user;
+            return patient;
         }
 
-        public async Task<string?> CreateUser(AddUpdateUserDTO request)
+        public async Task<string?> CreatePatient(AddUpdatePatientDTO request)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Username == request.Username);
+            var patient = await _dbContext.Patients.FirstOrDefaultAsync(t => t.Email == request.Email);
 
-            if (user != null)
-                return EMessages.UserExistAlready;
+            if (patient != null)
+                return EMessages.PatientExistAlready;
 
-            var newUser = new User
+            var newPatient = new Patient
             {
-                Id = Guid.NewGuid(),
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                Username= request.Username,
+                FullName = request.FullName,
                 Email = request.Email,
-                Password = PasswordHelper.HashPassword(request.Password),
-                Role = request.Role,
-                IsAdmin = request.IsAdmin,
+                Gender = request.Gender,
+                DateOfBirth = request.DateOfBirth,
+                PrimaryPhone = request.PrimaryPhone,
+                EmergencyContactName = request.EmergencyContactName,
+                EmergencyContactPhone = request.EmergencyContactPhone,
+                EmergencyContactEmail = request.EmergencyContactEmail,
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = _userContext.UserId,
                 Hidden = false
             };
 
-            await _dbContext.Users.AddAsync(newUser);
+            await _dbContext.Patients.AddAsync(newPatient);
             await _dbContext.SaveChangesAsync();
 
             return null;
         }
 
-        public async Task<string?> UpdateUser(AddUpdateUserDTO request)
+        public async Task<string?> UpdatePatient(AddUpdatePatientDTO request)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Id == request.Id);
+            var patient = await _dbContext.Patients.FirstOrDefaultAsync(t => t.Id == request.Id);
 
-            if (user == null)
-                return EMessages.UserNotExists;
+            if (patient == null)
+                return EMessages.PatientNotExists;
 
-            user.FirstName = request.FirstName;
-            user.LastName = request.LastName;
-            user.Email = request.Email;
-            user.Password = request.Password == null ? user.Password : PasswordHelper.HashPassword(request.Password);
-            user.Role = request.Role;
+            patient.FullName = request.FullName;
+            patient.Gender = request.Gender;
+            patient.DateOfBirth = request.DateOfBirth;
+            patient.PrimaryPhone = request.PrimaryPhone;
+            patient.EmergencyContactName = request.EmergencyContactName;
+            patient.EmergencyContactPhone = request.EmergencyContactPhone;
+            patient.EmergencyContactEmail = request.EmergencyContactEmail;
 
             await _dbContext.SaveChangesAsync();
 
             return null;
         }
 
-        public async Task<string?> ToggleHide(Guid id)
+        public async Task<string?> ToggleHide(int id)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Id == id);
+            var patient = await _dbContext.Patients.FirstOrDefaultAsync(t => t.Id == id);
 
-            if (user == null)
-                return EMessages.UserNotExists;
+            if (patient == null)
+                return EMessages.PatientNotExists;
 
-            user.Hidden = !user.Hidden;
+            patient.Hidden = !patient.Hidden;
             await _dbContext.SaveChangesAsync();
 
             return null;

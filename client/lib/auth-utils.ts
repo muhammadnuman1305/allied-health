@@ -5,8 +5,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   accessToken: string;
-  role: string;
-  isAdmin: boolean;
+  role: number;
 }
 
 export function getUser(): UserData | null {
@@ -19,7 +18,7 @@ export function getUser(): UserData | null {
     const user = JSON.parse(userStr);
     
     // Validate required fields
-    if (!user.accessToken || typeof user.isAdmin !== 'boolean') {
+    if (!user.accessToken || typeof user.role !== 'number') {
       return null;
     }
     
@@ -35,12 +34,12 @@ export function isAuthenticated(): boolean {
 
 export function isAdmin(): boolean {
   const user = getUser();
-  return user?.isAdmin === true;
+  return user?.role === 2;
 }
 
 export function isUser(): boolean {
   const user = getUser();
-  return user?.isAdmin === false;
+  return user?.role === 1;
 }
 
 export function clearAuth(): void {
@@ -53,5 +52,5 @@ export function redirectBasedOnRole(): string {
   const user = getUser();
   if (!user) return '/login';
   
-  return user.isAdmin ? '/admin/dashboard' : '/dashboard';
+  return user.role === 2 ? '/admin/dashboard' : '/dashboard';
 }

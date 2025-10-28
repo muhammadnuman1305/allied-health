@@ -1,204 +1,120 @@
-import { Patient, PatientFormData, PatientSummary, PatientTask, PatientReferral, PatientFeedback } from "./_model";
+import { Patient, PatientFormData, PatientSummary, PatientTask, PatientReferral, PatientFeedback, getGenderValue } from "./_model";
+import api from "../../axios";
 
-// Helper function to calculate age from date of birth
-const calculateAge = (dateOfBirth: string): number => {
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
+const BASE_URL = "/api/patient";
+
+// Helper to convert string IDs to numbers for backend API
+const toIntId = (id: string | undefined | null): number | undefined => {
+  if (!id) return undefined;
+  const numId = parseInt(id, 10);
+  return isNaN(numId) ? undefined : numId;
 };
 
-// Mock data for development
-const MOCK_PATIENTS: Patient[] = [
-  {
-    id: "1",
-    fullName: "John Smith",
-    mrn: "MRN001234",
-    dateOfBirth: "1949-03-15",
-    gender: "Male",
-    primaryPhone: "+447700900123",
-    emergencyContactName: "Sarah Smith",
-    emergencyContactPhone: "+447700900456",
-    activeTasks: 3,
-    lastUpdated: "2024-10-18T14:30:00Z",
-    createdAt: "2024-01-16T09:00:00Z",
-    updatedAt: "2024-10-18T14:30:00Z"
-  },
-  {
-    id: "2",
-    fullName: "Mary Johnson",
-    mrn: "MRN001235",
-    dateOfBirth: "1956-07-22",
-    gender: "Female",
-    primaryPhone: "+447700900789",
-    emergencyContactName: "Robert Johnson",
-    emergencyContactPhone: "+447700900012",
-    activeTasks: 5,
-    lastUpdated: "2024-10-19T09:15:00Z",
-    createdAt: "2024-01-15T14:30:00Z",
-    updatedAt: "2024-10-19T09:15:00Z"
-  },
-  {
-    id: "3",
-    fullName: "Robert Davis",
-    mrn: "MRN001236",
-    dateOfBirth: "1942-11-08",
-    gender: "Male",
-    primaryPhone: "+447700900345",
-    emergencyContactName: "Margaret Davis",
-    emergencyContactPhone: "+447700900678",
-    activeTasks: 2,
-    lastUpdated: "2024-10-17T16:45:00Z",
-    createdAt: "2024-01-14T11:15:00Z",
-    updatedAt: "2024-10-17T16:45:00Z"
-  },
-  {
-    id: "4",
-    fullName: "Elizabeth Wilson",
-    mrn: "MRN001237",
-    dateOfBirth: "1945-05-30",
-    gender: "Female",
-    primaryPhone: "+447700900901",
-    emergencyContactName: "James Wilson",
-    emergencyContactPhone: "+447700900234",
-    activeTasks: 0,
-    lastUpdated: "2024-10-16T11:20:00Z",
-    createdAt: "2024-01-13T08:45:00Z",
-    updatedAt: "2024-10-16T11:20:00Z"
-  },
-  {
-    id: "5",
-    fullName: "William Anderson",
-    mrn: "MRN001238",
-    dateOfBirth: "1953-09-12",
-    gender: "Male",
-    primaryPhone: "+447700900567",
-    emergencyContactName: "Linda Anderson",
-    emergencyContactPhone: "+447700900890",
-    activeTasks: 4,
-    lastUpdated: "2024-10-19T10:00:00Z",
-    createdAt: "2024-01-16T13:20:00Z",
-    updatedAt: "2024-10-19T10:00:00Z"
-  },
-  {
-    id: "6",
-    fullName: "Patricia Brown",
-    mrn: "MRN001239",
-    dateOfBirth: "1960-12-03",
-    gender: "Female",
-    activeTasks: 1,
-    lastUpdated: "2024-10-18T08:30:00Z",
-    createdAt: "2024-02-10T10:00:00Z",
-    updatedAt: "2024-10-18T08:30:00Z"
-  }
-];
-
-const MOCK_SUMMARY: PatientSummary = {
-  totalPatients: 6,
-  newPatientsToday: 2,
-  activeTasks: 15,
-  completedTasks: 42
+// Helper to convert numeric ID to string for frontend
+const toStringId = (id: number | string): string => {
+  if (typeof id === 'number') return id.toString();
+  return id;
 };
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-export const getAll$ = async (): Promise<{ data: Patient[] }> => {
-  await delay(500);
-  return { data: MOCK_PATIENTS };
+// Helper to convert gender string/number to number
+const convertGenderToNumber = (gender: any): number => {
+  if (typeof gender === 'number') {
+    return gender;
+  }
+  if (typeof gender === 'string') {
+    return getGenderValue(gender);
+  }
+  return 0; // Default to Male
 };
 
-export const getById$ = async (id: any): Promise<{ data: Patient }> => {
-  await delay(300);
-  const patient = MOCK_PATIENTS.find(p => p.id === id);
-  if (!patient) {
-    throw new Error("Patient not found");
+export const getAll$ = async (hiddenFilter?: "All" | "Hidden" | "Active"): Promise<{ data: Patient[] }> => {
+  let url = BASE_URL;
+  
+  // Add OData filter for hidden status
+  if (hiddenFilter && hiddenFilter !== "All") {
+    const filterValue = hiddenFilter === "Hidden" ? "true" : "false";
+    url = `${BASE_URL}?$filter=hidden eq ${filterValue}`;
   }
-  return { data: patient };
+  
+  const response = await api.get<Patient[]>(url);
+  // Convert backend data to ensure IDs are strings and gender is number
+  const data = response.data.map(patient => ({
+    ...patient,
+    id: toStringId(patient.id),
+    gender: convertGenderToNumber(patient.gender)
+  }));
+  return { data };
+};
+
+export const getById$ = async (id: string): Promise<{ data: Patient }> => {
+  const response = await api.get<Patient>(`${BASE_URL}/${id}`);
+  // Convert ID to string and ensure gender is number
+  return { 
+    data: {
+      ...response.data,
+      id: toStringId(response.data.id),
+      gender: convertGenderToNumber(response.data.gender)
+    }
+  };
 };
 
 export const getSummary$ = async (): Promise<{ data: PatientSummary }> => {
-  await delay(200);
-  return { data: MOCK_SUMMARY };
+  const response = await api.get<PatientSummary>(`${BASE_URL}/summary`);
+  return response;
 };
 
 export const create$ = async (patient: PatientFormData): Promise<{ data: Patient }> => {
-  await delay(800);
-  const newPatient: Patient = {
-    id: Math.random().toString(36).substr(2, 9),
-    fullName: patient.fullName,
-    mrn: patient.mrn,
-    dateOfBirth: patient.dateOfBirth,
-    gender: patient.gender,
-    primaryPhone: patient.primaryPhone,
-    emergencyContactName: patient.emergencyContactName,
-    emergencyContactPhone: patient.emergencyContactPhone,
-    activeTasks: 0,
-    lastUpdated: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+  // Convert string ID to number for backend
+  const payload: any = {
+    ...patient,
+    id: patient.id ? parseInt(patient.id, 10) : undefined
   };
-  MOCK_PATIENTS.push(newPatient);
-  return { data: newPatient };
+  
+  const response = await api.post<Patient>(BASE_URL, payload);
+  // Convert ID to string for frontend
+  return { 
+    data: {
+      ...response.data,
+      id: toStringId(response.data.id)
+    }
+  };
 };
 
 export const update$ = async (patient: PatientFormData): Promise<{ data: Patient }> => {
-  await delay(800);
   if (!patient.id) {
     throw new Error("Patient ID is required for update");
   }
   
-  const index = MOCK_PATIENTS.findIndex(p => p.id === patient.id);
-  if (index === -1) {
-    throw new Error("Patient not found");
-  }
-  
-  const updatedPatient: Patient = {
-    ...MOCK_PATIENTS[index],
-    fullName: patient.fullName,
-    mrn: patient.mrn,
-    dateOfBirth: patient.dateOfBirth,
-    gender: patient.gender,
-    primaryPhone: patient.primaryPhone,
-    emergencyContactName: patient.emergencyContactName,
-    emergencyContactPhone: patient.emergencyContactPhone,
-    updatedAt: new Date().toISOString()
+  // Convert string ID to number for backend
+  const payload: any = {
+    ...patient,
+    id: parseInt(patient.id, 10)
   };
   
-  MOCK_PATIENTS[index] = updatedPatient;
-  return { data: updatedPatient };
+  const response = await api.put<Patient>(BASE_URL, payload);
+  // Convert ID to string for frontend
+  return { 
+    data: {
+      ...response.data,
+      id: toStringId(response.data.id)
+    }
+  };
 };
 
 export const delete$ = async (id: string): Promise<{ data: { success: boolean } }> => {
-  await delay(500);
-  const index = MOCK_PATIENTS.findIndex(p => p.id === id);
-  if (index === -1) {
-    throw new Error("Patient not found");
-  }
-  
-  MOCK_PATIENTS.splice(index, 1);
+  await api.delete(`${BASE_URL}/${id}`);
   return { data: { success: true } };
 };
 
 export const toggleActive$ = async (id: string): Promise<{ data: { success: boolean } }> => {
-  await delay(500);
-  const patient = MOCK_PATIENTS.find(p => p.id === id);
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-  // In a real implementation, this might toggle an isActive flag
-  // For now, we'll just return success
+  await api.delete(`${BASE_URL}/${id}`);
   return { data: { success: true } };
 };
 
 // Get patient tasks
+// TODO: Replace with actual API endpoint when available
 export const getPatientTasks$ = async (patientId: string): Promise<{ data: PatientTask[] }> => {
-  await delay(300);
-  // Mock task data
+  // Mock task data for now - replace with: api.get(`/api/patient/${patientId}/tasks`)
   const mockTasks: PatientTask[] = [
     {
       id: "1",
@@ -229,9 +145,9 @@ export const getPatientTasks$ = async (patientId: string): Promise<{ data: Patie
 };
 
 // Get patient referrals
+// TODO: Replace with actual API endpoint when available
 export const getPatientReferrals$ = async (patientId: string): Promise<{ data: PatientReferral[] }> => {
-  await delay(300);
-  // Mock referral data
+  // Mock referral data for now - replace with: api.get(`/api/patient/${patientId}/referrals`)
   const mockReferrals: PatientReferral[] = [
     {
       id: "1",
@@ -254,9 +170,9 @@ export const getPatientReferrals$ = async (patientId: string): Promise<{ data: P
 };
 
 // Get patient feedback
+// TODO: Replace with actual API endpoint when available
 export const getPatientFeedback$ = async (patientId: string): Promise<{ data: PatientFeedback[] }> => {
-  await delay(300);
-  // Mock feedback data
+  // Mock feedback data for now - replace with: api.get(`/api/patient/${patientId}/feedback`)
   const mockFeedback: PatientFeedback[] = [
     {
       id: "1",

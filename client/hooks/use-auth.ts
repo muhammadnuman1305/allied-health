@@ -11,8 +11,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   accessToken: string;
-  role: string;
-  isAdmin: boolean;
+  role: number;
 }
 
 export function useAuth() {
@@ -32,18 +31,18 @@ export function useAuth() {
     router.push("/login");
   };
 
-  const requireAuth = (requiredRole?: "admin" | "user") => {
+  const requireAuth = (requiredRole?: number) => {
     if (!isAuthenticated()) {
       router.replace("/login");
       return false;
     }
 
-    if (requiredRole === "admin" && !isAdmin()) {
+    if (requiredRole === 1 && !isAdmin()) {
       router.replace("/dashboard");
       return false;
     }
 
-    if (requiredRole === "user" && !isUser()) {
+    if (requiredRole === 2 && !isUser()) {
       router.replace("/admin/dashboard");
       return false;
     }

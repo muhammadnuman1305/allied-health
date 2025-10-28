@@ -1,7 +1,7 @@
 interface LoginPayload {
     username: string;
     password: string;
-    isAdmin: boolean;
+    role: number;
 }
 
 export type { LoginPayload };

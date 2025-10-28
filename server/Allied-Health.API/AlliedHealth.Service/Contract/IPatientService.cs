@@ -4,11 +4,11 @@ namespace AlliedHealth.Service.Contract
 {
     public interface IPatientService
     {
-        IQueryable<GetUserDTO> GetAll();
-        Task<GetUserSummaryDTO> GetSummary();
-        Task<GetUserDTO> GetUser(Guid id);
-        Task<string?> CreateUser(AddUpdateUserDTO request);
-        Task<string?> UpdateUser(AddUpdateUserDTO request);
-        Task<string?> ToggleHide(Guid id);
+        IQueryable<GetPatientDTO> GetAll();
+        Task<GetPatientSummaryDTO> GetSummary();
+        Task<GetPatientDetailsDTO> GetPatient(int id);
+        Task<string?> CreatePatient(AddUpdatePatientDTO request);
+        Task<string?> UpdatePatient(AddUpdatePatientDTO request);
+        Task<string?> ToggleHide(int id);
     }
 }

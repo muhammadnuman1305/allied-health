@@ -18,7 +18,7 @@
         public string? Email { get; set; }
         //public string Phone { get; set; }
         public required string Password { get; set; }
-        public bool IsAdmin { get; set; } = false;
+        public int Role { get; set; }
     }
 
     public class GetAuthUserDTO
@@ -30,6 +30,5 @@
         public string LastName { get; set; }
         public string AccessToken { get; set; }
         public int Role { get; set; }
-        public bool IsAdmin { get; set; }
     }
 }

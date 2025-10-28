@@ -4,57 +4,55 @@ export interface Department {
   id: string;
   name: string;
   code: string;
+  purpose: string;
   description: string;
-  serviceLine: ServiceLineType;
   headAHP: string; // User ID of the head AHP
   headAHPName?: string; // Display name for the head AHP
   status: "A" | "X"; // A=Active, X=Inactive
+  hidden: boolean; // Whether the department is hidden
   defaultTaskPriority: TaskPriority;
   coverageWards: string[]; // Array of ward IDs
   coverageWardNames?: string[]; // Display names for coverage wards
   activeAHPs: number; // Count of active AHPs
   activeAHAs: number; // Count of active AHAs
+  activeAssistants: number; // Count of active assistants (API field)
   openTasks: number; // Count of open tasks
   overdueTasks: number; // Count of overdue tasks
   incomingReferralsToday: number; // Count of incoming referrals today
   contactNumber: string;
   email: string;
+  operatingFrom: string; // Operating start time (e.g., "08:00")
+  operatingTo: string; // Operating end time (e.g., "18:00")
   notes?: string;
   createdAt: string;
-  updatedAt: string;
+  lastUpdated: string;
 }
 
 export interface DepartmentFormData {
   id?: string | null;
   name: string;
   code: string;
+  purpose: string;
   description: string;
-  serviceLine: ServiceLineType;
-  headAHP: string;
-  status: "A" | "X";
-  defaultTaskPriority: TaskPriority;
-  coverageWards: string[];
+  deptHeadId: string;
+  defaultTaskPriority: number; // Changed to number for backend
   contactNumber: string;
   email: string;
-  notes?: string;
+  operatingFrom: string;
+  operatingTo: string;
 }
 
 export interface DepartmentSummary {
   totalDepartments: number;
   activeDepartments: number;
-  serviceLineBreakdown: {
-    physiotherapy: number;
-    occupationalTherapy: number;
-    speechTherapy: number;
-    dietetics: number;
-  };
-  statusBreakdown: {
-    active: number;
-    inactive: number;
-  };
-  totalOpenTasks: number;
-  totalOverdueTasks: number;
-  totalIncomingReferralsToday: number;
+  openTasks: number;
+  overdueTasks: number;
+  incomingReferrals: number;
+}
+
+export interface DepartmentHead {
+  id: string;
+  name: string;
 }
 
 // Service Line types (renamed from DisciplineType for clarity)
@@ -65,17 +63,32 @@ export const SERVICE_LINES: ServiceLineType[] = [
   "Occupational Therapy", 
   "Speech Therapy",
   "Dietetics"
-] as const;
+];
 
 // Task priority levels
 export type TaskPriority = "Low" | "Medium" | "High" | "Urgent";
 
 export const TASK_PRIORITIES: TaskPriority[] = [
   "Low",
-  "Medium", 
+  "Medium",
   "High",
   "Urgent"
-] as const;
+];
+
+// Priority mapping to numeric IDs
+export const PRIORITY_TO_ID: Record<TaskPriority, number> = {
+  "Low": 1,
+  "Medium": 2,
+  "High": 3,
+  "Urgent": 4
+};
+
+export const ID_TO_PRIORITY: Record<number, TaskPriority> = {
+  1: "Low",
+  2: "Medium",
+  3: "High",
+  4: "Urgent"
+};
 
 // Service Line-specific interventions
 export const INTERVENTIONS_BY_SERVICE_LINE: Record<ServiceLineType, string[]> = {

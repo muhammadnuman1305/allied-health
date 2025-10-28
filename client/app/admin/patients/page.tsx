@@ -7,6 +7,13 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -46,25 +53,15 @@ import {
   GENDER_OPTIONS,
   Patient,
   PatientSummary,
+  getGenderLabel,
 } from "@/lib/api/admin/patients/_model";
 
-// Helper to calculate age from date of birth
-const calculateAge = (dateOfBirth: string | undefined): string => {
-  if (!dateOfBirth) return "—";
-
-  const today = new Date();
-  const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-
-  if (
-    monthDiff < 0 ||
-    (monthDiff === 0 && today.getDate() < birthDate.getDate())
-  ) {
-    age--;
-  }
-
-  return age.toString();
+// Helper to format patient ID as MRN
+const formatMRN = (id: string): string => {
+  // Parse the ID as number and format with leading zeros
+  const numId = parseInt(id, 10);
+  if (isNaN(numId)) return id;
+  return `MRN${numId.toString().padStart(5, "0")}`;
 };
 
 // Helper to format relative time
@@ -90,23 +87,28 @@ export default function AdminPatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [summary, setSummary] = useState<PatientSummary>({
     totalPatients: 0,
-    newPatientsToday: 0,
+    newPatients: 0,
     activeTasks: 0,
     completedTasks: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [hiddenFilter, setHiddenFilter] = useState<"All" | "Hidden" | "Active">(
+    "All"
+  );
   const [actionDialog, setActionDialog] = useState<{
     isOpen: boolean;
     patientId: string;
     patientName: string;
-    action: "delete";
+    action: "delete" | "restore";
+    isHidden: boolean;
   }>({
     isOpen: false,
     patientId: "",
     patientName: "",
     action: "delete",
+    isHidden: false,
   });
   const [filters, setFilters] = useState<FilterState>({
     mrn: "",
@@ -124,7 +126,7 @@ export default function AdminPatientsPage() {
 
         // Fetch both patients and summary data in parallel
         const [patientsResponse, summaryResponse] = await Promise.all([
-          getAll$(),
+          getAll$(hiddenFilter),
           getSummary$(),
         ]);
 
@@ -139,7 +141,7 @@ export default function AdminPatientsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [hiddenFilter]);
 
   // Define table columns
   const columns: Column<Patient>[] = [
@@ -166,13 +168,14 @@ export default function AdminPatientsPage() {
       sortable: true,
       filterable: true,
       filterType: "text",
+      render: (patient) => formatMRN(patient.id),
     },
     {
       key: "age",
       label: "Age",
       width: "w-[80px]",
       sortable: true,
-      render: (patient) => calculateAge(patient.dateOfBirth),
+      render: (patient) => patient.age,
     },
     {
       key: "gender",
@@ -180,11 +183,8 @@ export default function AdminPatientsPage() {
       width: "w-[80px]",
       sortable: true,
       render: (patient) => {
-        // Find the option that matches the patient's gender string
-        return (
-          GENDER_OPTIONS.find((option) => option.label === patient.gender)
-            ?.label || patient.gender
-        );
+        // Display gender label from numeric value
+        return getGenderLabel(patient.gender);
       },
     },
     // {
@@ -228,7 +228,8 @@ export default function AdminPatientsPage() {
             isOpen: true,
             patientId: patientId,
             patientName: patient.fullName,
-            action: "delete",
+            action: patient.hidden ? "restore" : "delete",
+            isHidden: patient.hidden,
           });
         }
         break;
@@ -243,11 +244,20 @@ export default function AdminPatientsPage() {
       await toggleActive$(patientId);
 
       // Refresh the patient list
-      const response = await getAll$();
+      const response = await getAll$(hiddenFilter);
       setPatients(response.data);
     } catch (err) {
-      setError("Failed to delete patient. Please try again.");
-      console.error("Error deleting patient:", err);
+      setError(
+        actionDialog.action === "restore"
+          ? "Failed to restore patient. Please try again."
+          : "Failed to hide patient. Please try again."
+      );
+      console.error(
+        `Error ${
+          actionDialog.action === "restore" ? "restoring" : "hiding"
+        } patient:`,
+        err
+      );
     }
 
     setActionDialog({
@@ -255,6 +265,7 @@ export default function AdminPatientsPage() {
       patientId: "",
       patientName: "",
       action: "delete",
+      isHidden: false,
     });
   };
 
@@ -329,7 +340,7 @@ export default function AdminPatientsPage() {
         />
         <StatsCard
           title="New Patients"
-          value={summary.newPatientsToday}
+          value={summary.newPatients}
           description="Added today"
           icon={Calendar}
         />
@@ -352,7 +363,7 @@ export default function AdminPatientsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Patients</CardTitle>
+              <CardTitle>Patients Table</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
@@ -361,6 +372,21 @@ export default function AdminPatientsPage() {
                   Clear Filters
                 </Button>
               )}
+              <Select
+                value={hiddenFilter}
+                onValueChange={(value) =>
+                  setHiddenFilter(value as "All" | "Hidden" | "Active")
+                }
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Hidden">Hidden</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => router.push("/admin/patients/0")}
                 className="bg-primary hover:bg-primary/90"
@@ -381,6 +407,9 @@ export default function AdminPatientsPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
+            getRowClassName={(patient) =>
+              patient.hidden ? "opacity-50 bg-muted/30 line-through" : ""
+            }
             actions={(patient) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -410,10 +439,12 @@ export default function AdminPatientsPage() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => handlePatientAction("delete", patient.id)}
-                    className="text-destructive"
+                    className={
+                      patient.hidden ? "text-green-600" : "text-destructive"
+                    }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Patient
+                    {patient.hidden ? "Restore Patient" : "Delete Patient"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -432,25 +463,37 @@ export default function AdminPatientsPage() {
               patientId: "",
               patientName: "",
               action: "delete",
+              isHidden: false,
             });
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Patient</AlertDialogTitle>
+            <AlertDialogTitle>
+              {actionDialog.action === "restore"
+                ? "Restore Patient"
+                : "Delete Patient"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{actionDialog.patientName}"? This
-              action cannot be undone and will remove all patient data.
+              {actionDialog.action === "restore"
+                ? `Are you sure you want to restore "${actionDialog.patientName}"? This will make the patient visible again.`
+                : `Are you sure you want to delete "${actionDialog.patientName}"? This action will hide the patient.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmedAction}
-              className="bg-destructive hover:bg-destructive/90"
+              className={
+                actionDialog.action === "restore"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-destructive hover:bg-destructive/90"
+              }
             >
-              Delete Patient
+              {actionDialog.action === "restore"
+                ? "Restore Patient"
+                : "Hide Patient"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

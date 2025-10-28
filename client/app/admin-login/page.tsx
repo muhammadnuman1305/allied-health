@@ -50,7 +50,7 @@ export default function AdminLoginPage() {
       const payload: LoginPayload = {
         username,
         password,
-        isAdmin: true,
+        role: 2,
       };
 
       const response = await login$(payload);
@@ -66,7 +66,6 @@ export default function AdminLoginPage() {
             lastName: response.data.lastName,
             accessToken: response.data.accessToken,
             role: response.data.role,
-            isAdmin: response.data.isAdmin,
           })
         );
 

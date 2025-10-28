@@ -200,11 +200,6 @@ export function AdminSidebar({
           href: "/admin/setup/wards",
           icon: <Bed className="h-5 w-5" />,
         },
-        {
-          title: "Coverage Mapping",
-          href: "/admin/setup/coverage",
-          icon: <Database className="h-5 w-5" />,
-        },
       ],
     },
     // {
