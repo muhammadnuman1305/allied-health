@@ -10,12 +10,13 @@ namespace AlliedHealth.Domain
             : base(options) { }
 
         // Core entities
-        public DbSet<Patient> Patients => Set<Patient>();
         public DbSet<PatientOutcome> PatientOutcomes => Set<PatientOutcome>();
         public DbSet<Priority> Priorities => Set<Priority>();
         public DbSet<User> Users => Set<User>();
-        public DbSet<Ward> Wards => Set<Ward>();
+        public DbSet<Patient> Patients => Set<Patient>();
         public DbSet<Department> Departments => Set<Department>();
+        public DbSet<Ward> Wards => Set<Ward>();
+        public DbSet<WardDeptCoverage> WardDeptCoverages => Set<WardDeptCoverage>();
         public DbSet<AhaRole> AhaRoles => Set<AhaRole>();
         public DbSet<AhaRoleCategory> AhaRoleCategories => Set<AhaRoleCategory>();
 

@@ -1,3 +1,6 @@
+using AlliedHealth.Common.Enums;
+using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.Contract;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Allied_Health.API.Controllers;
@@ -6,43 +9,58 @@ namespace Allied_Health.API.Controllers;
 [Route("api/[controller]")]
 public class TasksController : ControllerBase
 {
-    public TasksController()
-    {
+    private readonly ITaskService _taskService;
 
+    public TasksController(ITaskService taskService)
+    {
+        _taskService = taskService;
     }
 
     [HttpGet("")]
     public async Task<IActionResult> GetAll()
     {
-
-        return Ok();
+        var response = _taskService.GetAll();
+        return Ok(response);
     }
 
     [HttpGet("{id}")] 
     public async Task<IActionResult> GetTask(Guid id)
     {
-
-        return Ok();
+        var response = await _taskService.GetTask(id);
+        return Ok(response);
     }
 
-    [HttpPost("create-task")]
-    public async Task<IActionResult> CreateTask([FromBody] object? task)
+    [HttpPost("")]
+    public async Task<IActionResult> CreateTask([FromBody] AddUpdateTaskDTO request)
     {
+        var response = await _taskService.CreateTask(request);
 
-        return Ok();
+        if (response != null)
+            return BadRequest(EMessages.TaskExistAlready);
+
+        return Ok(response);
     } 
 
-    [HttpPut("update-task")]
-    public async Task<IActionResult> UpdateTask([FromBody] object? task)
+    [HttpPut("")]
+    public async Task<IActionResult> UpdateTask([FromBody] AddUpdateTaskDTO request)
     {
+        var response = await _taskService.CreateTask(request);
 
-        return Ok();
+        if (response != null)
+            return BadRequest(EMessages.TaskExistAlready);
+
+        return Ok(response);
     }
 
-    [HttpDelete("delete-task/{id}")]
-    public async Task<IActionResult> DeleteTask(Guid id)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> ToggleHide(Guid id)
     {
+        var response = await _taskService.ToggleHide(id);
 
-        return Ok();
+
+        if (response != null)
+            return BadRequest(EMessages.TaskNotExists);
+
+        return Ok(response);
     }
 }

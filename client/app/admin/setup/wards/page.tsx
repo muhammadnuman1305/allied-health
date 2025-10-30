@@ -20,8 +20,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Bed,
   Users,
@@ -31,11 +37,10 @@ import {
   RotateCcw,
   Plus,
   CheckCircle,
-  Eye,
-  Download,
   Filter,
   MapPin,
   Building2,
+  Trash2,
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
@@ -47,21 +52,8 @@ import {
 import {
   Ward,
   WardSummary,
-  WARD_STATUS_DESCRIPTIONS,
   getWardLocationDisplayName,
 } from "@/lib/api/admin/wards/_model";
-
-// Status badge variants
-const getStatusBadgeVariant = (status: string) => {
-  switch (status) {
-    case "A":
-      return "default"; // Active - green
-    case "X":
-      return "outline"; // Inactive - gray
-    default:
-      return "outline";
-  }
-};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -73,26 +65,25 @@ export default function AdminWardsSetupPage() {
     activeWards: 0,
     totalBeds: 0,
     occupiedBeds: 0,
-    statusBreakdown: {
-      active: 0,
-      inactive: 0,
-    },
     totalOpenTasks: 0,
     totalOverdueTasks: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
+    "All"
+  );
   const [actionDialog, setActionDialog] = useState<{
     isOpen: boolean;
     wardId: string;
     wardName: string;
-    action: "activate" | "deactivate";
+    action: "delete" | "restore";
   }>({
     isOpen: false,
     wardId: "",
     wardName: "",
-    action: "deactivate",
+    action: "delete",
   });
   const [filters, setFilters] = useState<FilterState>({
     name: "",
@@ -113,7 +104,7 @@ export default function AdminWardsSetupPage() {
 
         // Fetch both wards and summary data in parallel
         const [wardsResponse, summaryResponse] = await Promise.all([
-          getAll$(),
+          getAll$(statusFilter),
           getSummary$(),
         ]);
 
@@ -128,7 +119,7 @@ export default function AdminWardsSetupPage() {
     };
 
     fetchData();
-  }, []);
+  }, [statusFilter]);
 
   // Define table columns
   const columns: Column<Ward>[] = [
@@ -151,7 +142,7 @@ export default function AdminWardsSetupPage() {
     {
       key: "location",
       label: "Location",
-      width: "w-[140px]",
+      width: "w-[200px]",
       sortable: true,
       filterable: true,
       filterType: "select",
@@ -175,18 +166,14 @@ export default function AdminWardsSetupPage() {
     {
       key: "bedCount",
       label: "Bed Count",
-      width: "w-[100px]",
+      width: "w-[150px]",
       sortable: true,
-      render: (ward) => (
-        <Badge variant="secondary" className="text-xs">
-          {ward.bedCount} beds
-        </Badge>
-      ),
+      render: (ward) => ward.bedCount,
     },
     {
       key: "defaultDepartmentName",
       label: "Default Department",
-      width: "w-[160px]",
+      width: "w-[220px]",
       sortable: true,
       filterable: true,
       filterType: "text",
@@ -198,94 +185,52 @@ export default function AdminWardsSetupPage() {
       ),
     },
     {
-      key: "coverageDepartmentNames",
-      label: "Coverage Departments",
-      width: "w-[160px]",
-      render: (ward) => (
-        <div className="flex flex-wrap gap-1">
-          {ward.coverageDepartmentNames?.slice(0, 2).map((dept, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {dept}
-            </Badge>
-          ))}
-          {ward.coverageDepartmentNames &&
-            ward.coverageDepartmentNames.length > 2 && (
-              <Badge variant="outline" className="text-xs">
-                +{ward.coverageDepartmentNames.length - 2}
-              </Badge>
-            )}
-        </div>
-      ),
-    },
-    {
       key: "currentPatients",
       label: "Current Patients",
-      width: "w-[120px]",
+      width: "w-[100px]",
       sortable: true,
-      render: (ward) => (
-        <Badge variant="secondary" className="text-xs">
-          {ward.currentPatients}
-        </Badge>
-      ),
+      render: (ward) => ward.currentPatients,
     },
     {
       key: "openTasks",
-      label: "Open/Overdue Tasks",
-      width: "w-[140px]",
-      sortable: true,
-      render: (ward) => (
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {ward.openTasks} open
-          </Badge>
-          {ward.overdueTasks > 0 && (
-            <Badge variant="destructive" className="text-xs">
-              {ward.overdueTasks} overdue
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
+      label: "Open Tasks",
       width: "w-[100px]",
       sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "A", label: "Active" },
-        { value: "X", label: "Inactive" },
-      ],
-      render: (ward) => (
-        <Badge
-          variant={getStatusBadgeVariant(ward.status)}
-          title={WARD_STATUS_DESCRIPTIONS[ward.status]}
-        >
-          {ward.status === "A" ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      render: (ward) => ward.openTasks,
+    },
+    {
+      key: "overdueTasks",
+      label: "Overdue Tasks",
+      width: "w-[120px]",
+      sortable: true,
+      render: (ward) => ward.overdueTasks,
+    },
+    {
+      key: "lastUpdated",
+      label: "Last Updated",
+      width: "w-[140px]",
+      sortable: true,
+      render: (ward) =>
+        ward.lastUpdated
+          ? new Date(ward.lastUpdated).toLocaleDateString()
+          : "N/A",
     },
   ];
 
   // Handle ward actions
   const handleWardAction = (action: string, wardId: string) => {
     switch (action) {
-      case "view":
+      case "edit":
         router.push(`/admin/setup/wards/${wardId}`);
         break;
-      case "edit":
-        router.push(`/admin/setup/wards/${wardId}/edit`);
-        break;
-      case "activate":
-      case "deactivate":
+      case "toggle":
         const ward = wards.find((w) => w.id === wardId);
         if (ward) {
           setActionDialog({
             isOpen: true,
             wardId: wardId,
             wardName: ward.name,
-            action: action as "activate" | "deactivate",
+            action: ward.hidden ? "restore" : "delete",
           });
         }
         break;
@@ -297,39 +242,34 @@ export default function AdminWardsSetupPage() {
     const { wardId } = actionDialog;
 
     try {
-      await toggleActive$(wardId);
+      await toggleActive$(wardId, actionDialog.action);
 
-      // Update local state to reflect the change
-      setWards((prev) =>
-        prev.map((ward) =>
-          ward.id === wardId
-            ? { ...ward, status: ward.status === "X" ? "A" : "X" }
-            : ward
-        )
-      );
+      // Refresh the ward list
+      const response = await getAll$(statusFilter);
+      setWards(response.data);
 
-      // Update summary
-      const updatedSummary = { ...summary };
-      if (actionDialog.action === "activate") {
-        updatedSummary.activeWards++;
-        updatedSummary.statusBreakdown.active++;
-        updatedSummary.statusBreakdown.inactive--;
-      } else {
-        updatedSummary.activeWards--;
-        updatedSummary.statusBreakdown.active--;
-        updatedSummary.statusBreakdown.inactive++;
-      }
-      setSummary(updatedSummary);
+      // Refresh summary
+      const summaryResponse = await getSummary$();
+      setSummary(summaryResponse.data);
     } catch (err) {
-      setError("Failed to update ward status. Please try again.");
-      console.error("Error toggling ward status:", err);
+      setError(
+        actionDialog.action === "restore"
+          ? "Failed to restore ward. Please try again."
+          : "Failed to delete ward. Please try again."
+      );
+      console.error(
+        `Error ${
+          actionDialog.action === "restore" ? "restoring" : "deleting"
+        } ward:`,
+        err
+      );
     }
 
     setActionDialog({
       isOpen: false,
       wardId: "",
       wardName: "",
-      action: "deactivate",
+      action: "delete",
     });
   };
 
@@ -450,10 +390,21 @@ export default function AdminWardsSetupPage() {
                   Clear Filters
                 </Button>
               )}
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as "All" | "Active" | "Hidden")
+                }
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Hidden">Hidden</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => router.push("/admin/setup/wards/0")}
                 className="bg-primary hover:bg-primary/90"
@@ -474,6 +425,9 @@ export default function AdminWardsSetupPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
+            getRowClassName={(ward) =>
+              ward.hidden ? "opacity-50 bg-muted/30 line-through" : ""
+            }
             actions={(ward) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -483,40 +437,26 @@ export default function AdminWardsSetupPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => handleWardAction("view", ward.id)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
                     onClick={() => handleWardAction("edit", ward.id)}
                   >
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() =>
-                      handleWardAction(
-                        ward.status === "X" ? "activate" : "deactivate",
-                        ward.id
-                      )
-                    }
+                    onClick={() => handleWardAction("toggle", ward.id)}
                     className={
-                      ward.status === "X"
-                        ? "text-green-600"
-                        : "text-destructive"
+                      ward.hidden ? "text-green-600" : "text-destructive"
                     }
                   >
-                    {ward.status === "X" ? (
+                    {ward.hidden ? (
                       <>
                         <CheckCircle className="mr-2 h-4 w-4" />
-                        Activate
+                        Restore Ward
                       </>
                     ) : (
                       <>
                         <RotateCcw className="mr-2 h-4 w-4" />
-                        Deactivate
+                        Delete Ward
                       </>
                     )}
                   </DropdownMenuItem>
@@ -536,7 +476,7 @@ export default function AdminWardsSetupPage() {
               isOpen: false,
               wardId: "",
               wardName: "",
-              action: "deactivate",
+              action: "delete",
             });
           }
         }}
@@ -544,14 +484,14 @@ export default function AdminWardsSetupPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionDialog.action === "activate"
-                ? "Activate Ward"
-                : "Deactivate Ward"}
+              {actionDialog.action === "restore"
+                ? "Restore Ward"
+                : "Delete Ward"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionDialog.action === "activate"
-                ? `Are you sure you want to activate "${actionDialog.wardName}"? This will make the ward operational and available for patient assignments.`
-                : `Are you sure you want to deactivate "${actionDialog.wardName}"? This will mark the ward as inactive and prevent new patient assignments.`}
+              {actionDialog.action === "restore"
+                ? `Are you sure you want to restore "${actionDialog.wardName}"? This will make the ward operational and available for patient assignments.`
+                : `Are you sure you want to delete "${actionDialog.wardName}"? This will mark the ward as deleted and prevent new patient assignments.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -559,14 +499,14 @@ export default function AdminWardsSetupPage() {
             <AlertDialogAction
               onClick={handleConfirmedAction}
               className={
-                actionDialog.action === "activate"
+                actionDialog.action === "restore"
                   ? "bg-green-600 hover:bg-green-700"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >
-              {actionDialog.action === "activate"
-                ? "Activate Ward"
-                : "Deactivate Ward"}
+              {actionDialog.action === "restore"
+                ? "Restore Ward"
+                : "Delete Ward"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

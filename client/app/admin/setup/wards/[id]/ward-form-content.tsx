@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -38,11 +37,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/hooks/use-toast";
-import { getById$, create$, update$ } from "@/lib/api/admin/wards/_request";
+import {
+  getById$,
+  create$,
+  update$,
+  getDefaultDepartmentOptions$,
+} from "@/lib/api/admin/wards/_request";
 import {
   Ward,
   WardFormData,
-  WARD_LOCATIONS,
+  DepartmentOption,
 } from "@/lib/api/admin/wards/_model";
 import {
   getMatrix$,
@@ -63,23 +67,13 @@ const wardFormSchema = z.object({
     .string()
     .min(1, "Ward code is required")
     .max(10, "Code must be 10 characters or less"),
-  location: z.enum([
-    "Ground Floor",
-    "First Floor",
-    "Second Floor",
-    "Third Floor",
-    "ICU",
-    "Emergency",
-    "Surgery",
-    "Rehabilitation",
-    "Other",
-  ]),
+  location: z.string().min(1, "Location is required"),
   bedCount: z
     .number()
     .min(1, "Bed count must be at least 1")
     .max(1000, "Bed count cannot exceed 1000"),
+  description: z.string().optional(),
   defaultDepartment: z.string(),
-  status: z.enum(["A", "X"]),
   notes: z.string().optional(),
 });
 
@@ -88,16 +82,20 @@ type WardFormValues = z.infer<typeof wardFormSchema>;
 interface WardFormContentProps {
   wardId: string;
   isEdit?: boolean;
+  initialWardData?: Ward | null;
 }
 
 export default function WardFormContent({
   wardId,
   isEdit = false,
+  initialWardData,
 }: WardFormContentProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [ward, setWard] = useState<Ward | null>(null);
-  const [initialLoading, setInitialLoading] = useState(isEdit);
+  const [initialLoading, setInitialLoading] = useState(
+    isEdit && wardId !== "0"
+  );
   const [coverageMatrix, setCoverageMatrix] = useState<CoverageMatrix | null>(
     null
   );
@@ -113,22 +111,38 @@ export default function WardFormContent({
     wardId: "",
     validation: null,
   });
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<
+    DepartmentOption[]
+  >([]);
+  const [departmentOptionsLoading, setDepartmentOptionsLoading] =
+    useState(true);
+
+  // Refs to prevent duplicate API calls in React Strict Mode
+  const hasFetchedCoverageRef = useRef(false);
+  const hasFetchedWardRef = useRef<string | null>(null);
+  const hasFetchedDepartmentsRef = useRef(false);
 
   const form = useForm<WardFormValues>({
     resolver: zodResolver(wardFormSchema),
     defaultValues: {
       name: "",
       code: "",
-      location: "Ground Floor",
+      location: "",
       bedCount: 1,
+      description: "",
       defaultDepartment: "none",
-      status: "A",
       notes: "",
     },
   });
 
   // Load coverage data
   useEffect(() => {
+    if (hasFetchedCoverageRef.current) {
+      return;
+    }
+    hasFetchedCoverageRef.current = true;
+
     const fetchCoverageData = async () => {
       try {
         setCoverageLoading(true);
@@ -152,6 +166,41 @@ export default function WardFormContent({
   // Load ward data for editing
   useEffect(() => {
     if (isEdit && wardId !== "0") {
+      // If ward data is passed from parent, use it instead of fetching
+      if (initialWardData) {
+        setWard(initialWardData);
+        // API returns defaultDepartmentId, map it to defaultDepartment
+        const defaultDeptId =
+          (initialWardData as any).defaultDepartmentId ||
+          initialWardData.defaultDepartment ||
+          "none";
+        form.reset({
+          name: initialWardData.name,
+          code: initialWardData.code,
+          location: initialWardData.location as any,
+          bedCount: initialWardData.bedCount,
+          description: initialWardData.description || "",
+          defaultDepartment: defaultDeptId,
+          notes: initialWardData.notes || "",
+        });
+        // Initialize coverage departments from API response
+        const coverageDeptIds =
+          (initialWardData as any).departmentCoverages ||
+          initialWardData.coverageDepartments ||
+          [];
+        setSelectedDepartments(coverageDeptIds);
+        setInitialLoading(false);
+        // Reset the ref so if initialWardData is removed later, we can fetch
+        hasFetchedWardRef.current = null;
+        return;
+      }
+
+      // Prevent duplicate calls for the same wardId
+      if (hasFetchedWardRef.current === wardId) {
+        return;
+      }
+      hasFetchedWardRef.current = wardId;
+
       const fetchWard = async () => {
         try {
           setInitialLoading(true);
@@ -159,16 +208,29 @@ export default function WardFormContent({
           const wardData = response.data;
           setWard(wardData);
 
+          // API returns defaultDepartmentId, map it to defaultDepartment
+          const defaultDeptId =
+            (wardData as any).defaultDepartmentId ||
+            wardData.defaultDepartment ||
+            "none";
+
           // Populate form with existing data
           form.reset({
             name: wardData.name,
             code: wardData.code,
             location: wardData.location as any,
             bedCount: wardData.bedCount,
-            defaultDepartment: wardData.defaultDepartment || "none",
-            status: wardData.status,
+            description: wardData.description || "",
+            defaultDepartment: defaultDeptId,
             notes: wardData.notes || "",
           });
+
+          // Initialize coverage departments from API response
+          const coverageDeptIds =
+            (wardData as any).departmentCoverages ||
+            wardData.coverageDepartments ||
+            [];
+          setSelectedDepartments(coverageDeptIds);
         } catch (error) {
           console.error("Error fetching ward:", error);
           toast({
@@ -183,11 +245,46 @@ export default function WardFormContent({
 
       fetchWard();
     }
-  }, [wardId, isEdit, form]);
+  }, [wardId, isEdit, form, initialWardData]);
+
+  // Load department options
+  useEffect(() => {
+    if (hasFetchedDepartmentsRef.current) {
+      return;
+    }
+    hasFetchedDepartmentsRef.current = true;
+
+    const fetchDepartmentOptions = async () => {
+      try {
+        setDepartmentOptionsLoading(true);
+        const response = await getDefaultDepartmentOptions$();
+        setDepartmentOptions(response.data);
+      } catch (error) {
+        console.error("Error fetching department options:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load department options",
+          variant: "destructive",
+        });
+      } finally {
+        setDepartmentOptionsLoading(false);
+      }
+    };
+
+    fetchDepartmentOptions();
+  }, []);
 
   // Coverage management functions
   const isCoverageActive = (departmentId: string) => {
-    if (!coverageMatrix || wardId === "0") return false;
+    // For new wards or when editing, check local selection state first
+    if (selectedDepartments.length > 0) {
+      return selectedDepartments.includes(departmentId);
+    }
+    if (wardId === "0") {
+      return false;
+    }
+    // Fallback to coverage matrix if available
+    if (!coverageMatrix) return false;
     return coverageMatrix.mappings.some(
       (mapping) =>
         mapping.departmentId === departmentId && mapping.wardId === wardId
@@ -195,10 +292,27 @@ export default function WardFormContent({
   };
 
   const handleCoverageToggle = async (departmentId: string) => {
-    if (wardId === "0") return; // Can't manage coverage for new wards
-
     const isActive = isCoverageActive(departmentId);
 
+    if (wardId === "0") {
+      // For new wards, just toggle local selection state
+      if (isActive) {
+        setSelectedDepartments((prev) =>
+          prev.filter((id) => id !== departmentId)
+        );
+      } else {
+        setSelectedDepartments((prev) => {
+          // Prevent duplicates by checking if departmentId already exists
+          if (prev.includes(departmentId)) {
+            return prev;
+          }
+          return [...prev, departmentId];
+        });
+      }
+      return;
+    }
+
+    // For existing wards, handle API calls
     if (isActive) {
       // Validate removal
       try {
@@ -233,6 +347,11 @@ export default function WardFormContent({
             : null
         );
 
+        // Update selectedDepartments to keep in sync
+        setSelectedDepartments((prev) =>
+          prev.filter((id) => id !== departmentId)
+        );
+
         toast({
           title: "Success",
           description: "Coverage removed successfully",
@@ -261,9 +380,8 @@ export default function WardFormContent({
                     id: `${departmentId}-${wardId}`,
                     departmentId,
                     departmentName:
-                      coverageMatrix?.departments.find(
-                        (d) => d.id === departmentId
-                      )?.name || "",
+                      departmentOptions.find((d) => d.id === departmentId)
+                        ?.name || "",
                     wardId,
                     wardName: ward?.name || "",
                     isDefault: false,
@@ -274,6 +392,14 @@ export default function WardFormContent({
               }
             : null
         );
+
+        // Update selectedDepartments to keep in sync
+        setSelectedDepartments((prev) => {
+          if (prev.includes(departmentId)) {
+            return prev;
+          }
+          return [...prev, departmentId];
+        });
 
         toast({
           title: "Success",
@@ -300,11 +426,10 @@ export default function WardFormContent({
         code: data.code,
         location: data.location,
         bedCount: data.bedCount,
+        description: data.description,
         defaultDepartment:
           data.defaultDepartment === "none" ? "" : data.defaultDepartment,
-        coverageDepartments: [], // Will be managed separately
-        status: data.status,
-        notes: data.notes,
+        coverageDepartments: Array.from(new Set(selectedDepartments)),
       };
 
       if (isEdit) {
@@ -346,18 +471,7 @@ export default function WardFormContent({
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">
-          {isEdit ? "Edit Ward" : "Create New Ward"}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEdit
-            ? "Update ward information and settings"
-            : "Set up a new hospital ward for patient management"}
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -401,23 +515,12 @@ export default function WardFormContent({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {WARD_LOCATIONS.map((location) => (
-                            <SelectItem key={location} value={location}>
-                              {location}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Ground Floor, ICU, Emergency"
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -439,6 +542,25 @@ export default function WardFormContent({
                           onChange={(e) =>
                             field.onChange(parseInt(e.target.value) || 0)
                           }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Brief description of the ward..."
+                          className="resize-none"
+                          rows={3}
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -473,43 +595,17 @@ export default function WardFormContent({
                           <SelectItem value="none">
                             No default department
                           </SelectItem>
-                          <SelectItem value="dept-1">
-                            Physiotherapy Department
-                          </SelectItem>
-                          <SelectItem value="dept-2">
-                            Occupational Therapy Department
-                          </SelectItem>
-                          <SelectItem value="dept-3">
-                            Speech Pathology Department
-                          </SelectItem>
-                          <SelectItem value="dept-4">
-                            Dietitians Department
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="A">Active</SelectItem>
-                          <SelectItem value="X">Inactive</SelectItem>
+                          {departmentOptionsLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading departments...
+                            </SelectItem>
+                          ) : (
+                            departmentOptions.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -518,30 +614,36 @@ export default function WardFormContent({
                 />
 
                 {/* Coverage Departments Management */}
-                {isEdit && wardId !== "0" && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">
-                        Coverage Departments
-                      </Label>
-                      <Badge variant="outline" className="text-xs">
-                        {coverageMatrix?.mappings.filter(
-                          (m) => m.wardId === wardId
-                        ).length || 0}{" "}
-                        assigned
-                      </Badge>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Coverage Departments
+                    </Label>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedDepartments.length > 0
+                        ? selectedDepartments.length
+                        : coverageMatrix?.mappings.filter(
+                            (m) => m.wardId === wardId
+                          ).length || 0}{" "}
+                      assigned
+                    </Badge>
+                  </div>
 
-                    {coverageLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          Loading departments...
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {coverageMatrix?.departments.map((dept) => {
+                  {departmentOptionsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        Loading departments...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {departmentOptions.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No departments available
+                        </div>
+                      ) : (
+                        departmentOptions.map((dept) => {
                           const isCovered = isCoverageActive(dept.id);
                           return (
                             <div
@@ -553,22 +655,17 @@ export default function WardFormContent({
                               }`}
                             >
                               <div className="flex items-center gap-3">
-                                <Checkbox
-                                  checked={isCovered}
-                                  onCheckedChange={() =>
-                                    handleCoverageToggle(dept.id)
-                                  }
-                                />
                                 <div>
                                   <div className="font-medium text-sm">
                                     {dept.name}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
-                                    {dept.serviceLine} • {dept.code}
+                                    {dept.code} • {dept.purpose}
                                   </div>
                                 </div>
                               </div>
                               <Button
+                                type="button"
                                 size="sm"
                                 variant={isCovered ? "destructive" : "default"}
                                 onClick={() => handleCoverageToggle(dept.id)}
@@ -582,61 +679,26 @@ export default function WardFormContent({
                               </Button>
                             </div>
                           );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {wardId === "0" && (
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Coverage Departments:</strong> Will be available
-                      after creating the ward
-                    </p>
-                  </div>
-                )}
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Notes */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Additional Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Any additional notes about this ward"
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
           {/* Form Actions */}
-          <div className="flex items-center justify-end gap-4 pt-6 border-t">
+          <div className="flex items-center justify-start gap-4 pt-2">
+            <Button type="submit" disabled={loading}>
+              {loading ? "Saving..." : isEdit ? "Update Ward" : "Create Ward"}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => router.push("/admin/setup/wards")}
             >
               Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : isEdit ? "Update Ward" : "Create Ward"}
             </Button>
           </div>
         </form>

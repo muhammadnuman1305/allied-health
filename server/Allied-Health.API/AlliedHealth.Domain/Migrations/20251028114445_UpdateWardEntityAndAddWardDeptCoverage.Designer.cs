@@ -3,6 +3,7 @@ using System;
 using AlliedHealth.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlliedHealth.Domain.Migrations
 {
     [DbContext(typeof(AlliedHealthDbContext))]
-    partial class AlliedHealthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251028114445_UpdateWardEntityAndAddWardDeptCoverage")]
+    partial class UpdateWardEntityAndAddWardDeptCoverage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -497,14 +500,14 @@ namespace AlliedHealth.Domain.Migrations
                     b.Property<Guid>("DepartmentId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedDate")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("WardId", "DepartmentId");
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("WardDeptCoverage", (string)null);
+                    b.ToTable("WardDepartmentCoverage", (string)null);
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.AhaRoleCategory", b =>

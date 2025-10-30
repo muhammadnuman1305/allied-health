@@ -40,9 +40,6 @@ namespace AlliedHealth.Domain.EntityConfigs
                 .HasColumnType("time")
                 .IsRequired();
 
-            b.Property(t => t.Status)
-                .IsRequired();
-
             // Relationships
             b.HasOne(t => t.Patient)
                 .WithMany(p => p.Tasks)

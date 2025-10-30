@@ -3,6 +3,7 @@ using System;
 using AlliedHealth.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AlliedHealth.Domain.Migrations
 {
     [DbContext(typeof(AlliedHealthDbContext))]
-    partial class AlliedHealthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251029082739_UpdateWardDeptCoverage2")]
+    partial class UpdateWardDeptCoverage2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
