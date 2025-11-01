@@ -1,5 +1,5 @@
 using AlliedHealth.Common.Enums;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +13,12 @@ namespace Allied_Health.API.Controllers;
 public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IUtilityService _utilityService;
 
-    public UserController(IUserService userService)
+    public UserController(IUserService userService, IUtilityService utilityService)
     {
         _userService = userService;
+        _utilityService = utilityService;
     }
 
     [HttpGet("")]
@@ -76,4 +78,10 @@ public class UserController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("specialty-options")]
+    public async Task<IActionResult> GetTaskSpecialtyOptions()
+    {
+        var response = await _utilityService.GetSpecialityOptions();
+        return Ok(response);
+    }
 }

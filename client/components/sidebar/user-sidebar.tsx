@@ -18,6 +18,8 @@ import {
   BarChart,
   FileText,
   ArrowRight,
+  CalendarDays,
+  Clock,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -51,25 +53,27 @@ export function UserSidebar({
   useEffect(() => {
     const segments = pathname.split("/");
 
-    // Map pathname to section
+    // Map pathname to section (check segments[2] since /user is segments[1])
     const sectionMap = {
       dashboard: "Dashboard",
       tasks: "Task Management",
       patients: "Patient Management",
       referrals: "Referral Management",
       feedback: "Feedback Management",
-      settings: "Account",
+      settings: "Account", // Settings also opens Time Off & Requests
       profile: "Account",
       support: "Account",
     };
 
-    if (
-      segments.length > 1 &&
-      sectionMap[segments[1] as keyof typeof sectionMap]
-    ) {
+    // Check both segments[1] (if no /user prefix) and segments[2] (if /user prefix exists)
+    const sectionName = segments[2] || segments[1];
+    if (sectionName && sectionMap[sectionName as keyof typeof sectionMap]) {
+      const sectionToOpen = sectionMap[sectionName as keyof typeof sectionMap];
       setOpenSections((prev) => ({
         ...prev,
-        [sectionMap[segments[1] as keyof typeof sectionMap]]: true,
+        [sectionToOpen]: true,
+        // Also open Leave & Scheduling when on settings page
+        ...(sectionName === "settings" && { "Leave & Scheduling": true }),
       }));
     }
   }, [pathname]);
@@ -88,12 +92,12 @@ export function UserSidebar({
       items: [
         {
           title: "Overview",
-          href: "/dashboard",
+          href: "/user/dashboard",
           icon: <LayoutDashboard className="h-5 w-5" />,
         },
         {
           title: "Calendar",
-          href: "/dashboard/calendar",
+          href: "/user/dashboard/calendar",
           icon: <Calendar className="h-5 w-5" />,
         },
       ],
@@ -103,12 +107,12 @@ export function UserSidebar({
       items: [
         {
           title: "All Tasks",
-          href: "/tasks",
+          href: "/user/tasks",
           icon: <FileText className="h-5 w-5" />,
         },
         {
           title: "My Tasks",
-          href: "/tasks/my-tasks",
+          href: "/user/tasks",
           icon: <FileText className="h-5 w-5" />,
         },
       ],
@@ -118,12 +122,12 @@ export function UserSidebar({
       items: [
         {
           title: "All Patients",
-          href: "/patients",
+          href: "/user/patients",
           icon: <User className="h-5 w-5" />,
         },
         {
           title: "My Patients",
-          href: "/my-patients",
+          href: "/user/my-patients",
           icon: <User className="h-5 w-5" />,
         },
       ],
@@ -133,12 +137,12 @@ export function UserSidebar({
       items: [
         {
           title: "All Referrals",
-          href: "/referrals",
+          href: "/user/referrals",
           icon: <ArrowRight className="h-5 w-5" />,
         },
         {
           title: "My Referrals",
-          href: "/my-referrals",
+          href: "/user/my-referrals",
           icon: <ArrowRight className="h-5 w-5" />,
         },
       ],
@@ -148,32 +152,32 @@ export function UserSidebar({
       items: [
         {
           title: "All Feedback",
-          href: "/feedback",
+          href: "/user/feedback",
           icon: <MessageSquare className="h-5 w-5" />,
         },
+      ],
+    },
+    {
+      title: "Leave & Scheduling",
+      items: [
         {
-          title: "My Feedback",
-          href: "/feedback/my-feedback",
-          icon: <MessageSquare className="h-5 w-5" />,
+          title: "Vacations & Leave",
+          href: "/user/settings",
+          icon: <CalendarDays className="h-5 w-5" />,
+        },
+        {
+          title: "Reschedule Requests",
+          href: "/user/settings",
+          icon: <Clock className="h-5 w-5" />,
         },
       ],
     },
     {
       title: "Account",
       items: [
-        // {
-        //   title: "Profile",
-        //   href: "/profile",
-        //   icon: <UserCog className="h-5 w-5" />,
-        // },
-        // {
-        //   title: "Notifications",
-        //   href: "/notifications",
-        //   icon: <BellRing className="h-5 w-5" />,
-        // },
         {
           title: "Settings",
-          href: "/settings",
+          href: "/user/settings",
           icon: <Settings className="h-5 w-5" />,
         },
         // {
@@ -189,14 +193,14 @@ export function UserSidebar({
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen",
-        isCollapsed ? "w-[70px]" : "w-64",
+        isCollapsed ? "w-[70px]" : "w-72",
         className
       )}
       {...props}
     >
       {/* Header/Logo Section */}
       <div className="flex h-20 items-center justify-center border-b px-3">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/user/dashboard" className="flex items-center gap-2">
           <Leaf className="h-6 w-6 text-primary" />
           {!isCollapsed && (
             <span className="text-lg font-bold tracking-tight">
@@ -248,7 +252,7 @@ export function UserSidebar({
                   const isActive =
                     pathname === item.href ||
                     (pathname.startsWith(item.href + "/") &&
-                      item.href !== "/dashboard");
+                      item.href !== "/user/dashboard");
                   return (
                     <Link
                       key={item.href}

@@ -73,8 +73,8 @@ import { User, UserSummary } from "@/lib/api/admin/users/_model";
 // Role mapping from backend numbers to display strings
 const roleMap: Record<number, string> = {
   0: "User",
-  1: "Allied Professional",
-  2: "Allied Assistant",
+  1: "Allied Assistant",
+  2: "Allied Professional",
   3: "Admin",
 };
 

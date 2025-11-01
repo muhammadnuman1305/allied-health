@@ -23,19 +23,34 @@ namespace AlliedHealth.Common.Enums
         SuperAdmin = 3
     }
 
+    public enum ESpecialties
+    {
+        PhysioTherapy = 1,
+        OccupationalTherapy = 2,
+        SpeechTherapy = 3,
+        Dietetics = 4
+    }
+
     public enum ETaskStatus
     {
         Active = 1,
         Completed = 2,
-        Pending = 3,
-        Overdue = 4
+        Overdue = 3
     }
 
-    public enum DefaultTaskPriorities
+    public enum ETaskInterventionOutcomes
+    {
+        Seen = 1, // S - Patient seen by AHA
+        Attempted = 2, // A - There was an attempted made by AHA to see patient, however no intervention took place 
+        Declined = 3, // D - Patient declined intervention
+        Unseen = 4, // U - Patient was not seen by AHA (unseen).
+        Handover = 5  // X - Refer to additional note or handover from AHA regarding outcome of delegation.
+    }
+
+    public enum ETaskPriorities
     {
         Low = 1,
         Medium = 2,
         High = 3,
-        Urgent = 4
     }
 }

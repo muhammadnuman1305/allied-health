@@ -1,300 +1,386 @@
-import { Task, TaskFormData, TaskSummary } from "./_model";
+import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, priorityNumberToString, priorityStringToNumber } from "./_model";
+import api from "../../axios";
 
-// Mock data for development
-const MOCK_TASKS: Task[] = [
-  {
-    id: "task-001",
-    patientId: "1",
-    patientName: "John Smith",
-    patientMrn: "MRN001234",
-    taskType: "Assessment",
-    title: "Initial Mobility Assessment",
-    clinicalInstructions: "Complete initial mobility assessment including gait analysis and transfer capabilities. Focus on fall risk evaluation.",
-    priority: "High",
-    dueDate: "2024-01-20",
-    dueTime: "10:00",
-    assignedToDepartment: "Physiotherapy",
-    assignedToStaff: "user-001",
-    assignedToStaffName: "Dr. Sarah Wilson",
-    subTasks: [
-      { id: "1", name: "Gait analysis and documentation", assignedToStaff: "user-001" },
-      { id: "2", name: "Transfer assessment (bed to chair)", assignedToStaff: "user-002" },
-      { id: "3", name: "Balance testing and fall risk evaluation", assignedToStaff: "user-001" }
-    ],
-    status: "Assigned",
-    linkedReferral: true,
-    referralFromDepartment: "General Medical",
-    referralToDepartment: "Physiotherapy",
-    createdAt: "2024-01-18T09:00:00Z",
-    updatedAt: "2024-01-18T09:00:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-002",
-    patientId: "2",
-    patientName: "Mary Johnson",
-    patientMrn: "MRN001235",
-    taskType: "Treatment Session",
-    title: "Speech Therapy - Aphasia Treatment",
-    clinicalInstructions: "Continue expressive aphasia treatment. Focus on naming exercises and sentence construction. Monitor frustration levels.",
-    priority: "High",
-    dueDate: "2024-01-19",
-    dueTime: "14:00",
-    assignedToDepartment: "Speech Therapy",
-    assignedToStaff: "user-002",
-    assignedToStaffName: "Emma Thompson",
-    subTasks: [
-      { id: "1", name: "Expressive language assessment", assignedToStaff: "user-002" },
-      { id: "2", name: "Naming exercises and word retrieval", assignedToStaff: "user-002" },
-      { id: "3", name: "Sentence construction practice", assignedToStaff: "user-003" }
-    ],
-    status: "In Progress",
-    feedbackType: "Additional support needed",
-    feedbackNotes: "Patient showing good progress but requires family involvement for home practice.",
-    createdAt: "2024-01-17T10:30:00Z",
-    updatedAt: "2024-01-19T09:15:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-003",
-    patientId: "3",
-    patientName: "Robert Davis",
-    patientMrn: "MRN001236",
-    taskType: "Progress Review",
-    title: "Post-Op Hip Fracture Review",
-    clinicalInstructions: "Review progress post hip fracture surgery. Assess weight-bearing tolerance and pain levels. Update mobilization plan.",
-    priority: "Medium",
-    dueDate: "2024-01-21",
-    dueTime: "11:30",
-    assignedToDepartment: "Physiotherapy",
-    status: "Not Assigned",
-    createdAt: "2024-01-18T14:20:00Z",
-    updatedAt: "2024-01-18T14:20:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-004",
-    patientId: "4",
-    patientName: "Elizabeth Wilson",
-    patientMrn: "MRN001237",
-    taskType: "Follow-up",
-    title: "Nutrition Follow-up Assessment",
-    clinicalInstructions: "Follow-up assessment of nutritional status. Check weight, review dietary intake, and assess hydration.",
-    priority: "Low",
-    dueDate: "2024-01-16",
-    dueTime: "15:00",
-    assignedToDepartment: "Dietetics",
-    assignedToStaff: "user-003",
-    assignedToStaffName: "Lisa Chen",
-    status: "Completed",
-    feedbackType: "Completed as prescribed",
-    feedbackNotes: "Patient has achieved target weight and demonstrates good understanding of dietary plan.",
-    outcomeNotes: "Nutritional goals met. Patient ready for discharge. Provided written dietary guidelines for home.",
-    completedDate: "2024-01-16",
-    completedBy: "user-003",
-    createdAt: "2024-01-13T08:00:00Z",
-    updatedAt: "2024-01-16T15:45:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-005",
-    patientId: "5",
-    patientName: "William Anderson",
-    patientMrn: "MRN001238",
-    taskType: "Treatment Session",
-    title: "Cardiac Rehabilitation Session",
-    clinicalInstructions: "Continue cardiac rehabilitation program. Monitor vitals throughout. Focus on gentle strengthening and breathing exercises.",
-    priority: "High",
-    dueDate: "2024-01-19",
-    dueTime: "09:00",
-    assignedToDepartment: "Physiotherapy",
-    assignedToStaff: "user-001",
-    assignedToStaffName: "Dr. Sarah Wilson",
-    status: "In Progress",
-    linkedReferral: true,
-    referralFromDepartment: "Cardiology",
-    referralToDepartment: "Physiotherapy",
-    feedbackType: "Needs review",
-    feedbackNotes: "Patient reports increased fatigue. May need to adjust exercise intensity.",
-    createdAt: "2024-01-18T07:30:00Z",
-    updatedAt: "2024-01-19T09:20:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-006",
-    patientId: "1",
-    patientName: "John Smith",
-    patientMrn: "MRN001234",
-    taskType: "Equipment Assessment",
-    title: "Walking Aid Assessment",
-    clinicalInstructions: "Assess patient for appropriate walking aid. Consider frame vs stick. Ensure proper height and training provided.",
-    priority: "Medium",
-    dueDate: "2024-01-22",
-    dueTime: "10:30",
-    assignedToDepartment: "Occupational Therapy",
-    status: "Not Assigned",
-    createdAt: "2024-01-18T11:00:00Z",
-    updatedAt: "2024-01-18T11:00:00Z",
-    createdBy: "admin-001"
-  },
-  {
-    id: "task-007",
-    patientId: "2",
-    patientName: "Mary Johnson",
-    patientMrn: "MRN001235",
-    taskType: "Family Education",
-    title: "Family Communication Training",
-    clinicalInstructions: "Provide family education on supporting patient with aphasia. Demonstrate effective communication strategies.",
-    priority: "Medium",
-    dueDate: "2024-01-18",
-    dueTime: "13:00",
-    assignedToDepartment: "Speech Therapy",
-    assignedToStaff: "user-002",
-    assignedToStaffName: "Emma Thompson",
-    status: "Completed",
-    feedbackType: "Completed as prescribed",
-    feedbackNotes: "Family engaged and receptive. Provided written materials and demonstrated techniques.",
-    outcomeNotes: "Family education completed successfully. Family members demonstrate good understanding and are supportive.",
-    completedDate: "2024-01-18",
-    completedBy: "user-002",
-    createdAt: "2024-01-17T15:00:00Z",
-    updatedAt: "2024-01-18T14:30:00Z",
-    createdBy: "admin-001"
+// Types for specialties and interventions
+export interface TaskSpecialty {
+  id: string;
+  name: string;
+}
+
+export interface TaskIntervention {
+  id: string;
+  specialtyId: string;
+  name: string;
+}
+
+export interface AHAOption {
+  id: string;
+  name: string;
+  specialties: string[];
+}
+
+export interface DeptOption {
+  id: string;
+  name: string;
+}
+
+export interface WardOption {
+  id: string;
+  name: string;
+  departments: string[];
+}
+
+// Transform backend GetTaskDTO to frontend Task
+const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
+  // Infer status: if assigned, default to "Assigned", otherwise "Not Assigned"
+  // Note: Backend doesn't provide status, so we infer based on assignedTo
+  let inferredStatus: Task["status"] = "Not Assigned";
+  if (dto.assignedTo) {
+    // If assigned but no clear indication of progress, default to "Assigned"
+    // Completed status would need explicit backend support
+    inferredStatus = "Assigned";
   }
-];
+  
+  // Transform interventions if they exist
+  const interventions: string[] = [];
+  const interventionAssignments: Record<string, string> = {};
+  const interventionSchedules: Record<string, { startDate: string; endDate: string }> = {};
+  const interventionWardAssignments: Record<string, string> = {};
 
-const MOCK_SUMMARY: TaskSummary = {
-  totalTasks: 87,
-  tasksToday: 12,
-  notAssigned: 15,
-  assigned: 28,
-  inProgress: 22,
-  completed: 22,
-  overdue: 8,
-  priorityBreakdown: {
-    high: 25,
-    medium: 38,
-    low: 24
-  },
-  departmentBreakdown: {
-    physiotherapy: 32,
-    occupationalTherapy: 21,
-    speechTherapy: 18,
-    dietetics: 11,
-    unassigned: 15
+  if (dto.interventions && Array.isArray(dto.interventions)) {
+    dto.interventions.forEach((intervention) => {
+      interventions.push(intervention.id);
+      interventionAssignments[intervention.id] = intervention.ahaId;
+      interventionSchedules[intervention.id] = {
+        startDate: intervention.start,
+        endDate: intervention.end,
+      };
+      interventionWardAssignments[intervention.id] = intervention.wardId;
+    });
+  }
+
+  return {
+    id: dto.id,
+    title: dto.title,
+    patientId: dto.patientId.toString(),
+    patientName: dto.patientName 
+      ? (typeof dto.patientName === "string" ? dto.patientName : dto.patientName.toString())
+      : `Patient ${dto.patientId}`, // Fallback if patientName not provided
+    departmentId: dto.departmentId,
+    departmentName: dto.departmentName || "",
+    assignedToDepartment: dto.departmentName || "", // Alias
+    priority: priorityNumberToString(dto.priority),
+    startDate: dto.startDate,
+    endDate: dto.endDate,
+    assignedTo: dto.assignedTo,
+    description: dto.description,
+    diagnosis: dto.diagnosis || "",
+    goals: dto.goals || "",
+    clinicalInstructions: dto.description || "", // Map description to clinicalInstructions
+    lastUpdated: dto.lastUpdated,
+    updatedAt: dto.lastUpdated, // Alias
+    hidden: dto.hidden,
+    status: inferredStatus,
+    // Add interventions data for form use
+    interventions: interventions,
+    interventionAssignments: interventionAssignments,
+    interventionSchedules: interventionSchedules,
+    interventionWardAssignments: interventionWardAssignments,
+  } as Task & {
+    interventions?: string[];
+    interventionAssignments?: Record<string, string>;
+    interventionSchedules?: Record<string, { startDate: string; endDate: string }>;
+    interventionWardAssignments?: Record<string, string>;
+  };
+};
+
+// Fetch all tasks
+export const getAll$ = async (statusFilter: "All" | "Active" | "Hidden" = "All"): Promise<{ data: Task[] }> => {
+  try {
+    let url = "/api/task";
+    
+    // Add OData filter based on status
+    if (statusFilter === "Hidden") {
+      url += "?$filter=hidden eq true";
+    } else if (statusFilter === "Active") {
+      url += "?$filter=hidden eq false or hidden eq null";
+    }
+    // For "All", no filter is applied
+    
+    const response = await api.get(url);
+    const dtos = response.data as GetTaskDTO[];
+    const tasks = dtos.map(transformTaskFromBackend);
+    return { data: tasks };
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    throw error;
   }
 };
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-export const getAll$ = async (): Promise<{ data: Task[] }> => {
-  await delay(500);
-  return { data: MOCK_TASKS };
-};
-
+// Fetch single task by ID
 export const getById$ = async (id: string): Promise<{ data: Task }> => {
-  await delay(300);
-  const task = MOCK_TASKS.find(t => t.id === id);
-  if (!task) {
-    throw new Error("Task not found");
+  try {
+    const response = await api.get(`/api/task/${id}`);
+    const dto = response.data as GetTaskDTO;
+    return { data: transformTaskFromBackend(dto) };
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    throw error;
   }
-  return { data: task };
 };
 
 export const getSummary$ = async (): Promise<{ data: TaskSummary }> => {
-  await delay(200);
-  return { data: MOCK_SUMMARY };
+  try {
+    // If summary endpoint exists, use it. Otherwise, calculate from getAll$
+    const response = await api.get("/api/task/summary");
+    return { data: response.data as TaskSummary };
+  } catch (error) {
+    // Fallback: calculate summary from all tasks
+    console.warn("Summary endpoint not available, calculating from tasks:", error);
+    const tasksResponse = await getAll$();
+    const tasks = tasksResponse.data;
+    const now = new Date();
+    
+    // Calculate department breakdown dynamically
+    const deptMap = new Map<string, number>();
+    tasks.forEach((task) => {
+      const deptName = task.departmentName || task.assignedToDepartment || "Unassigned";
+      deptMap.set(deptName, (deptMap.get(deptName) || 0) + 1);
+    });
+    
+    const deptWiseSummary: Array<{ name: string; count: number }> = Array.from(deptMap.entries()).map(([name, count]) => ({
+      name,
+      count,
+    }));
+    
+    const summary: TaskSummary = {
+      totalTasks: tasks.length,
+      overdueTasks: tasks.filter(t => {
+        if (t.status === "Completed") return false;
+        const endDateTime = t.endDate 
+          ? new Date(t.endDate) 
+          : (t.dueDate && t.dueTime ? new Date(`${t.dueDate}T${t.dueTime}`) : null);
+        return endDateTime && endDateTime < now;
+      }).length,
+      activeTasks: tasks.filter(t => t.status === "Assigned" || t.status === "In Progress").length,
+      completedTasks: tasks.filter(t => t.status === "Completed").length,
+      highPriority: tasks.filter(t => t.priority === "High").length,
+      midPriority: tasks.filter(t => t.priority === "Medium").length,
+      lowPriority: tasks.filter(t => t.priority === "Low").length,
+      deptWiseSummary,
+    };
+    return { data: summary };
+  }
 };
 
 export const getByPatientId$ = async (patientId: string): Promise<{ data: Task[] }> => {
-  await delay(300);
-  const patientTasks = MOCK_TASKS.filter(t => t.patientId === patientId);
-  return { data: patientTasks };
+  try {
+    const response = await api.get(`/api/task?patientId=${patientId}`);
+    const dtos = response.data as GetTaskDTO[];
+    const tasks = dtos.map(transformTaskFromBackend);
+    return { data: tasks };
+  } catch (error) {
+    console.error("Error fetching patient tasks:", error);
+    throw error;
+  }
 };
 
 export const getOverdue$ = async (): Promise<{ data: Task[] }> => {
-  await delay(300);
-  const now = new Date();
-  const overdueTasks = MOCK_TASKS.filter(task => {
-    if (task.status === "Completed") return false;
-    const dueDateTime = new Date(`${task.dueDate}T${task.dueTime}`);
-    return dueDateTime < now;
-  });
-  return { data: overdueTasks };
+  try {
+    const response = await api.get("/api/task?overdue=true");
+    const dtos = response.data as GetTaskDTO[];
+    const tasks = dtos.map(transformTaskFromBackend);
+    return { data: tasks };
+  } catch (error) {
+    console.error("Error fetching overdue tasks:", error);
+    throw error;
+  }
 };
 
-export const create$ = async (task: TaskFormData): Promise<{ data: Task }> => {
-  await delay(800);
-  
-  // Determine status based on assignment
-  let status: Task["status"] = "Not Assigned";
-  if (task.assignedToDepartment) {
-    status = "Assigned";
-  }
-  
-  // In a real app, we'd fetch patient info from the backend
-  const newTask: Task = {
-    ...task,
-    id: `task-${Math.random().toString(36).substr(2, 9)}`,
-    patientName: "Patient Name", // Would come from backend
-    patientMrn: "MRN000000", // Would come from backend
-    status,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    createdBy: "current-user-id"
-  };
-  
-  MOCK_TASKS.push(newTask);
-  return { data: newTask };
-};
+// Helper function to convert priority string to number (use exported function from model)
+const priorityToNumber = priorityStringToNumber;
 
-export const update$ = async (task: TaskFormData): Promise<{ data: Task }> => {
-  await delay(800);
-  const index = MOCK_TASKS.findIndex(t => t.id === task.id);
-  if (index === -1) {
-    throw new Error("Task not found");
-  }
-  
-  const updatedTask: Task = {
-    ...MOCK_TASKS[index],
-    ...task,
-    updatedAt: new Date().toISOString()
-  };
-  
-  MOCK_TASKS[index] = updatedTask;
-  return { data: updatedTask };
-};
+// Transform frontend TaskFormData to backend AddUpdateTaskDTO
+const transformToBackendDTO = (formData: TaskFormData): AddUpdateTaskDTO => {
+  // Get start and end dates - prioritize startDate/endDate, fallback to dueDate
+  const startDate = formData.startDate || formData.dueDate;
+  const endDate = formData.endDate || formData.dueDate;
 
-export const updateStatus$ = async (id: string, status: Task["status"], outcomeNotes?: string): Promise<{ data: Task }> => {
-  await delay(500);
-  const task = MOCK_TASKS.find(t => t.id === id);
-  if (!task) {
-    throw new Error("Task not found");
+  // Transform interventions
+  const interventions: TaskInterventionDTO[] = [];
+  
+  if (formData.interventions && formData.interventionAssignments && 
+      formData.interventionSchedules && formData.interventionWardAssignments) {
+    formData.interventions.forEach((interventionId) => {
+      const ahaId = formData.interventionAssignments![interventionId];
+      const schedule = formData.interventionSchedules![interventionId];
+      const wardId = formData.interventionWardAssignments![interventionId];
+
+      if (ahaId && schedule && schedule.startDate && schedule.endDate && wardId) {
+        interventions.push({
+          id: interventionId,
+          ahaId: ahaId,
+          start: schedule.startDate,
+          end: schedule.endDate,
+          wardId: wardId,
+        });
+      }
+    });
   }
-  
-  task.status = status;
-  task.updatedAt = new Date().toISOString();
-  
-  if (status === "Completed") {
-    task.completedDate = new Date().toISOString().split("T")[0];
-    task.completedBy = "current-user-id";
-    if (outcomeNotes) {
-      task.outcomeNotes = outcomeNotes;
+
+  // Ensure patientId is a valid number
+  const patientIdNum = parseInt(formData.patientId, 10);
+  if (isNaN(patientIdNum)) {
+    throw new Error("Invalid patientId: must be a number");
+  }
+
+  // Ensure departmentId is provided
+  if (!formData.assignedToDepartment) {
+    throw new Error("DepartmentId is required");
+  }
+
+  // Ensure dates are in YYYY-MM-DD format
+  const formatDate = (dateStr: string): string => {
+    if (!dateStr) return "";
+    // If already in YYYY-MM-DD format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
     }
-  }
-  
-  return { data: task };
+    // Otherwise, parse and format
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date format: ${dateStr}`);
+    }
+    return date.toISOString().split("T")[0];
+  };
+
+  const dto: AddUpdateTaskDTO = {
+    id: formData.id || null,
+    patientId: patientIdNum,
+    departmentId: formData.assignedToDepartment,
+    title: formData.title,
+    priority: priorityToNumber(formData.priority),
+    startDate: formatDate(startDate),
+    endDate: formatDate(endDate),
+    description: formData.clinicalInstructions || null,
+    diagnosis: formData.diagnosis || null,
+    goals: formData.goals || null,
+    interventions: interventions,
+  };
+
+  return dto;
 };
 
-export const deleteTask$ = async (id: string): Promise<{ data: { success: boolean } }> => {
-  await delay(500);
-  const index = MOCK_TASKS.findIndex(t => t.id === id);
-  if (index === -1) {
-    throw new Error("Task not found");
+// Create new task
+export const create$ = async (task: TaskFormData): Promise<{ data: Task }> => {
+  try {
+    const payload = transformToBackendDTO(task);
+    const response = await api.post("/api/task", payload);
+    return { data: response.data as Task };
+  } catch (error) {
+    console.error("Error creating task:", error);
+    throw error;
   }
-  
-  MOCK_TASKS.splice(index, 1);
-  return { data: { success: true } };
+};
+
+// Update task
+export const update$ = async (task: TaskFormData): Promise<{ data: Task }> => {
+  try {
+    const payload = transformToBackendDTO(task);
+    const response = await api.put("/api/task", payload);
+    return { data: response.data as Task };
+  } catch (error) {
+    console.error("Error updating task:", error);
+    throw error;
+  }
+};
+
+// Update task status (uses PUT endpoint with full task data)
+export const updateStatus$ = async (id: string, status: Task["status"], outcomeNotes?: string): Promise<{ data: Task }> => {
+  try {
+    // First get the current task
+    const currentTask = await getById$(id);
+    const updatedTask: TaskFormData = {
+      ...currentTask.data,
+      status,
+      ...(outcomeNotes && { outcomeNotes }),
+      ...(status === "Completed" && {
+        completedDate: new Date().toISOString().split("T")[0],
+      })
+    };
+    
+    // Update using PUT endpoint
+    const response = await update$(updatedTask);
+    return response;
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    throw error;
+  }
+};
+
+// Delete/restore task (same endpoint for both)
+export const deleteTask$ = async (id: string): Promise<{ data: { success: boolean } }> => {
+  try {
+    const response = await api.delete(`/api/task/${id}`);
+    return { data: response.data || { success: true } };
+  } catch (error) {
+    console.error("Error deleting/restoring task:", error);
+    throw error;
+  }
+};
+
+// Get specialties for tasks
+export const getSpecialties$ = async (): Promise<{ data: TaskSpecialty[] }> => {
+  try {
+    const response = await api.get("/api/task/specialties");
+    return { data: response.data as TaskSpecialty[] };
+  } catch (error) {
+    console.error("Error fetching task specialties:", error);
+    throw error;
+  }
+};
+
+// Get interventions for tasks
+export const getInterventions$ = async (): Promise<{ data: TaskIntervention[] }> => {
+  try {
+    const response = await api.get("/api/task/interventions");
+    return { data: response.data as TaskIntervention[] };
+  } catch (error) {
+    console.error("Error fetching task interventions:", error);
+    throw error;
+  }
+};
+
+// Get AHA options for tasks
+export const getAHAOptions$ = async (): Promise<{ data: AHAOption[] }> => {
+  try {
+    const response = await api.get("/api/task/aha-options");
+    return { data: response.data as AHAOption[] };
+  } catch (error) {
+    console.error("Error fetching AHA options:", error);
+    throw error;
+  }
+};
+
+// Get department options for tasks
+export const getDeptOptions$ = async (): Promise<{ data: DeptOption[] }> => {
+  try {
+    const response = await api.get("/api/task/dept-options");
+    return { data: response.data as DeptOption[] };
+  } catch (error) {
+    console.error("Error fetching department options:", error);
+    throw error;
+  }
+};
+
+// Get ward options for tasks
+export const getWardOptions$ = async (): Promise<{ data: WardOption[] }> => {
+  try {
+    const response = await api.get("/api/task/ward-options");
+    return { data: response.data as WardOption[] };
+  } catch (error) {
+    console.error("Error fetching ward options:", error);
+    throw error;
+  }
 };
 

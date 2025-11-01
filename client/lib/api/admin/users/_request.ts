@@ -1,5 +1,6 @@
 import api from "../../axios";
 import { UserFormData } from "./_model";
+import { SpecialtyOption } from "../specialties/_model";
 const BASE_URL = "/api/user";
 
 export const getAll$ = async () => {
@@ -25,4 +26,10 @@ export const update$ = async (payload: UserFormData) => {
 
 export const toggleHide$ = async (id: string) => {
     return api.delete(`${BASE_URL}/${id}`);
+}
+
+// Get specialty options for user assignment
+export const getSpecialtyOptions$ = async () => {
+    const response = await api.get(`${BASE_URL}/specialty-options`);
+    return { data: response.data as SpecialtyOption[] };
 }

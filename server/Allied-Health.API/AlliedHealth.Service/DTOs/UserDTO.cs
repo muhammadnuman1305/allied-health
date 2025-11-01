@@ -1,4 +1,4 @@
-﻿namespace AlliedHealth.Domain.DTOs
+﻿namespace AlliedHealth.Service.DTOs
 {
     public class GetUserDTO
     {
@@ -10,6 +10,7 @@
         public int Role { get; set; }
         public bool IsAdmin { get; set; } = false;
         public bool Hidden { get; set; }
+        public List<Guid> SelectedSpecialties { get; set; } = new List<Guid>();
     }
 
     public class GetUserSummaryDTO 
@@ -29,6 +30,7 @@
         public string? Password { get; set; }
         public required string Email { get; set; }
         public int Role { get; set; }
+        public List<Guid> SelectedSpecialties { get; set; } = new List<Guid>();
         public bool IsAdmin { get; set; } = false;
     }
 }

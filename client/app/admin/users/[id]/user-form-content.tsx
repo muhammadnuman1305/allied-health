@@ -14,13 +14,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, User } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { ArrowLeft, Save, User, Check, ChevronsUpDown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getById$, create$, update$ } from "@/lib/api/admin/users/_request";
+import {
+  getById$,
+  create$,
+  update$,
+  getSpecialtyOptions$,
+} from "@/lib/api/admin/users/_request";
 import { UserFormData, User as UserType } from "@/lib/api/admin/users/_model";
+import { SpecialtyOption } from "@/lib/api/admin/specialties/_model";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Form validation schema - updated to match backend model
 const createUserFormSchema = (isNewUser: boolean) =>
@@ -55,19 +75,20 @@ const createUserFormSchema = (isNewUser: boolean) =>
       required_error: "Please select a role",
     }),
     isAdmin: z.boolean().default(false),
+    selectedSpecialties: z.array(z.string()).optional().default([]),
   });
 
 type FormData = z.infer<ReturnType<typeof createUserFormSchema>>;
 
 // Role mapping for display
 const roleMap = {
-  1: "Allied Professional",
-  2: "Allied Assistant",
+  1: "Allied Assistant",
+  2: "Allied Professional",
 } as const;
 
 const reverseRoleMap = {
-  "Allied Professional": 1,
-  "Allied Assistant": 2,
+  "Allied Assistant": 1,
+  "Allied Professional": 2,
 } as const;
 
 export default function UserFormContent({ userId }: { userId: string }) {
@@ -77,6 +98,9 @@ export default function UserFormContent({ userId }: { userId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingUser, setIsLoadingUser] = useState(!isNewUser);
   const [user, setUser] = useState<UserType | null>(null);
+  const [specialties, setSpecialties] = useState<SpecialtyOption[]>([]);
+  const [isLoadingSpecialties, setIsLoadingSpecialties] = useState(false);
+  const [specialtyPopoverOpen, setSpecialtyPopoverOpen] = useState(false);
 
   const {
     register,
@@ -93,13 +117,39 @@ export default function UserFormContent({ userId }: { userId: string }) {
       username: isNewUser ? "" : null,
       email: "",
       password: isNewUser ? "" : null,
-      role: 1, // Default to Allied Professional
+      role: 2, // Default to Allied Professional
       isAdmin: false,
+      selectedSpecialties: [],
     },
   });
 
   const watchedRole = watch("role");
   const watchedIsAdmin = watch("isAdmin");
+  const watchedSelectedSpecialties = watch("selectedSpecialties") || [];
+
+  // Load specialties when role is Allied Assistant
+  useEffect(() => {
+    const loadSpecialties = async () => {
+      if (watchedRole === 1) {
+        try {
+          setIsLoadingSpecialties(true);
+          const response = await getSpecialtyOptions$();
+          setSpecialties(response.data);
+        } catch (error) {
+          console.error("Error loading specialties:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load specialties. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingSpecialties(false);
+        }
+      }
+    };
+
+    loadSpecialties();
+  }, [watchedRole]);
 
   // Load user data for editing
   useEffect(() => {
@@ -120,6 +170,18 @@ export default function UserFormContent({ userId }: { userId: string }) {
           setValue("role", userData.role);
           setValue("isAdmin", userData.isAdmin);
           setValue("password", null); // Don't populate password for security
+          // Always populate selectedSpecialties from backend response
+          setValue("selectedSpecialties", userData.selectedSpecialties || []);
+
+          // Load specialties if user is Allied Assistant
+          if (userData.role === 1) {
+            try {
+              const specialtiesResponse = await getSpecialtyOptions$();
+              setSpecialties(specialtiesResponse.data);
+            } catch (error) {
+              console.error("Error loading specialties:", error);
+            }
+          }
         } catch (error) {
           console.error("Error loading user:", error);
           toast({
@@ -140,7 +202,7 @@ export default function UserFormContent({ userId }: { userId: string }) {
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      // Prepare payload according to backend model
+      // Prepare payload according to backend AddUpdateUserDTO
       const payload: UserFormData = {
         id: isNewUser ? null : data.id || userId,
         firstName: data.firstName,
@@ -150,6 +212,8 @@ export default function UserFormContent({ userId }: { userId: string }) {
         password: data.password || null,
         role: data.role,
         isAdmin: data.isAdmin,
+        selectedSpecialties:
+          data.role === 1 ? data.selectedSpecialties || [] : [],
       };
 
       if (isNewUser) {
@@ -320,12 +384,15 @@ export default function UserFormContent({ userId }: { userId: string }) {
                 <Label htmlFor="role">Role *</Label>
                 <Select
                   value={roleMap[watchedRole as keyof typeof roleMap] || ""}
-                  onValueChange={(value) =>
-                    setValue(
-                      "role",
-                      reverseRoleMap[value as keyof typeof reverseRoleMap]
-                    )
-                  }
+                  onValueChange={(value) => {
+                    const roleValue =
+                      reverseRoleMap[value as keyof typeof reverseRoleMap];
+                    setValue("role", roleValue);
+                    // Clear specialties if role changes from Allied Assistant
+                    if (roleValue !== 1) {
+                      setValue("selectedSpecialties", []);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
@@ -345,24 +412,111 @@ export default function UserFormContent({ userId }: { userId: string }) {
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Admin Checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isAdmin"
-                checked={watchedIsAdmin}
-                onCheckedChange={(checked) => setValue("isAdmin", !!checked)}
-              />
-              <Label
-                htmlFor="isAdmin"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Is Administrator
-              </Label>
-              <p className="text-xs text-muted-foreground ml-2">
-                Grants administrative privileges and access to admin features
-              </p>
+              {/* Specialties Multi-Select (only shown for Allied Assistant) */}
+              {watchedRole === 1 && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="specialties">Specialties</Label>
+                  <Popover
+                    open={specialtyPopoverOpen}
+                    onOpenChange={setSpecialtyPopoverOpen}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={specialtyPopoverOpen}
+                        className="w-full justify-between"
+                      >
+                        {watchedSelectedSpecialties.length > 0
+                          ? `${watchedSelectedSpecialties.length} specialty selected`
+                          : "Select specialties..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search specialties..." />
+                        <CommandList>
+                          <CommandEmpty>
+                            {isLoadingSpecialties
+                              ? "Loading specialties..."
+                              : "No specialties found."}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {specialties.map((specialty) => (
+                              <CommandItem
+                                key={specialty.id}
+                                value={specialty.name}
+                                onSelect={() => {
+                                  const currentIds = watchedSelectedSpecialties;
+                                  const isSelected = currentIds.includes(
+                                    specialty.id
+                                  );
+                                  const newIds = isSelected
+                                    ? currentIds.filter(
+                                        (id) => id !== specialty.id
+                                      )
+                                    : [...currentIds, specialty.id];
+                                  setValue("selectedSpecialties", newIds);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    watchedSelectedSpecialties.includes(
+                                      specialty.id
+                                    )
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {specialty.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {watchedSelectedSpecialties.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {watchedSelectedSpecialties.map((specialtyId) => {
+                        const specialty = specialties.find(
+                          (s) => s.id === specialtyId
+                        );
+                        return specialty ? (
+                          <div
+                            key={specialtyId}
+                            className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-sm"
+                          >
+                            {specialty.name}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setValue(
+                                  "selectedSpecialties",
+                                  watchedSelectedSpecialties.filter(
+                                    (id) => id !== specialtyId
+                                  )
+                                );
+                              }}
+                              className="ml-1 hover:opacity-70"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  {errors.selectedSpecialties && (
+                    <p className="text-sm text-destructive">
+                      {errors.selectedSpecialties.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Form Actions */}

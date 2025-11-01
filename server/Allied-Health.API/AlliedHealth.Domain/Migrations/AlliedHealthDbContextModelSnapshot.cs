@@ -22,47 +22,6 @@ namespace AlliedHealth.Domain.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.AhaRole", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("AhaRole", (string)null);
-                });
-
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.AhaRoleCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId", "Name")
-                        .IsUnique();
-
-                    b.ToTable("AhaRoleCategory", (string)null);
-                });
-
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -142,24 +101,45 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Intervention", b =>
                 {
-                    b.Property<int>("InterventionId")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("InterventionId"));
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("Hidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<int>("SpecialtyId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("SpecialtyId")
+                        .HasColumnType("uuid");
 
-                    b.HasKey("InterventionId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hidden");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.HasIndex("SpecialtyId");
 
@@ -298,18 +278,42 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Specialty", b =>
                 {
-                    b.Property<int>("SpecialtyId")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SpecialtyId"));
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("Hidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.HasKey("SpecialtyId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hidden");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("Specialty", (string)null);
                 });
@@ -320,25 +324,56 @@ namespace AlliedHealth.Domain.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CustomType")
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("timezone('utc', now())");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<DateOnly>("DueDate")
-                        .HasColumnType("date");
+                    b.Property<string>("Diagnosis")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<TimeOnly>("DueTime")
                         .HasColumnType("time");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Goals")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Hidden")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ModifiedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("timezone('utc', now())");
 
                     b.Property<int>("PatientId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -348,10 +383,9 @@ namespace AlliedHealth.Domain.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("PatientId");
 
@@ -360,15 +394,36 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskIntervention", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AhaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("InterventionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("InterventionId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WardId")
+                        .HasColumnType("uuid");
 
-                    b.HasKey("TaskId", "InterventionId");
+                    b.HasKey("Id");
 
                     b.HasIndex("InterventionId");
+
+                    b.HasIndex("TaskId");
 
                     b.ToTable("TaskIntervention", (string)null);
                 });
@@ -426,6 +481,26 @@ namespace AlliedHealth.Domain.Migrations
                         .IsUnique();
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.UserSpecialty", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SpecialtyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("(now() at time zone 'utc')");
+
+                    b.HasKey("UserId", "SpecialtyId");
+
+                    b.HasIndex("SpecialtyId");
+
+                    b.ToTable("UserSpecialty", (string)null);
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Ward", b =>
@@ -507,17 +582,6 @@ namespace AlliedHealth.Domain.Migrations
                     b.ToTable("WardDeptCoverage", (string)null);
                 });
 
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.AhaRoleCategory", b =>
-                {
-                    b.HasOne("AlliedHealth.Domain.Entities.AhaRole", "Role")
-                        .WithMany("Categories")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-                });
-
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Department", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.User", "DeptHeadUser")
@@ -574,11 +638,19 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Task", b =>
                 {
+                    b.HasOne("AlliedHealth.Domain.Entities.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AlliedHealth.Domain.Entities.Patient", "Patient")
                         .WithMany("Tasks")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Department");
 
                     b.Navigation("Patient");
                 });
@@ -588,7 +660,7 @@ namespace AlliedHealth.Domain.Migrations
                     b.HasOne("AlliedHealth.Domain.Entities.Intervention", "Intervention")
                         .WithMany("TaskInterventions")
                         .HasForeignKey("InterventionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("AlliedHealth.Domain.Entities.Task", "Task")
@@ -610,6 +682,25 @@ namespace AlliedHealth.Domain.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.UserSpecialty", b =>
+                {
+                    b.HasOne("AlliedHealth.Domain.Entities.Specialty", "Specialty")
+                        .WithMany("UserSpecialties")
+                        .HasForeignKey("SpecialtyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AlliedHealth.Domain.Entities.User", "User")
+                        .WithMany("UserSpecialties")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Specialty");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Ward", b =>
@@ -641,11 +732,6 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Ward");
                 });
 
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.AhaRole", b =>
-                {
-                    b.Navigation("Categories");
-                });
-
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Department", b =>
                 {
                     b.Navigation("AlliedAssistants");
@@ -671,11 +757,18 @@ namespace AlliedHealth.Domain.Migrations
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Specialty", b =>
                 {
                     b.Navigation("Interventions");
+
+                    b.Navigation("UserSpecialties");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Task", b =>
                 {
                     b.Navigation("TaskInterventions");
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
+                {
+                    b.Navigation("UserSpecialties");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Ward", b =>

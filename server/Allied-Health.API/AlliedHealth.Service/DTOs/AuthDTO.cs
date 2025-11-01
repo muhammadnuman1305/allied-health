@@ -1,4 +1,4 @@
-﻿namespace AlliedHealth.Domain.DTOs
+﻿namespace AlliedHealth.Service.DTOs
 {
     public class RegisterUserDTO
     {
@@ -24,11 +24,12 @@
     public class GetAuthUserDTO
     {
         public Guid Id { get; set; }
-        public string Username { get; set; }
-        public string Email { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string AccessToken { get; set; }
+        public required string Username { get; set; }
+        public required string Email { get; set; }
+        public required string FirstName { get; set; }
+        public required string LastName { get; set; }
+        public required string AccessToken { get; set; }
+        public Guid? DepartmentId { get; set; }
         public int Role { get; set; }
     }
 }

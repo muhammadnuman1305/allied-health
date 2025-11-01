@@ -6,6 +6,7 @@ interface UserFormData {
     email: string;
     password: string | null;
     role: number;
+    selectedSpecialties: string[];
     isAdmin: boolean;
 }
 
@@ -19,6 +20,7 @@ interface User {
     role: number;
     isAdmin: boolean;
     hidden: boolean;
+    selectedSpecialties: string[];
 }
 
 // Interface for user summary statistics

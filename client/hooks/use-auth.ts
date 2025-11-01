@@ -11,6 +11,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   accessToken: string;
+  departmentId?: string;
   role: number;
 }
 

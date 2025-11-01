@@ -1,7 +1,7 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Common.Helpers;
 using AlliedHealth.Domain;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract.Authentication;
 using AlliedHealth.Service.Helpers;
@@ -40,6 +40,7 @@ namespace AlliedHealth.Service.Implementation.Authentication
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                DepartmentId = user.DepartmentId,
                 AccessToken = await TokenHelper.GenerateAccessToken(user, _configuration),
                 Role = user.Role,
             };

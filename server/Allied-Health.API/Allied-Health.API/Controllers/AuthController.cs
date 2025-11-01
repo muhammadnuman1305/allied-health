@@ -1,4 +1,4 @@
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract.Authentication;
 using Microsoft.AspNetCore.Mvc;
 

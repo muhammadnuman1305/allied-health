@@ -10,7 +10,6 @@ namespace AlliedHealth.Domain.EntityConfigs
         {
             b.ToTable("User");
 
-            // Columns
             b.HasKey(x => x.Id);
 
             b.Property(x => x.FirstName).HasMaxLength(250).IsRequired();
@@ -23,6 +22,12 @@ namespace AlliedHealth.Domain.EntityConfigs
 
             b.HasIndex(x => x.Username).IsUnique();
             b.HasIndex(x => x.Email).IsUnique();
+
+            // Relationships
+            b.HasMany(x => x.UserSpecialties)
+             .WithOne(us => us.User)
+             .HasForeignKey(us => us.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

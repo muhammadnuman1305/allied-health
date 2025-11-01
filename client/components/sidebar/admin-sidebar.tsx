@@ -21,6 +21,8 @@ import {
   Building2,
   Bed,
   ClipboardList,
+  Stethoscope,
+  Syringe,
   Plus,
   ArrowDown,
   ArrowUp,
@@ -120,11 +122,11 @@ export function AdminSidebar({
         //   href: "/admin/analytics",
         //   icon: <BarChart className="h-5 w-5" />,
         // },
-        {
-          title: "Reports",
-          href: "/admin/reports",
-          icon: <LineChart className="h-5 w-5" />,
-        },
+        // {
+        //   title: "Reports",
+        //   href: "/admin/reports",
+        //   icon: <LineChart className="h-5 w-5" />,
+        // },
       ],
     },
     {
@@ -199,6 +201,16 @@ export function AdminSidebar({
           title: "Wards",
           href: "/admin/setup/wards",
           icon: <Bed className="h-5 w-5" />,
+        },
+        {
+          title: "Specialties",
+          href: "/admin/setup/specialties",
+          icon: <Stethoscope className="h-5 w-5" />,
+        },
+        {
+          title: "Interventions",
+          href: "/admin/setup/interventions",
+          icon: <Syringe className="h-5 w-5" />,
         },
       ],
     },

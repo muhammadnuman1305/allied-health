@@ -1,5 +1,5 @@
 using AlliedHealth.Common.Enums;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

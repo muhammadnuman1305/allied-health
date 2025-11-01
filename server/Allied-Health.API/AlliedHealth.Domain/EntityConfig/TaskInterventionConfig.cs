@@ -10,17 +10,46 @@ namespace AlliedHealth.Domain.EntityConfigs
         {
             b.ToTable("TaskIntervention");
 
-            b.HasKey(x => new { x.TaskId, x.InterventionId });
+            // Primary Key
+            b.HasKey(x => x.Id);
 
-            b.HasOne(x => x.Task);
-                //.WithMany(t => t.TaskInterventions)
-                //.HasForeignKey(x => x.TaskId)
-                //.OnDelete(DeleteBehavior.Cascade);
+            // Properties
+            b.Property(x => x.Id)
+                .ValueGeneratedOnAdd();
+
+            b.Property(x => x.TaskId)
+                .IsRequired();
+
+            b.Property(x => x.InterventionId)
+                .IsRequired();
+
+            b.Property(x => x.AhaId)
+                .IsRequired();
+
+            b.Property(x => x.WardId)
+                .IsRequired();
+
+            b.Property(x => x.StartDate)
+                .HasColumnType("date")
+                .IsRequired();
+
+            b.Property(x => x.EndDate)
+                .HasColumnType("date")
+                .IsRequired();
+
+            b.Property(x => x.Status)
+                .IsRequired();
+
+            // Relationships
+            b.HasOne(x => x.Task)
+                .WithMany(t => t.TaskInterventions)
+                .HasForeignKey(x => x.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             b.HasOne(x => x.Intervention)
                 .WithMany(i => i.TaskInterventions)
                 .HasForeignKey(x => x.InterventionId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

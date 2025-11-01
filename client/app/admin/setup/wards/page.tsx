@@ -54,6 +54,7 @@ import {
   WardSummary,
   getWardLocationDisplayName,
 } from "@/lib/api/admin/wards/_model";
+import { formatLastUpdated } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -210,10 +211,14 @@ export default function AdminWardsSetupPage() {
       label: "Last Updated",
       width: "w-[140px]",
       sortable: true,
-      render: (ward) =>
-        ward.lastUpdated
-          ? new Date(ward.lastUpdated).toLocaleDateString()
-          : "N/A",
+      render: (ward) => {
+        const text = formatLastUpdated(ward.lastUpdated as any);
+        return text === "Never" ? (
+          <span className="text-muted-foreground">Never</span>
+        ) : (
+          text
+        );
+      },
     },
   ];
 

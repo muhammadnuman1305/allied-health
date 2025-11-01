@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,21 +70,22 @@ import {
   isTaskOverdue,
 } from "@/lib/api/admin/tasks/_model";
 
-// Helper to format date and time
-const formatDateTime = (date: string, time: string): string => {
-  const dateObj = new Date(`${date}T${time}`);
-  return dateObj.toLocaleString("en-US", {
+// Helper to format date (DateOnly format)
+const formatDate = (date: string | undefined): string => {
+  if (!date) return "N/A";
+  const dateObj = new Date(date);
+  return dateObj.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
+    year: "numeric",
   });
 };
 
 // Helper to format relative time
-const formatRelativeTime = (dateString: string): string => {
+const formatRelativeTime = (dateString: string | undefined): string => {
+  if (!dateString) return "N/A";
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Invalid date";
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -98,32 +106,30 @@ export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [summary, setSummary] = useState<TaskSummary>({
     totalTasks: 0,
-    tasksToday: 0,
-    notAssigned: 0,
-    assigned: 0,
-    inProgress: 0,
-    completed: 0,
-    overdue: 0,
-    priorityBreakdown: { high: 0, medium: 0, low: 0 },
-    departmentBreakdown: {
-      physiotherapy: 0,
-      occupationalTherapy: 0,
-      speechTherapy: 0,
-      dietetics: 0,
-      unassigned: 0,
-    },
+    overdueTasks: 0,
+    activeTasks: 0,
+    completedTasks: 0,
+    highPriority: 0,
+    midPriority: 0,
+    lowPriority: 0,
+    deptWiseSummary: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
+    "All"
+  );
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     taskId: string;
     taskTitle: string;
+    isHidden: boolean;
   }>({
     isOpen: false,
     taskId: "",
     taskTitle: "",
+    isHidden: false,
   });
   const [completeDialog, setCompleteDialog] = useState<{
     isOpen: boolean;
@@ -141,39 +147,67 @@ export default function AdminTasksPage() {
     patientName: "",
     status: "all",
     priority: "all",
-    assignedToDepartment: "all",
+    departmentName: "all",
+    assignedToDepartment: "all", // Keep for backward compatibility
     sortField: null,
     sortDirection: null,
   });
 
-  // Fetch tasks and summary data on component mount
+  // Fetch tasks and summary data
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch both tasks and summary data in parallel
+      const [tasksResponse, summaryResponse] = await Promise.all([
+        getAll$(statusFilter),
+        getSummary$(),
+      ]);
+
+      setTasks(tasksResponse.data);
+
+      // Map summary data from backend DTO
+      const summaryData = summaryResponse.data || {};
+      setSummary({
+        totalTasks: summaryData.totalTasks || 0,
+        overdueTasks: summaryData.overdueTasks || 0,
+        activeTasks: summaryData.activeTasks || 0,
+        completedTasks: summaryData.completedTasks || 0,
+        highPriority: summaryData.highPriority || 0,
+        midPriority: summaryData.midPriority || 0,
+        lowPriority: summaryData.lowPriority || 0,
+        deptWiseSummary: summaryData.deptWiseSummary || [],
+      });
+    } catch (err) {
+      setError("Failed to fetch data. Please try again.");
+      console.error("Error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  // Fetch tasks and summary data on component mount and when statusFilter changes
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch both tasks and summary data in parallel
-        const [tasksResponse, summaryResponse] = await Promise.all([
-          getAll$(),
-          getSummary$(),
-        ]);
-
-        setTasks(tasksResponse.data);
-        setSummary(summaryResponse.data);
-      } catch (err) {
-        setError("Failed to fetch data. Please try again.");
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   // Define table columns
   const columns: Column<Task>[] = [
+    {
+      key: "title",
+      label: "Task",
+      width: "w-[200px]",
+      sortable: true,
+      render: (task) => (
+        <div>
+          <div className="font-medium">{task.title}</div>
+          {task.taskType && (
+            <div className="text-xs text-muted-foreground">{task.taskType}</div>
+          )}
+        </div>
+      ),
+    },
     {
       key: "patientName",
       label: "Patient",
@@ -189,21 +223,50 @@ export default function AdminTasksPage() {
           >
             {task.patientName}
           </button>
-          <div className="text-xs text-muted-foreground">{task.patientMrn}</div>
+          {task.patientMrn && (
+            <div className="text-xs text-muted-foreground">
+              {task.patientMrn}
+            </div>
+          )}
         </div>
       ),
     },
     {
-      key: "title",
-      label: "Task",
-      width: "w-[200px]",
+      key: "departmentName",
+      label: "Department",
+      width: "w-[180px]",
       sortable: true,
-      render: (task) => (
-        <div>
-          <div className="font-medium">{task.title}</div>
-          <div className="text-xs text-muted-foreground">{task.taskType}</div>
-        </div>
-      ),
+      filterable: true,
+      filterType: "select",
+      filterOptions: [
+        { value: "Physiotherapy", label: "Physiotherapy" },
+        { value: "Occupational Therapy", label: "Occupational Therapy" },
+        { value: "Speech Therapy", label: "Speech Therapy" },
+        { value: "Dietetics", label: "Dietetics" },
+      ],
+      render: (task) => {
+        const departmentName = task.departmentName || task.assignedToDepartment;
+        const departmentId = task.departmentId;
+
+        if (!departmentName) {
+          return <Badge variant="outline">Unassigned</Badge>;
+        }
+
+        return (
+          <button
+            onClick={() => {
+              if (departmentId) {
+                router.push(`/admin/setup/departments/${departmentId}`);
+              }
+            }}
+            className={`text-left ${
+              departmentId ? "text-primary hover:underline font-medium" : ""
+            }`}
+          >
+            {departmentName}
+          </button>
+        );
+      },
     },
     {
       key: "priority",
@@ -224,44 +287,22 @@ export default function AdminTasksPage() {
       ),
     },
     {
-      key: "dueDate",
-      label: "Due",
+      key: "startDate",
+      label: "Start",
+      width: "w-[140px]",
+      sortable: true,
+      render: (task) => <div>{formatDate(task.startDate)}</div>,
+    },
+    {
+      key: "endDate",
+      label: "End",
       width: "w-[140px]",
       sortable: true,
       render: (task) => (
         <div
           className={isTaskOverdue(task) ? "text-destructive font-medium" : ""}
         >
-          {formatDateTime(task.dueDate, task.dueTime)}
-        </div>
-      ),
-    },
-    {
-      key: "assignedToDepartment",
-      label: "Assigned To",
-      width: "w-[180px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Physiotherapy", label: "Physiotherapy" },
-        { value: "Occupational Therapy", label: "Occupational Therapy" },
-        { value: "Speech Therapy", label: "Speech Therapy" },
-        { value: "Dietetics", label: "Dietetics" },
-      ],
-      render: (task) => (
-        <div>
-          {task.assignedToStaffName && (
-            <div className="font-medium">{task.assignedToStaffName}</div>
-          )}
-          {task.assignedToDepartment && (
-            <div className="text-xs text-muted-foreground">
-              {task.assignedToDepartment}
-            </div>
-          )}
-          {!task.assignedToStaffName && !task.assignedToDepartment && (
-            <Badge variant="outline">Unassigned</Badge>
-          )}
+          {formatDate(task.endDate)}
         </div>
       ),
     },
@@ -273,7 +314,6 @@ export default function AdminTasksPage() {
       filterable: true,
       filterType: "select",
       filterOptions: [
-        { value: "Not Assigned", label: "Not Assigned" },
         { value: "Assigned", label: "Assigned" },
         { value: "In Progress", label: "In Progress" },
         { value: "Completed", label: "Completed" },
@@ -286,14 +326,18 @@ export default function AdminTasksPage() {
     },
     {
       key: "updatedAt",
-      label: "Updated",
-      width: "w-[120px]",
+      label: "Last Updated",
+      width: "w-[140px]",
       sortable: true,
-      render: (task) => (
-        <span title={new Date(task.updatedAt).toLocaleString()}>
-          {formatRelativeTime(task.updatedAt)}
-        </span>
-      ),
+      render: (task) => {
+        const lastUpdated = task.lastUpdated || task.updatedAt;
+        if (!lastUpdated) return <span>N/A</span>;
+        return (
+          <span title={new Date(lastUpdated).toLocaleString()}>
+            {formatRelativeTime(lastUpdated)}
+          </span>
+        );
+      },
     },
   ];
 
@@ -331,6 +375,7 @@ export default function AdminTasksPage() {
             isOpen: true,
             taskId: taskId,
             taskTitle: task.title,
+            isHidden: task.hidden || false,
           });
         }
         break;
@@ -342,10 +387,8 @@ export default function AdminTasksPage() {
     try {
       await updateStatus$(taskId, status);
 
-      // Update local state
-      setTasks((prev) =>
-        prev.map((task) => (task.id === taskId ? { ...task, status } : task))
-      );
+      // Refetch tasks and summary to ensure data is in sync
+      await fetchData();
     } catch (err) {
       setError("Failed to update task status. Please try again.");
       console.error("Error updating task status:", err);
@@ -359,19 +402,8 @@ export default function AdminTasksPage() {
     try {
       await updateStatus$(taskId, "Completed", outcomeNotes);
 
-      // Update local state
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                status: "Completed" as const,
-                outcomeNotes,
-                completedDate: new Date().toISOString().split("T")[0],
-              }
-            : task
-        )
-      );
+      // Refetch tasks and summary to ensure data is in sync
+      await fetchData();
     } catch (err) {
       setError("Failed to complete task. Please try again.");
       console.error("Error completing task:", err);
@@ -385,24 +417,25 @@ export default function AdminTasksPage() {
     });
   };
 
-  // Handle task deletion
+  // Handle task deletion/restoration
   const handleDeleteTask = async () => {
     const { taskId } = deleteDialog;
 
     try {
       await deleteTask$(taskId);
 
-      // Remove from local state
-      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+      // Refetch tasks and summary to ensure data is in sync
+      await fetchData();
     } catch (err) {
-      setError("Failed to delete task. Please try again.");
-      console.error("Error deleting task:", err);
+      setError("Failed to delete/restore task. Please try again.");
+      console.error("Error deleting/restoring task:", err);
     }
 
     setDeleteDialog({
       isOpen: false,
       taskId: "",
       taskTitle: "",
+      isHidden: false,
     });
   };
 
@@ -413,7 +446,8 @@ export default function AdminTasksPage() {
       patientName: "",
       status: "all",
       priority: "all",
-      assignedToDepartment: "all",
+      departmentName: "all",
+      assignedToDepartment: "all", // Keep for backward compatibility
       sortField: null,
       sortDirection: null,
     });
@@ -426,7 +460,8 @@ export default function AdminTasksPage() {
     filters.patientName ||
     filters.status !== "all" ||
     filters.priority !== "all" ||
-    filters.assignedToDepartment !== "all" ||
+    (filters.departmentName && filters.departmentName !== "all") ||
+    (filters.assignedToDepartment && filters.assignedToDepartment !== "all") ||
     filters.sortField;
 
   if (loading) {
@@ -477,7 +512,7 @@ export default function AdminTasksPage() {
       </div>
 
       {/* Statistics Cards - Main Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Total Tasks"
           value={summary.totalTasks}
@@ -486,25 +521,19 @@ export default function AdminTasksPage() {
         />
         <StatsCard
           title="Overdue"
-          value={summary.overdue}
+          value={summary.overdueTasks}
           description="Requires attention"
           icon={AlertTriangle}
         />
         <StatsCard
-          title="Not Assigned"
-          value={summary.notAssigned}
-          description="Needs assignment"
-          icon={Users}
-        />
-        <StatsCard
-          title="In Progress"
-          value={summary.inProgress}
+          title="Active"
+          value={summary.activeTasks}
           description="Being worked on"
           icon={Clock}
         />
         <StatsCard
           title="Completed"
-          value={summary.completed}
+          value={summary.completedTasks}
           description="Successfully done"
           icon={CheckCircle}
         />
@@ -526,7 +555,7 @@ export default function AdminTasksPage() {
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
                   <div className="text-2xl font-bold mb-0.5">
-                    {summary.priorityBreakdown.high}
+                    {summary.highPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
                     High
@@ -534,7 +563,7 @@ export default function AdminTasksPage() {
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
                   <div className="text-2xl font-bold mb-0.5">
-                    {summary.priorityBreakdown.medium}
+                    {summary.midPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
                     Medium
@@ -542,7 +571,7 @@ export default function AdminTasksPage() {
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
                   <div className="text-2xl font-bold mb-0.5">
-                    {summary.priorityBreakdown.low}
+                    {summary.lowPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
                     Low
@@ -559,39 +588,28 @@ export default function AdminTasksPage() {
                   Department Distribution
                 </h3>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Physiotherapy</span>
-                  <span className="text-base font-bold">
-                    {summary.departmentBreakdown.physiotherapy}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Occupational Therapy</span>
-                  <span className="text-base font-bold">
-                    {summary.departmentBreakdown.occupationalTherapy}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Speech Therapy</span>
-                  <span className="text-base font-bold">
-                    {summary.departmentBreakdown.speechTherapy}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Dietetics</span>
-                  <span className="text-base font-bold">
-                    {summary.departmentBreakdown.dietetics}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center col-span-2 pt-1.5 border-t">
-                  <span className="text-sm text-muted-foreground">
-                    Unassigned
-                  </span>
-                  <span className="text-base font-bold text-muted-foreground">
-                    {summary.departmentBreakdown.unassigned}
-                  </span>
-                </div>
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                {summary.deptWiseSummary.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-2">
+                    No department assignments
+                  </div>
+                ) : (
+                  <>
+                    {summary.deptWiseSummary.map((dept) => (
+                      <div
+                        key={dept.name}
+                        className="flex justify-between items-center"
+                      >
+                        <span className="text-sm truncate pr-2">
+                          {dept.name || "Unassigned"}
+                        </span>
+                        <span className="text-base font-bold flex-shrink-0">
+                          {dept.count}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -612,6 +630,21 @@ export default function AdminTasksPage() {
                   Clear Filters
                 </Button>
               )}
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as "All" | "Active" | "Hidden")
+                }
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Hidden">Hidden</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={() => router.push("/admin/tasks/0")}
                 className="bg-primary hover:bg-primary/90"
@@ -632,6 +665,9 @@ export default function AdminTasksPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
+            getRowClassName={(task) =>
+              task.hidden ? "opacity-50 bg-muted/30 line-through" : ""
+            }
             actions={(task) => (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -681,10 +717,16 @@ export default function AdminTasksPage() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => handleTaskAction("delete", task.id)}
-                    className="text-destructive"
+                    className={
+                      task.hidden ? "text-green-600" : "text-destructive"
+                    }
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Task
+                    {task.hidden ? (
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Trash2 className="mr-2 h-4 w-4" />
+                    )}
+                    {task.hidden ? "Restore Task" : "Delete Task"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -702,25 +744,33 @@ export default function AdminTasksPage() {
               isOpen: false,
               taskId: "",
               taskTitle: "",
+              isHidden: false,
             });
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteDialog.isHidden ? "Restore Task" : "Delete Task"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteDialog.taskTitle}"? This
-              action cannot be undone.
+              {deleteDialog.isHidden
+                ? `Are you sure you want to restore "${deleteDialog.taskTitle}"? This will make the task visible again.`
+                : `Are you sure you want to delete "${deleteDialog.taskTitle}"? This action will hide the task.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteTask}
-              className="bg-destructive hover:bg-destructive/90"
+              className={
+                deleteDialog.isHidden
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-destructive hover:bg-destructive/90"
+              }
             >
-              Delete Task
+              {deleteDialog.isHidden ? "Restore Task" : "Delete Task"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

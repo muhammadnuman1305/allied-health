@@ -1,6 +1,6 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;

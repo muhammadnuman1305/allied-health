@@ -1,11 +1,12 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore.Storage.Json;
 
 namespace AlliedHealth.Service.Implementation
 {
@@ -87,9 +88,15 @@ namespace AlliedHealth.Service.Implementation
             if (dept != null)
                 return EMessages.DeptExistAlready;
 
+            var deptHead = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.DeptHeadId);
+
+            if (deptHead == null || deptHead.Role != (int)UserRoles.Professional)
+                return EMessages.DeptHeadNotExist;
+
+            var deptId = Guid.NewGuid();
             var newDept = new Department
             {
-                Id = Guid.NewGuid(),
+                Id = deptId,
                 Name = request.Name,
                 Code = request.Code,
                 Purpose = request.Purpose,
@@ -108,6 +115,9 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.Departments.AddAsync(newDept);
             await _dbContext.SaveChangesAsync();
 
+            deptHead.DepartmentId = deptId;
+            await _dbContext.SaveChangesAsync();
+
             return null;
         }
 
@@ -117,6 +127,25 @@ namespace AlliedHealth.Service.Implementation
 
             if (dept == null)
                 return EMessages.DeptNotExists;
+
+            var deptHead = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == request.DeptHeadId);
+
+            if (deptHead == null || deptHead.Role != (int)UserRoles.Professional)
+                return EMessages.DeptHeadNotExist;
+
+            if (deptHead.DepartmentId != null && deptHead.DepartmentId != request.Id)
+                return EMessages.DeptHeadAlready;
+
+            var prevDeptHead = await _dbContext.Users.FirstOrDefaultAsync(x => x.DepartmentId == request.Id);
+
+            if (prevDeptHead == null)
+                deptHead.DepartmentId = request.Id;
+
+            else if(deptHead.Id != prevDeptHead.Id)
+            {
+                prevDeptHead.DepartmentId = null;
+                deptHead.DepartmentId = request.Id;
+            }
 
             dept.Name = request.Name;
             dept.Purpose = request.Purpose;
@@ -132,7 +161,6 @@ namespace AlliedHealth.Service.Implementation
             dept.ModifiedBy = _userContext.UserId;
 
             await _dbContext.SaveChangesAsync();
-
             return null;
         }
 

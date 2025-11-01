@@ -60,6 +60,7 @@ export default function LoginPage() {
             firstName: response.data.firstName,
             lastName: response.data.lastName,
             accessToken: response.data.accessToken,
+            departmentId: response.data.departmentId,
             role: response.data.role,
           })
         );
@@ -69,7 +70,7 @@ export default function LoginPage() {
           variant: "default",
           duration: 1500,
         });
-        router.push("/dashboard");
+        router.push("/user/dashboard");
       } else {
         toast({
           title: "Login Failed",

@@ -1,21 +1,27 @@
-﻿using AlliedHealth.Domain.Entities;
-
+﻿
 namespace AlliedHealth.Domain.Entities
 {
     public class Task
     {
+        // Task details
         public Guid Id { get; set; }
         public int PatientId { get; set; }
         public Guid DepartmentId { get; set; }
-        public int Type { get; set; }
-        public string CustomType { get; set; }
         public string Title { get; set; }
+        public string Diagnosis { get; set; }
         public string Description { get; set; }
+        public string Goals { get; set; }
         public int Priority { get; set; }
-        public DateOnly DueDate { get; set; }
-        public TimeOnly DueTime { get; set; }
+        public DateOnly StartDate { get; set; }
+        public DateOnly EndDate { get; set; }
+        public int Status { get; set; }
 
-
+        // Auditing fields
+        public DateTime CreatedDate { get; set; }
+        public Guid? CreatedBy { get; set; }
+        public DateTime ModifiedDate { get; set; }
+        public Guid? ModifiedBy { get; set; }
+        public bool Hidden { get; set; } = false;
 
         // Assignment fields
         public Patient Patient { get; set; } = default!;

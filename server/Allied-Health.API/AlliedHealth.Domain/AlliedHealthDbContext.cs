@@ -17,8 +17,7 @@ namespace AlliedHealth.Domain
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Ward> Wards => Set<Ward>();
         public DbSet<WardDeptCoverage> WardDeptCoverages => Set<WardDeptCoverage>();
-        public DbSet<AhaRole> AhaRoles => Set<AhaRole>();
-        public DbSet<AhaRoleCategory> AhaRoleCategories => Set<AhaRoleCategory>();
+        public DbSet<UserSpecialty> UserSpecialties => Set<UserSpecialty>();
 
         // Newly added entities
         public DbSet<Task> Tasks => Set<Task>();

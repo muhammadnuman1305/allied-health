@@ -10,11 +10,43 @@ namespace AlliedHealth.Domain.EntityConfigs
         {
             b.ToTable("Specialty");
 
-            b.HasKey(x => x.SpecialtyId);
+            // Primary Key
+            b.HasKey(x => x.Id);
 
+            // Properties
             b.Property(x => x.Name)
                 .HasMaxLength(150)
                 .IsRequired();
+
+            b.Property(x => x.Description)
+                .HasMaxLength(500);
+
+            // Audit Fields
+            b.Property(x => x.CreatedDate)
+                .IsRequired();
+
+            b.Property(x => x.CreatedBy)
+                .IsRequired();
+
+            b.Property(x => x.ModifiedDate)
+                .IsRequired(false);
+
+            b.Property(x => x.ModifiedBy)
+                .IsRequired(false);
+
+            b.Property(x => x.Hidden)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            // Relationships
+            b.HasMany(x => x.Interventions)
+                .WithOne(i => i.Specialty)
+                .HasForeignKey(i => i.SpecialtyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes (optional for performance and filtering)
+            b.HasIndex(x => x.Name).IsUnique();  // Ensures each specialty name is distinct
+            b.HasIndex(x => x.Hidden);
         }
     }
 }

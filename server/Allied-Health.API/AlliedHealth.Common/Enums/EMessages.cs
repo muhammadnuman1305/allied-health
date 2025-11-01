@@ -8,8 +8,14 @@
         public static string PatientNotExists { get; set; } = "Patient with provided MRN doesn't exist.";
         public static string DeptExistAlready { get; set; } = "Department exists already.";
         public static string DeptNotExists { get; set; } = "Department doesn't exist.";
+        public static string DeptHeadNotExist { get; set; } = "Department head doesn't exist.";
+        public static string DeptHeadAlready { get; set; } = "This Allied professional is already head of a department.";
         public static string WardExistAlready { get; set; } = "Ward with same name or code already exists.";
         public static string WardNotExists { get; set; } = "Ward doesn't exist.";
+        public static string SpecialtyNotExists { get; set; } = "Specialty doesn't exist.";
+        public static string SpecialtyExistAlready { get; set; } = "Specialty with same name already exists.";
+        public static string InterventionNotExists { get; set; } = "Intervention doesn't exist.";
+        public static string InterventionExistAlready { get; set; } = "Intervention with same name already exists.";
         public static string TaskExistAlready { get; set; } = "There is already an active task for this patient.";
         public static string TaskNotExists { get; set; } = "Task doesn't exist.";
         public static string IncorrectUserPassword { get; set; } = "Invalid user password.";

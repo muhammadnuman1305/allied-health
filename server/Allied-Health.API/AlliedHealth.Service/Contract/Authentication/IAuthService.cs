@@ -1,4 +1,4 @@
-﻿using AlliedHealth.Domain.DTOs;
+﻿using AlliedHealth.Service.DTOs;
 
 namespace AlliedHealth.Service.Contract.Authentication
 {

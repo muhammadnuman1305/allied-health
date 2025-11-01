@@ -1,6 +1,6 @@
 ﻿using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
@@ -69,6 +69,7 @@ namespace AlliedHealth.Service.Implementation
                               Username = t.Username,
                               Email = t.Email,
                               Role = t.Role,
+                              SelectedSpecialties = t.UserSpecialties.Select(x => x.SpecialtyId).ToList(),
                               Hidden = t.Hidden,
                           }).FirstOrDefaultAsync();
 
@@ -82,9 +83,10 @@ namespace AlliedHealth.Service.Implementation
             if (user != null)
                 return EMessages.UserExistAlready;
 
+            var userId = Guid.NewGuid();
             var newUser = new User
             {
-                Id = Guid.NewGuid(),
+                Id = userId,
                 FirstName = request.FirstName,
                 LastName = request.LastName,
                 Username= request.Username,
@@ -97,12 +99,27 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.Users.AddAsync(newUser);
             await _dbContext.SaveChangesAsync();
 
+            foreach(var spec in request.SelectedSpecialties)
+            {
+                var newUserSpec = new UserSpecialty
+                {
+                    UserId = userId,
+                    SpecialtyId = spec,
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                await _dbContext.AddAsync(newUserSpec);
+            }
+
+            await _dbContext.SaveChangesAsync();
             return null;
         }
 
         public async Task<string?> UpdateUser(AddUpdateUserDTO request)
         {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Id == request.Id);
+            var user = await _dbContext.Users
+                            .Include(x => x.UserSpecialties)
+                            .FirstOrDefaultAsync(t => t.Id == request.Id);
 
             if (user == null)
                 return EMessages.UserNotExists;
@@ -112,6 +129,24 @@ namespace AlliedHealth.Service.Implementation
             user.Email = request.Email;
             user.Password = request.Password == null ? user.Password : PasswordHelper.HashPassword(request.Password);
             user.Role = request.Role;
+
+            if (user.UserSpecialties.Any())
+            {
+                _dbContext.UserSpecialties.RemoveRange(user.UserSpecialties);
+                await _dbContext.SaveChangesAsync();
+            }
+
+            foreach (var spec in request.SelectedSpecialties)
+            {
+                var newUserSpec = new UserSpecialty
+                {
+                    UserId = user.Id,
+                    SpecialtyId = spec,
+                    CreatedDate = DateTime.UtcNow,
+                };
+
+                await _dbContext.AddAsync(newUserSpec);
+            }
 
             await _dbContext.SaveChangesAsync();
 

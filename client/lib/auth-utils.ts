@@ -5,6 +5,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   accessToken: string;
+  departmentId?: string;
   role: number;
 }
 
@@ -38,6 +39,7 @@ export function isAdmin(): boolean {
 }
 
 export function isUser(): boolean {
+
   const user = getUser();
   return user?.role === 1;
 }
@@ -54,3 +56,4 @@ export function redirectBasedOnRole(): string {
   
   return user.role === 2 ? '/admin/dashboard' : '/dashboard';
 }
+

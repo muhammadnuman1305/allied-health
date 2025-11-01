@@ -65,6 +65,7 @@ export default function AdminLoginPage() {
             firstName: response.data.firstName,
             lastName: response.data.lastName,
             accessToken: response.data.accessToken,
+            departmentId: response.data.departmentId,
             role: response.data.role,
           })
         );

@@ -1,8 +1,12 @@
 ﻿using AlliedHealth.Domain;
-using AlliedHealth.Domain.DTOs;
+using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using AlliedHealth.Common.Enums;
+using AlliedHealth.Domain.Entities;
+using Task = AlliedHealth.Domain.Entities.Task;
 
 namespace AlliedHealth.Service.Implementation
 {
@@ -21,114 +25,207 @@ namespace AlliedHealth.Service.Implementation
 
         public IQueryable<GetTaskDTO> GetAll()
         {
-            //var users = _dbContext.Users
-            //                //.Where(t => t.Id != _userContext.UserId)
-            //                .Select(t => new GetUserDTO
-            //                {
-            //                    Id = t.Id,
-            //                    FirstName = t.FirstName,
-            //                    LastName = t.LastName,
-            //                    Username = t.Username,
-            //                    Email = t.Email,
-            //                    Role = t.Role,
-            //                    Hidden = t.Hidden,
-            //                }).AsQueryable();
+            var tasks = _dbContext.Tasks
+                            .Select(t => new GetTaskDTO
+                            {
+                                Id = t.Id,
+                                Title = t.Title,
+                                PatientId  =t.PatientId,
+                                PatientName = t.Patient.FullName,
+                                DepartmentId = t.DepartmentId,
+                                DepartmentName = t.Department.Name,
+                                Priority = t.Priority,
+                                StartDate = t.StartDate,
+                                EndDate = t.EndDate,
+                                LastUpdated = t.ModifiedDate,
+                                Hidden = t.Hidden,
+                            }).AsQueryable();
 
-            //return users;
-
-            return null;
+            return tasks;
         }
 
         public async Task<GetTaskSummaryDTO> GetSummary()
         {
-            //var summary = await _dbContext.Users
-            //                 .Where(u => u.Hidden != true)
-            //                 .GroupBy(u => 1)
-            //                 .Select(g => new GetUserSummaryDTO
-            //                 {
-            //                     TotalUsers = g.Count(),
-            //                     TotalProfessionals = g.Count(u => u.Role == (int)UserRoles.Professional),
-            //                     TotalAssistants = g.Count(u => u.Role == (int)UserRoles.Assistant),
-            //                     TotalAdmins = g.Count(u => u.Role == (int)UserRoles.SuperAdmin)
-            //                 }).FirstOrDefaultAsync();
+            var summary = await _dbContext.Tasks
+                             .Where(u => u.Hidden != true)
+                             .GroupBy(u => 1)
+                             .Select(g => new GetTaskSummaryDTO
+                             {
+                                 TotalTasks = g.Count(),
+                                 OverdueTasks = g.Count(x => x.Status == (int)ETaskStatus.Overdue),
+                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.Active),
+                                 CompletedTasks = g.Count(x => x.Status == (int)ETaskStatus.Completed),
 
-            //return summary ?? new GetUserSummaryDTO();
+                                 HighPriority = g.Count(x => x.Priority == (int)ETaskPriorities.High),
+                                 MidPriority = g.Count(x => x.Priority == (int)ETaskPriorities.Medium),
+                                 LowPriority = g.Count(x => x.Priority == (int)ETaskPriorities.Low),
 
-            return null;
+                                 DeptWiseSummary = g.GroupBy(x => x.Department.Name)
+                                                    .Select(d => new DeptTaskSummary
+                                                    {
+                                                        Name = d.Key,
+                                                        Count = d.Count()
+                                                    }).ToList()
+                             }).FirstOrDefaultAsync();
+
+            return summary ?? new GetTaskSummaryDTO();
         }
 
         public async Task<GetTaskDetailsDTO> GetTask(Guid id)
         {
-            //var user = await _dbContext.Users
-            //              .Where(t => t.Id == id)
-            //              .Select(t => new GetUserDTO
-            //              {
-            //                  Id = t.Id,
-            //                  FirstName = t.FirstName,
-            //                  LastName = t.LastName,
-            //                  Username = t.Username,
-            //                  Email = t.Email,
-            //                  Role = t.Role,
-            //                  Hidden = t.Hidden,
-            //              }).FirstOrDefaultAsync();
+            var task = await _dbContext.Tasks
+                        .Where(x => x.Id == id)
+                        .Select(x => new GetTaskDetailsDTO
+                        {
+                            Id = x.Id,
+                            Title = x.Title,
+                            PatientId = x.PatientId,
+                            DepartmentId = x.DepartmentId,
+                            Priority = x.Priority,
+                            Diagnosis = x.Diagnosis,
+                            Goals = x.Goals,
+                            StartDate = x.StartDate,
+                            EndDate = x.EndDate,
+                            Description = x.Description,
+                            Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
+                            {
+                                Id = t.InterventionId,
+                                AhaId = t.AhaId,
+                                WardId = t.WardId,
+                                Start = t.StartDate,
+                                End = t.EndDate,
+                            }).ToList()
+                        }).FirstOrDefaultAsync();
 
-            //return user;
-
-            return null;
+            return task;
         }
 
         public async Task<string?> CreateTask(AddUpdateTaskDTO request)
         {
-            //var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Username == request.Username);
+            var patient = await _dbContext.Patients.FirstOrDefaultAsync(x => x.Id == request.PatientId);
 
-            //if (user != null)
-            //    return EMessages.UserExistAlready;
+            if (patient == null)
+                return EMessages.PatientNotExists;
 
-            //var newUser = new User
-            //{
-            //    Id = Guid.NewGuid(),
-            //    FirstName = request.FirstName,
-            //    LastName = request.LastName,
-            //    Username= request.Username,
-            //    Email = request.Email,
-            //    Password = PasswordHelper.HashPassword(request.Password),
-            //    Role = request.Role,
-            //    Hidden = false
-            //};
+            var dept = await _dbContext.Departments.FirstOrDefaultAsync(x => x.Id == request.DepartmentId);
 
-            //await _dbContext.Users.AddAsync(newUser);
-            //await _dbContext.SaveChangesAsync();
+            if (dept == null)
+                return EMessages.DeptNotExists;
 
+            var taskId = Guid.NewGuid();
+
+            var newTask = new Task
+            {
+                Id = taskId,
+                PatientId = request.PatientId,
+                DepartmentId = request.DepartmentId,
+                Title = request.Title,
+                Priority = request.Priority,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
+                Diagnosis = request.Diagnosis,
+                Goals = request.Goals,
+                Description = request.Description,
+                Status = (int)ETaskInterventionOutcomes.Unseen,
+                
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = _userContext.UserId,
+                Hidden = false
+            };
+
+            await _dbContext.AddAsync(newTask);
+            await _dbContext.SaveChangesAsync();
+
+            foreach(var inv in request.Interventions)
+            {
+                var taskInv = new TaskIntervention
+                {
+                    Id = Guid.NewGuid(),
+                    TaskId = taskId,
+                    InterventionId = inv.Id,
+                    AhaId = inv.AhaId,
+                    StartDate = inv.Start,
+                    EndDate = inv.End,
+                    WardId = inv.WardId
+                };
+
+                await _dbContext.TaskInterventions.AddAsync(taskInv);
+            }
+
+            await _dbContext.SaveChangesAsync();
             return null;
         }
 
         public async Task<string?> UpdateTask(AddUpdateTaskDTO request)
         {
-            //var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Id == request.Id);
+            var task = await _dbContext.Tasks
+                             .Include(x => x.TaskInterventions)
+                             .FirstOrDefaultAsync(x => x.Id == request.Id);
 
-            //if (user == null)
-            //    return EMessages.UserNotExists;
+            if (task == null)
+                return EMessages.TaskNotExists;
 
-            //user.FirstName = request.FirstName;
-            //user.LastName = request.LastName;
-            //user.Email = request.Email;
-            //user.Password = request.Password == null ? user.Password : PasswordHelper.HashPassword(request.Password);
-            //user.Role = request.Role;
+            task.Title = request.Title;
+            task.Priority = request.Priority;
+            task.StartDate = request.StartDate;
+            task.EndDate = request.EndDate;
+            task.Diagnosis = request.Diagnosis;
+            task.Goals = request.Goals;
+            task.Description = request.Description;
+            task.ModifiedDate = DateTime.UtcNow;
+            task.ModifiedBy = _userContext.UserId;
 
-            //await _dbContext.SaveChangesAsync();
+            var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
+            var toRemove = task.TaskInterventions
+                            .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
+                            .ToList();
 
+            _dbContext.TaskInterventions.RemoveRange(toRemove);
+
+            // 2️⃣ Update existing interventions and add new ones
+            foreach (var inv in request.Interventions)
+            {
+                var existing = task.TaskInterventions
+                    .FirstOrDefault(ti => ti.InterventionId == inv.Id);
+
+                if (existing != null)
+                {
+                    existing.AhaId = inv.AhaId;
+                    existing.StartDate = inv.Start;
+                    existing.EndDate = inv.End;
+                    existing.WardId = inv.WardId;
+                }
+                else
+                {
+                    // Add new intervention
+                    var newIntervention = new TaskIntervention
+                    {
+                        Id = Guid.NewGuid(),
+                        TaskId = task.Id,
+                        InterventionId = inv.Id,
+                        AhaId = inv.AhaId,
+                        StartDate = inv.Start,
+                        EndDate = inv.End,
+                        WardId = inv.WardId
+                    };
+
+                    await _dbContext.TaskInterventions.AddAsync(newIntervention);
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
             return null;
         }
 
         public async Task<string?> ToggleHide(Guid id)
         {
-            //var user = await _dbContext.Users.FirstOrDefaultAsync(t => t.Id == id);
+            var task = await _dbContext.Tasks.FirstOrDefaultAsync(t => t.Id == id);
 
-            //if (user == null)
-            //    return EMessages.UserNotExists;
+            if (task == null)
+                return EMessages.UserNotExists;
 
-            //user.Hidden = !user.Hidden;
-            //await _dbContext.SaveChangesAsync();
+            task.Hidden = !task.Hidden;
+            await _dbContext.SaveChangesAsync();
 
             return null;
         }

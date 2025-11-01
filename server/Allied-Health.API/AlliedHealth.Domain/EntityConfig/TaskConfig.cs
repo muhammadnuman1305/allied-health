@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using AlliedHealth.Domain.Entities;
 using Task = AlliedHealth.Domain.Entities.Task;
 
 namespace AlliedHealth.Domain.EntityConfigs
@@ -13,14 +14,7 @@ namespace AlliedHealth.Domain.EntityConfigs
             // Primary Key
             b.HasKey(t => t.Id);
 
-            // Properties
-            b.Property(t => t.Type)
-                .IsRequired();
-
-            b.Property(t => t.CustomType)
-                .HasMaxLength(150)
-                .IsRequired(false);
-
+            // Property Configurations
             b.Property(t => t.Title)
                 .HasMaxLength(250)
                 .IsRequired();
@@ -32,12 +26,32 @@ namespace AlliedHealth.Domain.EntityConfigs
             b.Property(t => t.Priority)
                 .IsRequired();
 
-            b.Property(t => t.DueDate)
+            b.Property(t => t.StartDate)
                 .HasColumnType("date")
                 .IsRequired();
 
-            b.Property(t => t.DueTime)
-                .HasColumnType("time")
+            b.Property(t => t.EndDate)
+                .HasColumnType("date")
+                .IsRequired();
+
+            b.Property(t => t.Status)
+                .IsRequired();
+
+            // Auditing Fields
+            b.Property(t => t.CreatedDate)
+                .HasDefaultValueSql("timezone('utc', now())");
+
+            b.Property(t => t.CreatedBy)
+                .IsRequired(false);
+
+            b.Property(t => t.ModifiedDate)
+                .HasDefaultValueSql("timezone('utc', now())");
+
+            b.Property(t => t.ModifiedBy)
+                .IsRequired(false);
+
+            b.Property(t => t.Hidden)
+                .HasDefaultValue(false)
                 .IsRequired();
 
             // Relationships
@@ -46,7 +60,11 @@ namespace AlliedHealth.Domain.EntityConfigs
                 .HasForeignKey(t => t.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Navigation
+            b.HasOne(t => t.Department)
+                .WithMany()
+                .HasForeignKey(t => t.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             b.HasMany(t => t.TaskInterventions)
                 .WithOne(ti => ti.Task)
                 .HasForeignKey(ti => ti.TaskId)

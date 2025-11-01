@@ -49,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatLastUpdated } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -195,17 +196,7 @@ export default function AdminDepartmentsSetupPage() {
       label: "Last Updated",
       width: "w-[140px]",
       sortable: true,
-      render: (department) => {
-        if (!department.lastUpdated) {
-          return <span className="text-muted-foreground">Never</span>;
-        }
-        const date = new Date(department.lastUpdated);
-        return date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      },
+      render: (row) => formatLastUpdated(row.lastUpdated as any),
     },
   ];
 

@@ -1,4 +1,4 @@
-﻿namespace AlliedHealth.Domain.DTOs
+﻿namespace AlliedHealth.Service.DTOs
 {
     public class GetWardDTO
     {
