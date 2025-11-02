@@ -237,7 +237,7 @@ function VacationLeaveCard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle>Vacation & Leave Requests</CardTitle>
+            <CardTitle>Vacation Requests</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Save,
@@ -28,13 +29,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { getById$, create$, update$ } from "@/lib/api/admin/referrals/_request";
 import { getAll$ as getPatients$ } from "@/lib/api/admin/patients/_request";
+import { getAll$ as getDepartments$ } from "@/lib/api/admin/departments/_request";
 import {
-  ReferralFormData,
-  Referral,
-  INTERVENTIONS,
-  DEPARTMENTS,
-} from "@/lib/api/admin/referrals/_model";
+  getSpecialties$,
+  getInterventions$,
+} from "@/lib/api/admin/tasks/_request";
+import { getUser } from "@/lib/auth-utils";
+import { ReferralFormData, Referral } from "@/lib/api/admin/referrals/_model";
 import { Patient } from "@/lib/api/admin/patients/_model";
+import { Department } from "@/lib/api/admin/departments/_model";
+import {
+  TaskSpecialty,
+  TaskIntervention,
+} from "@/lib/api/admin/tasks/_request";
 import { toast } from "@/hooks/use-toast";
 
 // Form validation schema for referral data
@@ -53,9 +60,6 @@ const createReferralFormSchema = () =>
     interventions: z
       .array(z.string())
       .min(1, "At least one intervention is required"),
-    status: z.enum(["S", "A", "D", "U", "X"], {
-      required_error: "Please select a status",
-    }),
     // Department workflow fields
     originDepartment: z.string().min(1, "Origin department is required"),
     destinationDepartment: z
@@ -68,8 +72,11 @@ const createReferralFormSchema = () =>
     triagedBy: z.string().optional(),
     triagedAt: z.string().optional(),
     redirectToDepartment: z.string().optional(),
-    // Original fields
-    notes: z.string().optional(),
+    // New fields replacing notes
+    diagnosis: z.string().optional(),
+    goals: z.string().optional(),
+    clinicalInstructions: z.string().optional(),
+    // Original fields (kept for backward compatibility)
     outcomeNotes: z.string().optional(),
     completedDate: z.string().optional(),
     // Ward-specific fields
@@ -96,9 +103,20 @@ export default function ReferralFormContent({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingReferral, setIsLoadingReferral] = useState(!isNewReferral);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
+  const [isLoadingInterventions, setIsLoadingInterventions] = useState(true);
   const [referral, setReferral] = useState<Referral | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [specialties, setSpecialties] = useState<TaskSpecialty[]>([]);
+  const [interventions, setInterventions] = useState<TaskIntervention[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isOriginDepartmentDisabled, setIsOriginDepartmentDisabled] =
+    useState(false);
+
+  // Get current user info
+  const user = getUser();
+  const userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
 
   const {
     register,
@@ -112,21 +130,23 @@ export default function ReferralFormContent({
     defaultValues: {
       id: isNewReferral ? null : referralId,
       patientId: preSelectedPatientId || "",
-      referringTherapist: "",
+      referringTherapist: userFullName,
       referralDate: new Date().toISOString().split("T")[0],
       priority: "P2",
       interventions: [],
-      status: "A",
       // Department workflow fields
-      originDepartment: "",
+      originDepartment: user?.departmentId || "",
       destinationDepartment: "",
       triageStatus: "pending",
       triageNotes: "",
       triagedBy: "",
       triagedAt: "",
       redirectToDepartment: "",
+      // New fields replacing notes
+      diagnosis: "",
+      goals: "",
+      clinicalInstructions: "",
       // Original fields
-      notes: "",
       outcomeNotes: "",
       completedDate: "",
       dementiaNotes: "",
@@ -138,7 +158,6 @@ export default function ReferralFormContent({
 
   const watchedPatientId = watch("patientId");
   const watchedInterventions = watch("interventions");
-  const watchedStatus = watch("status");
 
   // Load patients list
   useEffect(() => {
@@ -162,6 +181,77 @@ export default function ReferralFormContent({
     loadPatients();
   }, []);
 
+  // Load departments list
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        setIsLoadingDepartments(true);
+        const response = await getDepartments$("Active");
+        setDepartments(response.data);
+
+        // Pre-select origin department if user has departmentId
+        if (user?.departmentId) {
+          const departmentExists = response.data.some(
+            (dept: Department) => dept.id === user.departmentId
+          );
+          if (departmentExists) {
+            setValue("originDepartment", user.departmentId);
+            setIsOriginDepartmentDisabled(true);
+          } else {
+            setIsOriginDepartmentDisabled(false);
+          }
+        } else {
+          setIsOriginDepartmentDisabled(false);
+        }
+      } catch (error) {
+        console.error("Error loading departments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load departments list. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingDepartments(false);
+      }
+    };
+
+    loadDepartments();
+  }, [user?.departmentId, setValue]);
+
+  // Load specialties and interventions
+  useEffect(() => {
+    const loadInterventionsData = async () => {
+      try {
+        setIsLoadingInterventions(true);
+        const [specialtiesResponse, interventionsResponse] = await Promise.all([
+          getSpecialties$(),
+          getInterventions$(),
+        ]);
+
+        const specialtiesData = specialtiesResponse?.data || [];
+        const interventionsData = interventionsResponse?.data || [];
+
+        setSpecialties(Array.isArray(specialtiesData) ? specialtiesData : []);
+        setInterventions(
+          Array.isArray(interventionsData) ? interventionsData : []
+        );
+      } catch (error) {
+        console.error("Error loading interventions:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load interventions. Please try again.",
+          variant: "destructive",
+        });
+        setSpecialties([]);
+        setInterventions([]);
+      } finally {
+        setIsLoadingInterventions(false);
+      }
+    };
+
+    loadInterventionsData();
+  }, []);
+
   // Load referral data for editing
   useEffect(() => {
     const loadReferral = async () => {
@@ -179,7 +269,6 @@ export default function ReferralFormContent({
           setValue("referralDate", referralData.referralDate);
           setValue("priority", referralData.priority);
           setValue("interventions", referralData.interventions);
-          setValue("status", referralData.status);
           // Department workflow fields
           setValue("originDepartment", referralData.originDepartment || "");
           setValue(
@@ -194,10 +283,26 @@ export default function ReferralFormContent({
             "redirectToDepartment",
             referralData.redirectToDepartment || ""
           );
+          // New fields (check if they exist, otherwise use legacy notes field)
+          setValue("diagnosis", referralData.diagnosis || "");
+          setValue("goals", (referralData as any).goals || "");
+          setValue(
+            "clinicalInstructions",
+            (referralData as any).clinicalInstructions ||
+              referralData.notes ||
+              ""
+          );
           // Original fields
-          setValue("notes", referralData.notes || "");
           setValue("outcomeNotes", referralData.outcomeNotes || "");
           setValue("completedDate", referralData.completedDate || "");
+
+          // Check if origin department should be disabled for existing referral
+          if (
+            user?.departmentId &&
+            referralData.originDepartment === user.departmentId
+          ) {
+            setIsOriginDepartmentDisabled(true);
+          }
           setValue("dementiaNotes", referralData.dementiaNotes || "");
           setValue("limbWeakness", referralData.limbWeakness || "");
           setValue(
@@ -237,6 +342,16 @@ export default function ReferralFormContent({
     setIsLoading(true);
     try {
       // Prepare payload according to backend model
+      // Combine diagnosis, goals, and clinicalInstructions into notes for backend
+      const combinedNotes = [
+        data.diagnosis && `Diagnosis: ${data.diagnosis}`,
+        data.goals && `Goals: ${data.goals}`,
+        data.clinicalInstructions &&
+          `Clinical Instructions: ${data.clinicalInstructions}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       const payload: ReferralFormData = {
         id: isNewReferral ? null : data.id || referralId,
         patientId: data.patientId,
@@ -244,7 +359,7 @@ export default function ReferralFormContent({
         referralDate: data.referralDate,
         priority: data.priority,
         interventions: data.interventions,
-        status: data.status,
+        status: "A", // Default to Active since status field is removed
         // Department workflow fields
         originDepartment: data.originDepartment,
         destinationDepartment: data.destinationDepartment,
@@ -253,8 +368,8 @@ export default function ReferralFormContent({
         triagedBy: data.triagedBy,
         triagedAt: data.triagedAt,
         redirectToDepartment: data.redirectToDepartment,
-        // Original fields
-        notes: data.notes,
+        // Original fields (combining new fields into notes for backend)
+        notes: combinedNotes || undefined,
         outcomeNotes: data.outcomeNotes,
         completedDate: data.completedDate,
         dementiaNotes: data.dementiaNotes,
@@ -294,7 +409,12 @@ export default function ReferralFormContent({
   };
 
   // Show loading state while fetching data
-  if (isLoadingReferral || isLoadingPatients) {
+  if (
+    isLoadingReferral ||
+    isLoadingPatients ||
+    isLoadingDepartments ||
+    isLoadingInterventions
+  ) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -302,6 +422,29 @@ export default function ReferralFormContent({
       </div>
     );
   }
+
+  // Group interventions by specialty
+  const interventionsBySpecialty = specialties.reduce(
+    (acc, specialty) => {
+      const specialtyInterventions = interventions.filter(
+        (intervention) => intervention.specialtyId === specialty.id
+      );
+      if (specialtyInterventions.length > 0) {
+        acc[specialty.id] = {
+          specialty,
+          interventions: specialtyInterventions,
+        };
+      }
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        specialty: TaskSpecialty;
+        interventions: TaskIntervention[];
+      }
+    >
+  );
 
   return (
     <div className="space-y-6">
@@ -327,16 +470,16 @@ export default function ReferralFormContent({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Patient Selection */}
+        {/* Referral Details */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Patient Information
+              <Calendar className="h-5 w-5" />
+              Referral Details
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Patient Selection */}
               <div className="space-y-2">
                 <Label htmlFor="patientId">Patient *</Label>
@@ -351,7 +494,7 @@ export default function ReferralFormContent({
                       <SelectContent>
                         {patients.map((patient) => (
                           <SelectItem key={patient.id} value={patient.id}>
-                            {patient.fullName} ({patient.mrn})
+                            {patient.fullName}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -365,51 +508,6 @@ export default function ReferralFormContent({
                 )}
               </div>
 
-              {/* Patient Details Display */}
-              {selectedPatient && (
-                <div className="space-y-2">
-                  <Label>Patient Details</Label>
-                  <div className="p-3 bg-muted rounded-md">
-                    <p className="text-sm">
-                      <strong>MRN:</strong> {selectedPatient.mrn}
-                    </p>
-                    <p className="text-sm">
-                      <strong>Gender:</strong> {selectedPatient.gender}
-                    </p>
-                    {selectedPatient.dateOfBirth && (
-                      <p className="text-sm">
-                        <strong>Date of Birth:</strong>{" "}
-                        {new Date(
-                          selectedPatient.dateOfBirth
-                        ).toLocaleDateString()}
-                      </p>
-                    )}
-                    {selectedPatient.primaryPhone && (
-                      <p className="text-sm">
-                        <strong>Phone:</strong> {selectedPatient.primaryPhone}
-                      </p>
-                    )}
-                    <p className="text-sm">
-                      <strong>Active Tasks:</strong>{" "}
-                      {selectedPatient.activeTasks}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Department Workflow */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Department Workflow
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Origin Department */}
               <div className="space-y-2">
                 <Label htmlFor="originDepartment">Origin Department *</Label>
@@ -417,14 +515,18 @@ export default function ReferralFormContent({
                   name="originDepartment"
                   control={control}
                   render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isOriginDepartmentDisabled}
+                    >
+                      <SelectTrigger disabled={isOriginDepartmentDisabled}>
                         <SelectValue placeholder="Select origin department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {DEPARTMENTS.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -452,9 +554,9 @@ export default function ReferralFormContent({
                         <SelectValue placeholder="Select destination department" />
                       </SelectTrigger>
                       <SelectContent>
-                        {DEPARTMENTS.map((dept) => (
-                          <SelectItem key={dept} value={dept}>
-                            {dept}
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>
+                            {dept.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -467,20 +569,6 @@ export default function ReferralFormContent({
                   </p>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Referral Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Referral Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Referring Therapist */}
               <div className="space-y-2">
                 <Label htmlFor="referringTherapist">
@@ -490,6 +578,7 @@ export default function ReferralFormContent({
                   id="referringTherapist"
                   {...register("referringTherapist")}
                   placeholder="Enter therapist name"
+                  disabled
                 />
                 {errors.referringTherapist && (
                   <p className="text-sm text-destructive">
@@ -522,12 +611,33 @@ export default function ReferralFormContent({
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="P1">P1 - High Priority</SelectItem>
-                        <SelectItem value="P2">P2 - Medium Priority</SelectItem>
-                        <SelectItem value="P3">P3 - Low Priority</SelectItem>
+                        <SelectItem value="P1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="destructive">High</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              - Urgent, immediate attention
+                            </span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="P2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="default">Medium</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              - Standard priority
+                            </span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="P3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Low</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              - Non-urgent, can be scheduled
+                            </span>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -539,69 +649,40 @@ export default function ReferralFormContent({
                 )}
               </div>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Controller
-                  name="status"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A">Active</SelectItem>
-                        <SelectItem value="S">Success</SelectItem>
-                        <SelectItem value="D">Discharged</SelectItem>
-                        <SelectItem value="U">Unavailable</SelectItem>
-                        <SelectItem value="X">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.status && (
-                  <p className="text-sm text-destructive">
-                    {errors.status.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Completed Date (only show if status is Success) */}
-              {watchedStatus === "S" && (
-                <div className="space-y-2">
-                  <Label htmlFor="completedDate">Completed Date</Label>
-                  <Input
-                    id="completedDate"
-                    type="date"
-                    {...register("completedDate")}
-                  />
-                </div>
-              )}
-
-              {/* Notes */}
+              {/* Diagnosis */}
               <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="diagnosis">Diagnosis</Label>
                 <Textarea
-                  id="notes"
-                  {...register("notes")}
-                  placeholder="Enter additional notes"
+                  id="diagnosis"
+                  {...register("diagnosis")}
+                  placeholder="Enter patient diagnosis"
                   rows={3}
                 />
               </div>
 
-              {/* Outcome Notes (only show if status is Success) */}
-              {watchedStatus === "S" && (
-                <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                  <Label htmlFor="outcomeNotes">Outcome Notes</Label>
-                  <Textarea
-                    id="outcomeNotes"
-                    {...register("outcomeNotes")}
-                    placeholder="Enter outcome notes and treatment results"
-                    rows={3}
-                  />
-                </div>
-              )}
+              {/* Goals */}
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="goals">Goals</Label>
+                <Textarea
+                  id="goals"
+                  {...register("goals")}
+                  placeholder="Enter treatment goals"
+                  rows={3}
+                />
+              </div>
+
+              {/* Clinical Instructions / Description */}
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="clinicalInstructions">
+                  Clinical Instructions / Description
+                </Label>
+                <Textarea
+                  id="clinicalInstructions"
+                  {...register("clinicalInstructions")}
+                  placeholder="Enter clinical instructions and description"
+                  rows={4}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -618,46 +699,64 @@ export default function ReferralFormContent({
             <div className="space-y-6">
               {/* Intervention Selection */}
               <div className="space-y-4">
-                {Object.entries(INTERVENTIONS).map(
-                  ([discipline, interventions]) => (
-                    <div key={discipline} className="space-y-2">
-                      <h4 className="font-medium capitalize">
-                        {discipline.replace(/([A-Z])/g, " $1").trim()}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {interventions.map((intervention) => (
-                          <div
-                            key={intervention}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={intervention}
-                              checked={watchedInterventions.includes(
-                                intervention
-                              )}
-                              onCheckedChange={(checked) => {
-                                const current = watchedInterventions;
-                                if (checked) {
-                                  setValue("interventions", [
-                                    ...current,
-                                    intervention,
-                                  ]);
-                                } else {
-                                  setValue(
-                                    "interventions",
-                                    current.filter((i) => i !== intervention)
-                                  );
-                                }
-                              }}
-                            />
-                            <Label htmlFor={intervention} className="text-sm">
-                              {intervention}
-                            </Label>
+                {!isLoadingInterventions ? (
+                  Object.keys(interventionsBySpecialty).length > 0 ? (
+                    Object.values(interventionsBySpecialty).map(
+                      ({
+                        specialty,
+                        interventions: specialtyInterventions,
+                      }) => (
+                        <div key={specialty.id} className="space-y-2">
+                          <h4 className="font-medium">{specialty.name}</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {specialtyInterventions.map((intervention) => (
+                              <div
+                                key={intervention.id}
+                                className="flex items-center space-x-2"
+                              >
+                                <Checkbox
+                                  id={intervention.id}
+                                  checked={watchedInterventions.includes(
+                                    intervention.id
+                                  )}
+                                  onCheckedChange={(checked) => {
+                                    const current = watchedInterventions;
+                                    if (checked) {
+                                      setValue("interventions", [
+                                        ...current,
+                                        intervention.id,
+                                      ]);
+                                    } else {
+                                      setValue(
+                                        "interventions",
+                                        current.filter(
+                                          (i) => i !== intervention.id
+                                        )
+                                      );
+                                    }
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={intervention.id}
+                                  className="text-sm"
+                                >
+                                  {intervention.name}
+                                </Label>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )
+                    )
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No interventions available
                     </div>
                   )
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    Loading interventions...
+                  </div>
                 )}
                 {errors.interventions && (
                   <p className="text-sm text-destructive">

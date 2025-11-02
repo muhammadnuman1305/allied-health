@@ -1,8 +1,27 @@
 "use client";
 
-import { ChevronRight, Home, LayoutDashboard, Users, FileText, Settings, 
-  BarChart, Heart, Activity, Droplet, Pill, Apple, Utensils, Scale, 
-  LineChart, HeartPulse, BookOpen, MessageSquare, User, LifeBuoy } from "lucide-react";
+import {
+  ChevronRight,
+  Home,
+  LayoutDashboard,
+  Users,
+  FileText,
+  Settings,
+  BarChart,
+  Heart,
+  Activity,
+  Droplet,
+  Pill,
+  Apple,
+  Utensils,
+  Scale,
+  LineChart,
+  HeartPulse,
+  BookOpen,
+  MessageSquare,
+  User,
+  LifeBuoy,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -15,56 +34,56 @@ export function Breadcrumb() {
   // Icon mapping for common routes
   const iconMapping = {
     // Admin routes
-    "admin": <LayoutDashboard className="h-4 w-4" />,
-    "dashboard": <LayoutDashboard className="h-4 w-4" />,
-    "analytics": <BarChart className="h-4 w-4" />,
-    "users": <Users className="h-4 w-4" />,
-    "content": <FileText className="h-4 w-4" />,
-    "settings": <Settings className="h-4 w-4" />,
-    
+    admin: <LayoutDashboard className="h-4 w-4" />,
+    dashboard: <LayoutDashboard className="h-4 w-4" />,
+    analytics: <BarChart className="h-4 w-4" />,
+    users: <Users className="h-4 w-4" />,
+    content: <FileText className="h-4 w-4" />,
+    settings: <Settings className="h-4 w-4" />,
+
     // User routes
     "health-tracking": <Heart className="h-4 w-4" />,
     "glucose-log": <Droplet className="h-4 w-4" />,
     "vital-signs": <HeartPulse className="h-4 w-4" />,
     "weight-tracking": <Scale className="h-4 w-4" />,
-    "activity": <Activity className="h-4 w-4" />,
-    "nutrition": <Apple className="h-4 w-4" />,
+    activity: <Activity className="h-4 w-4" />,
+    nutrition: <Apple className="h-4 w-4" />,
     "diet-plan": <Utensils className="h-4 w-4" />,
     "food-database": <Apple className="h-4 w-4" />,
     "meal-planner": <Utensils className="h-4 w-4" />,
     "meal-tracking": <Utensils className="h-4 w-4" />,
-    "medical": <Pill className="h-4 w-4" />,
-    "medications": <Pill className="h-4 w-4" />,
+    medical: <Pill className="h-4 w-4" />,
+    medications: <Pill className="h-4 w-4" />,
     "health-stats": <LineChart className="h-4 w-4" />,
     "lab-results": <FileText className="h-4 w-4" />,
     "doctor-visits": <User className="h-4 w-4" />,
-    "education": <BookOpen className="h-4 w-4" />,
-    "community": <MessageSquare className="h-4 w-4" />,
-    "profile": <User className="h-4 w-4" />,
-    "support": <LifeBuoy className="h-4 w-4" />
+    education: <BookOpen className="h-4 w-4" />,
+    community: <MessageSquare className="h-4 w-4" />,
+    profile: <User className="h-4 w-4" />,
+    support: <LifeBuoy className="h-4 w-4" />,
   };
 
   // Better title formatting
   const formatTitle = (segment: string) => {
     // Handle special cases
-    if (segment.toLowerCase() === 'admin') return 'Admin';
-    
+    if (segment.toLowerCase() === "admin") return "Admin";
+
     // Handle acronyms and special terms (can be expanded)
     const specialTerms = {
-      'bmi': 'BMI',
-      'faq': 'FAQ',
-      'api': 'API'
+      bmi: "BMI",
+      faq: "FAQ",
+      api: "API",
     };
-    
+
     return segment
-      .split('-')
+      .split("-")
       .map((word: string) => {
         if (specialTerms[word.toLowerCase() as keyof typeof specialTerms]) {
           return specialTerms[word.toLowerCase() as keyof typeof specialTerms];
         }
         return word.charAt(0).toUpperCase() + word.slice(1);
       })
-      .join(' ');
+      .join(" ");
   };
 
   // Generate breadcrumb items with proper labels and icons
@@ -74,16 +93,19 @@ export function Breadcrumb() {
       href,
       label: formatTitle(segment),
       segment: segment.toLowerCase(),
-      isLast: index === segments.length - 1
+      isLast: index === segments.length - 1,
     };
   });
 
   // Determine home link
-  const homeLink = isAdminRoute ? "/admin/dashboard" : "/dashboard";
+  const homeLink = isAdminRoute ? "/admin/dashboard" : "/user/dashboard";
   const homeLabel = isAdminRoute ? "Admin" : "Home";
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center py-3 overflow-x-auto scrollbar-hide">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex items-center py-3 overflow-x-auto scrollbar-hide"
+    >
       <ol className="flex items-center space-x-1 text-sm">
         {/* <li>
           <Link
@@ -94,11 +116,14 @@ export function Breadcrumb() {
             {isAdminRoute ? <LayoutDashboard className="h-4 w-4" /> : <Home className="h-4 w-4" />}
           </Link>
         </li> */}
-        
+
         {breadcrumbItems.map((item, index) => (
           <li key={item.href} className="flex items-center">
             {index !== 0 && (
-              <ChevronRight className="h-4 w-4 text-muted-foreground mx-1 flex-shrink-0" aria-hidden="true" />
+              <ChevronRight
+                className="h-4 w-4 text-muted-foreground mx-1 flex-shrink-0"
+                aria-hidden="true"
+              />
             )}
             <Link
               href={item.href}

@@ -29,7 +29,7 @@ export default function AdminLayout({
 
       if (!isAdmin()) {
         // User is authenticated but is not an admin, redirect to user dashboard
-        router.replace("/dashboard");
+        router.replace("/user/dashboard");
         return;
       }
 

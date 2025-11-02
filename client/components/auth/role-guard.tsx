@@ -33,7 +33,7 @@ export function RoleGuard({
         roleCheck = isAdmin();
         if (!roleCheck) {
           // User is authenticated but not admin, redirect to user dashboard
-          router.replace(fallbackPath || "/dashboard");
+          router.replace(fallbackPath || "/user/dashboard");
           return;
         }
       } else if (requiredRole === "user") {

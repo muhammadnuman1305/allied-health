@@ -54,6 +54,6 @@ export function redirectBasedOnRole(): string {
   const user = getUser();
   if (!user) return '/login';
   
-  return user.role === 2 ? '/admin/dashboard' : '/dashboard';
+  return user.role === 2 ? '/admin/dashboard' : '/user/dashboard';
 }
 

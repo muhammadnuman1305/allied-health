@@ -39,7 +39,7 @@ export function useAuth() {
     }
 
     if (requiredRole === 1 && !isAdmin()) {
-      router.replace("/dashboard");
+      router.replace("/user/dashboard");
       return false;
     }
 

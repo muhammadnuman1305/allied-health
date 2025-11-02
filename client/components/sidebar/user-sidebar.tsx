@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  Settings,
   Leaf,
   LogOut,
   ChevronDown,
@@ -17,9 +16,9 @@ import {
   Calendar,
   BarChart,
   FileText,
-  ArrowRight,
   CalendarDays,
   Clock,
+  Settings,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -32,6 +31,9 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { clearAuth } from "@/lib/auth-utils";
+import { useAuth } from "@/hooks/use-auth";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent } from "@/components/ui/card";
 
 export function UserSidebar({
   className = "",
@@ -44,6 +46,7 @@ export function UserSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
   const [openSections, setOpenSections] = useState({
     Dashboard: true,
   });
@@ -57,12 +60,11 @@ export function UserSidebar({
     const sectionMap = {
       dashboard: "Dashboard",
       tasks: "Task Management",
+      "all-tasks": "Task Management",
+      "my-tasks": "Task Management",
       patients: "Patient Management",
-      referrals: "Referral Management",
       feedback: "Feedback Management",
-      settings: "Account", // Settings also opens Time Off & Requests
-      profile: "Account",
-      support: "Account",
+      schedule: "Schedule Management",
     };
 
     // Check both segments[1] (if no /user prefix) and segments[2] (if /user prefix exists)
@@ -107,12 +109,12 @@ export function UserSidebar({
       items: [
         {
           title: "All Tasks",
-          href: "/user/tasks",
+          href: "/user/all-tasks",
           icon: <FileText className="h-5 w-5" />,
         },
         {
           title: "My Tasks",
-          href: "/user/tasks",
+          href: "/user/my-tasks",
           icon: <FileText className="h-5 w-5" />,
         },
       ],
@@ -122,7 +124,7 @@ export function UserSidebar({
       items: [
         {
           title: "All Patients",
-          href: "/user/patients",
+          href: "/user/all-patients",
           icon: <User className="h-5 w-5" />,
         },
         {
@@ -133,58 +135,28 @@ export function UserSidebar({
       ],
     },
     {
-      title: "Referral Management",
-      items: [
-        {
-          title: "All Referrals",
-          href: "/user/referrals",
-          icon: <ArrowRight className="h-5 w-5" />,
-        },
-        {
-          title: "My Referrals",
-          href: "/user/my-referrals",
-          icon: <ArrowRight className="h-5 w-5" />,
-        },
-      ],
-    },
-    {
       title: "Feedback Management",
       items: [
         {
-          title: "All Feedback",
+          title: "Feedbacks",
           href: "/user/feedback",
           icon: <MessageSquare className="h-5 w-5" />,
         },
       ],
     },
     {
-      title: "Leave & Scheduling",
+      title: "Schedule Management",
       items: [
         {
-          title: "Vacations & Leave",
-          href: "/user/settings",
+          title: "Vacation Requests",
+          href: "/user/schedule/vacation-requests",
           icon: <CalendarDays className="h-5 w-5" />,
         },
         {
           title: "Reschedule Requests",
-          href: "/user/settings",
+          href: "/user/schedule/reschedule-requests",
           icon: <Clock className="h-5 w-5" />,
         },
-      ],
-    },
-    {
-      title: "Account",
-      items: [
-        {
-          title: "Settings",
-          href: "/user/settings",
-          icon: <Settings className="h-5 w-5" />,
-        },
-        // {
-        //   title: "Support",
-        //   href: "/support",
-        //   icon: <LifeBuoy className="h-5 w-5" />,
-        // },
       ],
     },
   ];
@@ -192,14 +164,14 @@ export function UserSidebar({
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen",
+        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen overflow-hidden",
         isCollapsed ? "w-[70px]" : "w-72",
         className
       )}
       {...props}
     >
       {/* Header/Logo Section */}
-      <div className="flex h-20 items-center justify-center border-b px-3">
+      <div className="flex h-20 flex-shrink-0 items-center justify-center border-b px-3">
         <Link href="/user/dashboard" className="flex items-center gap-2">
           <Leaf className="h-6 w-6 text-primary" />
           {!isCollapsed && (
@@ -211,8 +183,8 @@ export function UserSidebar({
       </div>
 
       {/* Navigation Section */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        <div className="space-y-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto py-4 px-3 scrollbar-thin">
+        <div className="space-y-4">
           {userSections.map((section) => (
             <div key={section.title}>
               {!isCollapsed && (
@@ -239,7 +211,7 @@ export function UserSidebar({
 
               <div
                 className={cn(
-                  "space-y-1.5 mt-1",
+                  "space-y-2 mt-2",
                   isCollapsed ? "pl-0" : "pl-2",
                   isCollapsed
                     ? "block"
@@ -255,7 +227,7 @@ export function UserSidebar({
                       item.href !== "/user/dashboard");
                   return (
                     <Link
-                      key={item.href}
+                      key={`${section.title}-${item.title}`}
                       href={item.href}
                       className={cn(
                         "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
@@ -288,42 +260,93 @@ export function UserSidebar({
       </nav>
 
       {/* Footer Section */}
-      <div className="mt-auto border-t py-4 px-3">
-        <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
-                isCollapsed ? "justify-center" : "justify-start"
-              )}
-              title={isCollapsed ? "Logout" : undefined}
-            >
-              <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span>Logout</span>}
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-md p-8">
-            <AlertDialogHeader className="items-center">
-              <LogOut className="h-8 w-8 text-destructive mb-2" />
-              <AlertDialogTitle className="text-center text-lg font-semibold">
-                Are you sure you want to logout?
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-              <AlertDialogCancel className="w-28">Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  clearAuth();
-                  router.push("/login");
-                }}
-                className="w-28 bg-destructive text-white hover:bg-destructive/90"
+      <div className="mt-auto flex-shrink-0 flex flex-col border-t">
+        <Separator />
+        <div className="px-3 py-3 space-y-2">
+          {/* Settings Button */}
+          <Link
+            href="/user/settings"
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm w-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
+              isCollapsed ? "justify-center" : "justify-start",
+              pathname === "/user/settings" &&
+                "bg-primary/10 text-primary font-medium"
+            )}
+            title={isCollapsed ? "Settings" : undefined}
+          >
+            <Settings className="h-5 w-5 flex-shrink-0" />
+            {!isCollapsed && <span>Settings</span>}
+          </Link>
+
+          {/* Logout Button */}
+          <AlertDialog
+            open={logoutDialogOpen}
+            onOpenChange={setLogoutDialogOpen}
+          >
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
+                  isCollapsed ? "justify-center" : "justify-start"
+                )}
+                title={isCollapsed ? "Logout" : undefined}
               >
-                Logout
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span>Logout</span>}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="max-w-md p-8">
+              <AlertDialogHeader className="items-center">
+                <LogOut className="h-8 w-8 text-destructive mb-2" />
+                <AlertDialogTitle className="text-center text-lg font-semibold">
+                  Are you sure you want to logout?
+                </AlertDialogTitle>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
+                <AlertDialogCancel className="w-28">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    clearAuth();
+                    router.push("/login");
+                  }}
+                  className="w-28 bg-destructive text-white hover:bg-destructive/90"
+                >
+                  Logout
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* User Info Card */}
+          {!isCollapsed && user && (
+            <Card className="mt-3">
+              <CardContent className="px-3 py-3">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none truncate">
+                    {user.firstName && user.lastName
+                      ? `${user.firstName} ${user.lastName}`
+                      : user.username || "User"}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-none truncate">
+                    {user.email || "No email"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {isCollapsed && user && (
+            <div className="mt-3 flex justify-center">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs font-medium text-primary">
+                  {user.firstName && user.lastName
+                    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+                    : user.username?.[0]?.toUpperCase() || "U"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

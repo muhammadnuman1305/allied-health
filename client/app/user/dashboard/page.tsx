@@ -53,7 +53,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex gap-2">
           <Button className="bg-primary hover:bg-primary/90" size="sm" asChild>
-            <Link href="/user/tasks">
+            <Link href="/user/my-tasks">
               <ClipboardList className="h-4 w-4 mr-1" /> View Tasks
             </Link>
           </Button>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
           description="View and manage your assigned tasks, update status, and save final outcomes."
           icon={<ClipboardList className="h-6 w-6 text-primary" />}
           actionText="View Tasks"
-          actionLink="/user/tasks"
+          actionLink="/user/my-tasks"
           time="Priority"
         />
 
@@ -292,7 +292,7 @@ export default function DashboardPage() {
 
       {/* Quick access buttons based on SRS User Panel Features */}
       <div className="flex flex-wrap gap-3 mt-6">
-        <Link href="/user/tasks">
+        <Link href="/user/my-tasks">
           <Button variant="outline" size="sm">
             My Tasks
           </Button>

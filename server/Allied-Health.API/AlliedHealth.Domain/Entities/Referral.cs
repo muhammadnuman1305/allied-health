@@ -4,20 +4,29 @@
     {
         public Guid Id { get; set; }
 
-        // Patient and Department details
         public int PatientId { get; set; }
-        public int OriginDepartment { get; set; }
-        public int DestDepartment { get; set; }
-        
-
-        // Referral details
         public Guid ReferringTherapist { get; set; }
-        public DateTime ReferralDate { get; set; }
+        public Guid OriginDepartmentId { get; set; }
+        public Guid DestinationDepartmentId { get; set; }
+
+        public string? Diagnosis { get; set; }
+        public string? Goals { get; set; }
+        public string? Description { get; set; }
         public int Priority { get; set; }
         public int Status { get; set; }
-        public int Notes { get; set; }
 
-        // Assignment fields
+        public DateTime CreatedDate { get; set; }
+        public Guid? CreatedBy { get; set; }
+        public DateTime ModifiedDate { get; set; }
+        public Guid? ModifiedBy { get; set; }
+        public bool Hidden { get; set; }
 
+        // Navigation
+        public Patient Patient { get; set; } = default!;
+        public Department OriginDepartment { get; set; } = default!;
+        public Department DestinationDepartment { get; set; } = default!;
+
+        public ICollection<ReferralIntervention> ReferralInterventions { get; set; } = new List<ReferralIntervention>();
+        public ICollection<Task> Tasks { get; set; } = new List<Task>();
     }
 }
