@@ -70,7 +70,7 @@ namespace AlliedHealth.Service.Implementation
             var inv = await _dbContext.Interventions.FirstOrDefaultAsync(t => t.Id == request.Id || t.Name == request.Name);
 
             if (inv != null)
-                return EMessages.WardExistAlready;
+                return EMessages.InterventionExistAlready;
 
             var newInv = new Intervention
             {
@@ -96,7 +96,7 @@ namespace AlliedHealth.Service.Implementation
             if (inv == null)
                 return EMessages.InterventionNotExists;
 
-            var existingInv = await _dbContext.Interventions.FirstOrDefaultAsync(t => t.Name == request.Name);
+            var existingInv = await _dbContext.Interventions.FirstOrDefaultAsync(t => t.Id != request.Id && t.Name == request.Name);
 
             if (existingInv != null)
                 return EMessages.InterventionExistAlready;

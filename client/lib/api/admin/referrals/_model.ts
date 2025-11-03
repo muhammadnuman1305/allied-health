@@ -1,24 +1,57 @@
 // Referral data models
 
+// API Response interface (what comes from backend)
+export interface ReferralAPIResponse {
+  id: string;
+  type: "incoming" | "outgoing";
+  patientId: number;
+  patientName: string;
+  originDeptId: string;
+  originDeptName: string;
+  destinationDeptId: string;
+  destinationDeptName: string;
+  therapistId: string;
+  therapistName: string;
+  priority: number; // 1, 2, or 3
+  referralDate: string;
+  diagnosis?: string | null;
+  goals?: string | null;
+  description?: string | null;
+  lastUpdated: string;
+  hidden: boolean;
+}
+
+// Frontend Referral interface (transformed from API)
 export interface Referral {
   id: string;
+  type: "incoming" | "outgoing";
   patientId: string;
   patientName: string;
-  patientUmrn: string;
-  patientAge: number;
-  patientGender: "M" | "F" | "Other";
-  ward: string;
-  bedNumber: string;
-  diagnosis: string;
-  referringTherapist: string;
+  patientUmrn?: string;
+  patientAge?: number;
+  patientGender?: "M" | "F" | "Other";
+  ward?: string;
+  bedNumber?: string;
+  diagnosis?: string;
+  goals?: string;
+  clinicalInstructions?: string;
+  therapistId: string;
+  therapistName: string;
+  referringTherapist?: string; // Alias for therapistName
   referralDate: string;
   priority: "P1" | "P2" | "P3";
-  interventions: string[];
-  status: "S" | "A" | "D" | "U" | "X"; // S=Success, A=Active, D=Discharged, U=Unavailable, X=Cancelled
+  priorityNumber: number; // 1, 2, or 3
+  priorityDisplay: "High" | "Medium" | "Low"; // Display text for badges
+  interventions?: string[];
+  status?: "S" | "A" | "D" | "U" | "X"; // S=Success, A=Active, D=Discharged, U=Unavailable, X=Cancelled
   // Department workflow fields
-  originDepartment: string; // Department that created the referral
-  destinationDepartment: string; // Department the referral is sent to
-  triageStatus: "pending" | "accepted" | "rejected" | "redirected"; // Triage status
+  originDeptId: string;
+  originDeptName: string;
+  originDepartment: string; // Alias for originDeptName
+  destinationDeptId: string;
+  destinationDeptName: string;
+  destinationDepartment: string; // Alias for destinationDeptName
+  triageStatus?: "pending" | "accepted" | "rejected" | "redirected"; // Triage status
   triageNotes?: string; // Notes from destination department
   triagedBy?: string; // AHP who triaged the referral
   triagedAt?: string; // When the referral was triaged
@@ -32,8 +65,10 @@ export interface Referral {
   limbWeakness?: string; // Stroke
   communicationChallenges?: string; // Stroke
   weightBearingTolerance?: string; // Orthopaedic
-  createdAt: string;
-  updatedAt: string;
+  lastUpdated: string;
+  updatedAt: string; // Alias for lastUpdated
+  hidden: boolean;
+  createdAt?: string;
 }
 
 export interface ReferralFormData {
@@ -52,6 +87,10 @@ export interface ReferralFormData {
   triagedBy?: string;
   triagedAt?: string;
   redirectToDepartment?: string;
+  // New fields for backend DTO
+  diagnosis: string;
+  goals: string;
+  clinicalInstructions?: string;
   // Original fields
   notes?: string;
   outcomeNotes?: string;

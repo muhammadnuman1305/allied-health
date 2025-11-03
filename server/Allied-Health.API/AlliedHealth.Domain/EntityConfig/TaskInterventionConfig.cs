@@ -37,8 +37,13 @@ namespace AlliedHealth.Domain.EntityConfigs
                 .HasColumnType("date")
                 .IsRequired();
 
-            b.Property(x => x.Status)
+            b.Property(x => x.OutcomeStatus)
                 .IsRequired();
+
+            b.Property(x => x.Outcome);
+
+            b.Property(x => x.OutcomeDate)
+                .HasColumnType("date");
 
             // Relationships
             b.HasOne(x => x.Task)

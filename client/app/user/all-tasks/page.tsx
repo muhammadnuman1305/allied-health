@@ -6,152 +6,31 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
+import { Separator } from "@/components/ui/separator";
 import {
-  Search,
   FileText,
   AlertCircle,
   Clock,
   CheckCircle,
   Eye,
-  Settings,
-  User,
-  Calendar,
-  ExternalLink,
   ArrowRight,
+  User,
 } from "lucide-react";
+import { getAllTasks$, getTaskDetailsById$ } from "@/lib/api/aha/_request";
+import type { AHATask, AHATaskDetails } from "@/lib/api/aha/_model";
+import { toast } from "sonner";
 
-// Task interface for all tasks view
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  patientId: string;
-  patientName: string;
-  patientMrn?: string;
-  startDate: string;
-  endDate: string;
-  priority: "High" | "Medium" | "Low";
-  departmentName?: string;
-  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed";
-  assignedTo?: string;
-  assignedToDepartment?: string;
-  interventionCount: number;
-  myInterventionCount: number;
-}
-
-// Mock data - all tasks
-const mockAllTasks: Task[] = [
-  {
-    id: "T001",
-    title: "Initial Assessment - John Smith",
-    description:
-      "Complete initial health assessment for new patient John Smith",
-    patientId: "P001",
-    patientName: "John Smith",
-    patientMrn: "MRN00001",
-    startDate: "2024-01-10",
-    endDate: "2024-01-20",
-    priority: "High",
-    departmentName: "Cardiology",
-    status: "Assigned",
-    assignedTo: "Dr. Sarah Johnson",
-    assignedToDepartment: "Cardiology",
-    interventionCount: 3,
-    myInterventionCount: 1,
-  },
-  {
-    id: "T002",
-    title: "Follow-up Consultation - Maria Garcia",
-    description: "Follow-up consultation for diabetes management",
-    patientId: "P002",
-    patientName: "Maria Garcia",
-    patientMrn: "MRN00002",
-    startDate: "2024-01-08",
-    endDate: "2024-01-15",
-    priority: "Medium",
-    departmentName: "Endocrinology",
-    status: "In Progress",
-    assignedTo: "Dr. Michael Chen",
-    assignedToDepartment: "Endocrinology",
-    interventionCount: 2,
-    myInterventionCount: 1,
-  },
-  {
-    id: "T003",
-    title: "Physical Therapy Session - Robert Wilson",
-    description: "Post-surgery physical therapy session",
-    patientId: "P003",
-    patientName: "Robert Wilson",
-    patientMrn: "MRN00003",
-    startDate: "2024-01-05",
-    endDate: "2024-01-12",
-    priority: "Low",
-    departmentName: "Physical Therapy",
-    status: "Completed",
-    assignedTo: "Dr. Emily Davis",
-    assignedToDepartment: "Physical Therapy",
-    interventionCount: 1,
-    myInterventionCount: 1,
-  },
-  {
-    id: "T004",
-    title: "Nutrition Consultation - Lisa Brown",
-    description: "Dietary consultation for weight management",
-    patientId: "P004",
-    patientName: "Lisa Brown",
-    patientMrn: "MRN00004",
-    startDate: "2024-01-11",
-    endDate: "2024-01-18",
-    priority: "Medium",
-    departmentName: "Nutrition",
-    status: "Assigned",
-    assignedTo: "Dr. David Miller",
-    assignedToDepartment: "Nutrition",
-    interventionCount: 2,
-    myInterventionCount: 0,
-  },
-  {
-    id: "T005",
-    title: "Cardiac Evaluation - Ahmed Ali",
-    description: "Complete cardiac evaluation and assessment",
-    patientId: "P005",
-    patientName: "Ahmed Ali",
-    patientMrn: "MRN00005",
-    startDate: "2024-01-12",
-    endDate: "2024-01-22",
-    priority: "High",
-    departmentName: "Cardiology",
-    status: "In Progress",
-    assignedTo: "Dr. Sarah Johnson",
-    assignedToDepartment: "Cardiology",
-    interventionCount: 4,
-    myInterventionCount: 0,
-  },
-];
+// Task interface for all tasks view (using AHATask from API)
+type Task = AHATask;
 
 const statusConfig = {
   "Not Assigned": {
@@ -171,6 +50,10 @@ const statusConfig = {
     label: "Completed",
     color:
       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  },
+  Overdue: {
+    label: "Overdue",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
   },
 };
 
@@ -209,12 +92,27 @@ export default function AllTasksPage() {
     sortDirection: null,
   });
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskDetails, setTaskDetails] = useState<AHATaskDetails | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   useEffect(() => {
-    // In real app, fetch all tasks
-    setTasks(mockAllTasks);
-    setLoading(false);
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getAllTasks$();
+        setTasks(response.data);
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+        setError("Failed to fetch tasks. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchTasks();
+    }
   }, [user]);
 
   // Get task counts
@@ -270,6 +168,7 @@ export default function AllTasksPage() {
         { value: "Assigned", label: "Assigned" },
         { value: "In Progress", label: "In Progress" },
         { value: "Completed", label: "Completed" },
+        { value: "Overdue", label: "Overdue" },
       ],
       render: (task) => {
         const status = statusConfig[task.status as keyof typeof statusConfig];
@@ -340,18 +239,27 @@ export default function AllTasksPage() {
   ];
 
   // Handle task actions
-  const handleTaskAction = (action: string, taskId: string) => {
+  const handleTaskAction = async (action: string, taskId: string) => {
     switch (action) {
       case "view":
         const task = tasks.find((t) => t.id === taskId);
         if (task) {
-          setSelectedTask(task);
-          setIsViewDialogOpen(true);
+          try {
+            setSelectedTask(task);
+            const response = await getTaskDetailsById$(taskId);
+            setTaskDetails(response.data);
+            setIsViewDialogOpen(true);
+          } catch (err) {
+            console.error("Error fetching task details:", err);
+            toast.error("Failed to load task details. Please try again.");
+            setSelectedTask(null);
+            setTaskDetails(null);
+          }
         }
         break;
       case "patient":
         const taskForPatient = tasks.find((t) => t.id === taskId);
-        if (taskForPatient) {
+        if (taskForPatient && taskForPatient.patientId) {
           router.push(`/user/all-patients/${taskForPatient.patientId}`);
         }
         break;
@@ -483,49 +391,43 @@ export default function AllTasksPage() {
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
             actions={(task) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => handleTaskAction("view", task.id)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleTaskAction("patient", task.id)}
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    View Patient
-                  </DropdownMenuItem>
-                  {task.myInterventionCount > 0 && (
-                    <DropdownMenuItem
-                      onClick={() => handleTaskAction("my-tasks", task.id)}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      View My Interventions
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleTaskAction("view", task.id)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
             )}
           />
         </CardContent>
       </Card>
 
       {/* Task Detail Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Task Details</DialogTitle>
+      <Dialog
+        open={isViewDialogOpen}
+        onOpenChange={(open) => {
+          setIsViewDialogOpen(open);
+          if (!open) {
+            // Reset state when dialog closes
+            setSelectedTask(null);
+            setTaskDetails(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:h-5 [&>button]:w-5 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button]:top-[1.625rem]">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-xl font-semibold leading-tight">
+              Task Details
+            </DialogTitle>
           </DialogHeader>
-          {selectedTask && (
+          <div className="-mx-6 mb-4">
+            <Separator />
+          </div>
+          {selectedTask && taskDetails && (
             <TaskDetailView
               task={selectedTask}
+              taskDetails={taskDetails}
               onNavigateToPatient={handleTaskAction}
             />
           )}
@@ -538,13 +440,16 @@ export default function AllTasksPage() {
 // Task Detail View Component
 function TaskDetailView({
   task,
+  taskDetails,
   onNavigateToPatient,
 }: {
   task: Task;
+  taskDetails: AHATaskDetails;
   onNavigateToPatient: (action: string, taskId: string) => void;
 }) {
   const status = statusConfig[task.status as keyof typeof statusConfig];
-  const priority = priorityConfig[task.priority as keyof typeof priorityConfig];
+  const priority =
+    priorityConfig[taskDetails.priority as keyof typeof priorityConfig];
 
   return (
     <div className="space-y-6">
@@ -569,94 +474,128 @@ function TaskDetailView({
 
       <div>
         <Label className="text-sm font-medium text-muted-foreground">
-          Task
+          Title
         </Label>
-        <p className="text-base font-semibold mt-1">{task.title}</p>
+        <p className="text-sm mt-1">{taskDetails.title}</p>
       </div>
 
-      <div>
-        <Label className="text-sm font-medium text-muted-foreground">
-          Description
-        </Label>
-        <p className="text-sm mt-1">{task.description}</p>
-      </div>
+      {taskDetails.description && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Description
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.description}
+          </p>
+        </div>
+      )}
+
+      {taskDetails.diagnosis && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Diagnosis
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.diagnosis}
+          </p>
+        </div>
+      )}
+
+      {taskDetails.goals && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Goals
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.goals}
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
             Patient
           </Label>
-          <p className="text-base mt-1">
-            {task.patientName}
-            {task.patientMrn && (
-              <span className="text-sm text-muted-foreground ml-2">
-                ({task.patientMrn})
-              </span>
-            )}
-          </p>
+          <p className="text-sm mt-1">{taskDetails.patientName}</p>
         </div>
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
             Department
           </Label>
-          <p className="text-sm mt-1">{task.departmentName || "—"}</p>
+          <p className="text-sm mt-1">{taskDetails.departmentName || "—"}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
-            Assigned To
+            Start Date
           </Label>
-          <p className="text-sm mt-1">{task.assignedTo || "—"}</p>
+          <p className="text-sm mt-1">
+            {taskDetails.startDate
+              ? new Date(taskDetails.startDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
+          </p>
         </div>
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
-            Interventions
+            End Date
           </Label>
           <p className="text-sm mt-1">
-            {task.interventionCount} total
-            {task.myInterventionCount > 0 && (
-              <span className="text-primary ml-2">
-                ({task.myInterventionCount} assigned to you)
-              </span>
-            )}
+            {taskDetails.endDate
+              ? new Date(taskDetails.endDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
           </p>
         </div>
       </div>
 
-      <div>
-        <Label className="text-sm font-medium text-muted-foreground">
-          Date Range
-        </Label>
-        <p className="text-sm mt-1">
-          {new Date(task.startDate).toLocaleDateString()} -{" "}
-          {new Date(task.endDate).toLocaleDateString()}
-        </p>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Total Interventions
+          </Label>
+          <p className="text-sm mt-1">{taskDetails.totalInterventions}</p>
+        </div>
+        {taskDetails.lastUpdated && (
+          <div>
+            <Label className="text-sm font-medium text-muted-foreground">
+              Last Updated
+            </Label>
+            <p className="text-sm mt-1">
+              {new Date(taskDetails.lastUpdated).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="pt-4 border-t flex gap-3">
-        <Button
-          variant="default"
-          onClick={() => onNavigateToPatient("patient", task.id)}
-          className="flex-1"
-        >
-          <ExternalLink className="h-4 w-4 mr-2" />
-          View Patient
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-        {task.myInterventionCount > 0 && (
+      {task.myInterventionCount > 0 && (
+        <div className="pt-4 border-t">
           <Button
             variant="outline"
             onClick={() => onNavigateToPatient("my-tasks", task.id)}
-            className="flex-1"
+            className="w-full"
           >
             <FileText className="h-4 w-4 mr-2" />
             View My Interventions
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

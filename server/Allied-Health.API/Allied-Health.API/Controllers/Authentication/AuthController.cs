@@ -2,7 +2,7 @@ using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract.Authentication;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Allied_Health.API.Controllers;
+namespace AlliedHealth.API.Controllers.Authentication;
 
 [ApiController]
 [Route("[controller]")]

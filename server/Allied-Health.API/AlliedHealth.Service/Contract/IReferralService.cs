@@ -6,9 +6,9 @@ namespace AlliedHealth.Service.Contract
     {
         IQueryable<GetReferralDTO> GetAll();
         Task<GetReferralSummaryDTO> GetSummary();
-        Task<GetReferralDetailsDTO> GetTask(Guid id);
-        Task<string?> CreateTask(AddUpdateReferralDTO request);
-        Task<string?> UpdateTask(AddUpdateReferralDTO request);
+        Task<GetReferralDetailsDTO> GetReferral(Guid id);
+        Task<string?> CreateReferral(AddUpdateReferralDTO request);
+        Task<string?> UpdateReferral(AddUpdateReferralDTO request);
         Task<string?> ToggleHide(Guid id);
     }
 }

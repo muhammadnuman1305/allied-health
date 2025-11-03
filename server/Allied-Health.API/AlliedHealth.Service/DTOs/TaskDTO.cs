@@ -33,6 +33,18 @@
         public List<TaskInterventionDTO> Interventions { get; set; } = new List<TaskInterventionDTO>();
     }
 
+    public class GetReferralTaskDetailsDTO
+    {
+        public Guid RefId { get; set; }
+        public int PatientId { get; set; }
+        public Guid DepartmentId { get; set; }
+        public int Priority { get; set; }
+        public string Diagnosis { get; set; }
+        public string Goals { get; set; }
+        public string Description { get; set; }
+        public List<Guid> Interventions { get; set; } = new List<Guid>();
+    }
+
     public class SelectIntervention
     {
         public Guid InterventionId { get; set; }
@@ -62,6 +74,7 @@
     public class AddUpdateTaskDTO
     {
         public Guid? Id { get; set; }
+        public Guid? RefId { get; set; }
 
         // Task Details
         public int PatientId { get; set; }

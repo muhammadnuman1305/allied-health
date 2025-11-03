@@ -8,6 +8,7 @@ namespace AlliedHealth.Service.Contract.Authentication
         string? UserName { get; }
         bool IsAdmin { get; }
         int Role { get; } // 1 for AHP, 2 for others based on your existing logic
+        Guid? DepartmentId { get; }
         ClaimsIdentity? Claims { get; }
         List<Claim> GetClaims(string claimId);
     }

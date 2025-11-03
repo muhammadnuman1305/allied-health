@@ -31,13 +31,6 @@ namespace AlliedHealth.Common.Enums
         Dietetics = 4
     }
 
-    public enum ETaskStatus
-    {
-        Active = 1,
-        Completed = 2,
-        Overdue = 3
-    }
-
     public enum ETaskInterventionOutcomes
     {
         Seen = 1, // S - Patient seen by AHA
@@ -45,6 +38,21 @@ namespace AlliedHealth.Common.Enums
         Declined = 3, // D - Patient declined intervention
         Unseen = 4, // U - Patient was not seen by AHA (unseen).
         Handover = 5  // X - Refer to additional note or handover from AHA regarding outcome of delegation.
+    }
+
+    public enum ETaskStatus
+    {
+        Assigned = 1,
+        InProgress = 2,
+        Completed = 3,
+        Overdue = 4
+    }
+
+    public enum EReferralOutcomes
+    {
+        Pending = 1,
+        Accepted = 2,
+        Rejected = 3
     }
 
     public enum ETaskPriorities

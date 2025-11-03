@@ -258,7 +258,7 @@ export default function AdminSpecialtiesSetupPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Specialties</CardTitle>
+            <CardTitle>Specialties Table</CardTitle>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={clearAllFilters}>

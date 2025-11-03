@@ -26,6 +26,7 @@ import {
   Plus,
   ArrowDown,
   ArrowUp,
+  Calendar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -67,6 +68,7 @@ export function AdminSidebar({
         dashboard: "Dashboard",
         analytics: "Dashboard",
         reports: "Dashboard",
+        calendar: "Dashboard",
         realtime: "Dashboard",
         users: "User Management",
         roles: "User Management",
@@ -116,6 +118,11 @@ export function AdminSidebar({
           title: "Overview",
           href: "/admin/dashboard",
           icon: <LayoutDashboard className="h-5 w-5" />,
+        },
+        {
+          title: "Calendar",
+          href: "/admin/calendar",
+          icon: <Calendar className="h-5 w-5" />,
         },
         // {
         //   title: "Analytics",
@@ -264,7 +271,7 @@ export function AdminSidebar({
 
       {/* Navigation Section */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        <div className="space-y-2">
+        <div className="space-y-4">
           {adminSections.map((section) => (
             <div key={section.title}>
               {!isCollapsed && (
@@ -291,7 +298,7 @@ export function AdminSidebar({
 
               <div
                 className={cn(
-                  "space-y-1.5 mt-1",
+                  "space-y-2 mt-2",
                   isCollapsed ? "pl-0" : "pl-2",
                   isCollapsed
                     ? "block"
@@ -360,7 +367,7 @@ export function AdminSidebar({
               </AlertDialogTitle>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-              <AlertDialogCancel className="w-28">Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
                   clearAuth();

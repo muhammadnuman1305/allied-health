@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import PatientDetailContent from "../[id]/patient-detail-content";
+import PatientDetailContent from "./patient-detail-content";
 
 export default async function PatientDetailPage({
   params,

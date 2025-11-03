@@ -1,280 +1,204 @@
-import { Referral, ReferralFormData, ReferralSummary } from "./_model";
+import { Referral, ReferralFormData, ReferralSummary, ReferralAPIResponse } from "./_model";
+import api from "../../axios";
+import { getUser } from "@/lib/auth-utils";
 
-// Mock data for development
-const MOCK_REFERRALS: Referral[] = [
-  {
-    id: "ref-001",
-    patientId: "1",
-    patientName: "John Smith",
-    patientUmrn: "MRN001234",
-    patientAge: 75,
-    patientGender: "M",
-    ward: "Geriatrics",
-    bedNumber: "G12",
-    diagnosis: "Dementia with mobility issues",
-    referringTherapist: "Dr. Sarah Wilson",
-    referralDate: "2024-01-16",
-    priority: "P2",
-    interventions: ["Mobilisation", "Cognitive Assessment"],
-    status: "A",
-    originDepartment: "Geriatrics",
-    destinationDepartment: "Physiotherapy",
-    triageStatus: "accepted",
-    notes: "Patient requires assistance with daily activities",
-    dementiaNotes: "Moderate dementia, responsive to familiar faces",
-    createdAt: "2024-01-16T09:00:00Z",
-    updatedAt: "2024-01-16T09:00:00Z"
-  },
-  {
-    id: "ref-002",
-    patientId: "2",
-    patientName: "Mary Johnson",
-    patientUmrn: "MRN001235",
-    patientAge: 68,
-    patientGender: "F",
-    ward: "Stroke",
-    bedNumber: "S08",
-    diagnosis: "Acute stroke - left hemisphere",
-    referringTherapist: "Dr. Michael Brown",
-    referralDate: "2024-01-15",
-    priority: "P1",
-    interventions: ["Articulation Therapy", "Function Retraining"],
-    status: "A",
-    originDepartment: "Stroke",
-    destinationDepartment: "Speech Pathology",
-    triageStatus: "accepted",
-    notes: "High priority - significant communication difficulties",
-    limbWeakness: "Right side weakness, moderate severity",
-    communicationChallenges: "Expressive aphasia, understands well",
-    createdAt: "2024-01-15T14:30:00Z",
-    updatedAt: "2024-01-15T14:30:00Z"
-  },
-  {
-    id: "ref-003",
-    patientId: "3",
-    patientName: "Robert Davis",
-    patientUmrn: "MRN001236",
-    patientAge: 82,
-    patientGender: "M",
-    ward: "Orthopaedic",
-    bedNumber: "O15",
-    diagnosis: "Hip fracture post-surgery",
-    referringTherapist: "Dr. Lisa Chen",
-    referralDate: "2024-01-14",
-    priority: "P2",
-    interventions: ["Mobilisation", "Strength Training"],
-    status: "A",
-    originDepartment: "Orthopaedic",
-    destinationDepartment: "Physiotherapy",
-    triageStatus: "accepted",
-    notes: "Post-operative day 3, cleared for mobilisation",
-    weightBearingTolerance: "Partial weight bearing - 50%",
-    createdAt: "2024-01-14T11:15:00Z",
-    updatedAt: "2024-01-14T11:15:00Z"
-  },
-  {
-    id: "ref-004",
-    patientId: "4",
-    patientName: "Elizabeth Wilson",
-    patientUmrn: "MRN001237",
-    patientAge: 79,
-    patientGender: "F",
-    ward: "Geriatrics",
-    bedNumber: "G05",
-    diagnosis: "Malnutrition and dehydration",
-    referringTherapist: "Dr. James Taylor",
-    referralDate: "2024-01-13",
-    priority: "P3",
-    interventions: ["Nutrition Screening", "Feeding Support"],
-    status: "S",
-    originDepartment: "Geriatrics",
-    destinationDepartment: "Dietitians",
-    triageStatus: "accepted",
-    notes: "Nutrition goals achieved, ready for discharge",
-    outcomeNotes: "Patient achieved target weight and improved nutritional status",
-    completedDate: "2024-01-16",
-    createdAt: "2024-01-13T08:45:00Z",
-    updatedAt: "2024-01-16T16:20:00Z"
-  },
-  {
-    id: "ref-005",
-    patientId: "5",
-    patientName: "William Anderson",
-    patientUmrn: "MRN001238",
-    patientAge: 71,
-    patientGender: "M",
-    ward: "Cardiology",
-    bedNumber: "C22",
-    diagnosis: "Myocardial infarction",
-    referringTherapist: "Dr. Emma Thompson",
-    referralDate: "2024-01-16",
-    priority: "P1",
-    interventions: ["Respiratory Physiotherapy", "Activities of Daily Living"],
-    status: "A",
-    originDepartment: "Cardiology",
-    destinationDepartment: "Physiotherapy",
-    triageStatus: "accepted",
-    notes: "Recent MI, requires cardiac rehabilitation",
-    createdAt: "2024-01-16T13:20:00Z",
-    updatedAt: "2024-01-16T13:20:00Z"
-  },
-  {
-    id: "ref-006",
-    patientId: "2",
-    patientName: "Mary Johnson",
-    patientUmrn: "MRN001235",
-    patientAge: 68,
-    patientGender: "F",
-    ward: "Stroke",
-    bedNumber: "S08",
-    diagnosis: "Acute stroke - left hemisphere",
-    referringTherapist: "Dr. Patricia Lee",
-    referralDate: "2024-01-17",
-    priority: "P1",
-    interventions: ["Swallowing Assessment", "Voice Therapy"],
-    status: "A",
-    originDepartment: "Stroke",
-    destinationDepartment: "Speech Pathology",
-    triageStatus: "pending",
-    notes: "Additional speech therapy referral for swallowing difficulties",
-    communicationChallenges: "Dysphagia concerns, requires assessment",
-    createdAt: "2024-01-17T10:00:00Z",
-    updatedAt: "2024-01-17T10:00:00Z"
+const BASE_URL = "/api/referral";
+
+// Helper to convert priority string (P1, P2, P3) to number (1, 2, 3)
+const priorityToNumber = (priority: "P1" | "P2" | "P3"): number => {
+  switch (priority) {
+    case "P1":
+      return 1;
+    case "P2":
+      return 2;
+    case "P3":
+      return 3;
+    default:
+      return 2; // Default to medium priority
   }
-];
-
-const MOCK_SUMMARY: ReferralSummary = {
-  totalReferrals: 45,
-  referralsToday: 8,
-  priorityBreakdown: {
-    P1: 12,
-    P2: 18,
-    P3: 15
-  },
-  disciplineBreakdown: {
-    physiotherapy: 25,
-    occupationalTherapy: 18,
-    speechTherapy: 12,
-    dietetics: 8
-  },
-  statusBreakdown: {
-    active: 32,
-    completed: 13,
-    pending: 5,
-    cancelled: 3
-  },
-  pendingOutcomes: 32,
-  completedReferrals: 13,
-  pendingTriage: 3
 };
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Helper to convert priority number (1, 2, 3) to string (P1, P2, P3)
+const priorityToString = (priority: number): "P1" | "P2" | "P3" => {
+  switch (priority) {
+    case 1:
+      return "P1";
+    case 2:
+      return "P2";
+    case 3:
+      return "P3";
+    default:
+      return "P2";
+  }
+};
 
-export const getAll$ = async (): Promise<{ data: Referral[] }> => {
-  await delay(500);
-  return { data: MOCK_REFERRALS };
+// Transform frontend ReferralFormData to backend AddUpdateReferralDTO
+// Note: Using PascalCase to match C# DTO property names exactly
+interface AddUpdateReferralDTO {
+  Id?: string | null;
+  PatientId: number;
+  OriginDeptId: string;
+  DestinationDeptId: string;
+  TherapistId: string;
+  Priority: number;
+  Diagnosis: string;
+  Goals: string;
+  Description?: string | null;
+  Interventions: string[];
+}
+
+const transformToBackendDTO = (formData: ReferralFormData, therapistId: string): AddUpdateReferralDTO => {
+  // Convert patientId from string to number
+  const patientIdNum = parseInt(formData.patientId, 10);
+  if (isNaN(patientIdNum)) {
+    throw new Error("Invalid patientId: must be a number");
+  }
+
+  // Validate required fields
+  if (!formData.originDepartment) {
+    throw new Error("Origin department is required");
+  }
+  if (!formData.destinationDepartment) {
+    throw new Error("Destination department is required");
+  }
+  if (!formData.diagnosis) {
+    throw new Error("Diagnosis is required");
+  }
+  if (!formData.goals) {
+    throw new Error("Goals are required");
+  }
+
+  return {
+    Id: formData.id || null,
+    PatientId: patientIdNum,
+    OriginDeptId: formData.originDepartment,
+    DestinationDeptId: formData.destinationDepartment,
+    TherapistId: therapistId,
+    Priority: priorityToNumber(formData.priority),
+    Diagnosis: formData.diagnosis || "",
+    Goals: formData.goals || "",
+    Description: formData.clinicalInstructions || null,
+    Interventions: formData.interventions || [],
+  };
+};
+
+// Helper to convert priority P1/P2/P3 to High/Medium/Low
+// Note: P1 maps to 1 (Low), P2 maps to 2 (Medium), P3 maps to 3 (High)
+const priorityToDisplayText = (priority: "P1" | "P2" | "P3"): "High" | "Medium" | "Low" => {
+  switch (priority) {
+    case "P1":
+      return "Low";  // 1 -> Low
+    case "P2":
+      return "Medium";  // 2 -> Medium
+    case "P3":
+      return "High";  // 3 -> High
+    default:
+      return "Medium";
+  }
+};
+
+// Transform API response to frontend format
+const transformReferral = (apiReferral: ReferralAPIResponse): Referral => {
+  const priorityStr = priorityToString(apiReferral.priority);
+  return {
+    id: apiReferral.id,
+    type: apiReferral.type,
+    patientId: apiReferral.patientId.toString(),
+    patientName: apiReferral.patientName,
+    referralDate: apiReferral.referralDate,
+    priority: priorityStr,
+    priorityNumber: apiReferral.priority,
+    priorityDisplay: priorityToDisplayText(priorityStr),
+    originDeptId: apiReferral.originDeptId,
+    originDeptName: apiReferral.originDeptName,
+    originDepartment: apiReferral.originDeptName,
+    destinationDeptId: apiReferral.destinationDeptId,
+    destinationDeptName: apiReferral.destinationDeptName,
+    destinationDepartment: apiReferral.destinationDeptName,
+    therapistId: apiReferral.therapistId,
+    therapistName: apiReferral.therapistName,
+    referringTherapist: apiReferral.therapistName,
+    diagnosis: apiReferral.diagnosis || undefined,
+    goals: apiReferral.goals || undefined,
+    clinicalInstructions: apiReferral.description || undefined,
+    lastUpdated: apiReferral.lastUpdated,
+    updatedAt: apiReferral.lastUpdated,
+    hidden: apiReferral.hidden,
+  };
+};
+
+export const getAll$ = async (type?: "incoming" | "outgoing"): Promise<{ data: Referral[] }> => {
+  let url = BASE_URL;
+  
+  // Add OData filter for type filtering
+  if (type) {
+    url += `?$filter=type eq '${type}'`;
+  }
+  
+  const response = await api.get<ReferralAPIResponse[]>(url);
+  return { data: response.data.map(transformReferral) };
 };
 
 export const getById$ = async (id: string): Promise<{ data: Referral }> => {
-  await delay(300);
-  const referral = MOCK_REFERRALS.find(r => r.id === id);
-  if (!referral) {
-    throw new Error("Referral not found");
-  }
-  return { data: referral };
+  const response = await api.get<ReferralAPIResponse>(`${BASE_URL}/${id}`);
+  return { data: transformReferral(response.data) };
 };
 
 export const getSummary$ = async (): Promise<{ data: ReferralSummary }> => {
-  await delay(200);
-  return { data: MOCK_SUMMARY };
+  const response = await api.get<ReferralSummary>(`${BASE_URL}/summary`);
+  return { data: response.data };
 };
 
 export const create$ = async (referral: ReferralFormData): Promise<{ data: Referral }> => {
-  await delay(800);
-  
-  // Find patient info (in real app, this would come from the patient ID)
-  const existingReferral = MOCK_REFERRALS.find(r => r.patientId === referral.patientId);
-  const patientInfo = existingReferral ? {
-    patientName: existingReferral.patientName,
-    patientUmrn: existingReferral.patientUmrn,
-    patientAge: existingReferral.patientAge,
-    patientGender: existingReferral.patientGender,
-    ward: existingReferral.ward,
-    bedNumber: existingReferral.bedNumber,
-    diagnosis: existingReferral.diagnosis,
-  } : {
-    patientName: "Unknown Patient",
-    patientUmrn: "Unknown",
-    patientAge: 0,
-    patientGender: "M" as const,
-    ward: "General",
-    bedNumber: "Unknown",
-    diagnosis: "Unknown",
-  };
+  const user = getUser();
+  if (!user || !user.id) {
+    throw new Error("User must be authenticated to create a referral");
+  }
 
-  const newReferral: Referral = {
-    ...referral,
-    ...patientInfo,
-    id: `ref-${Math.random().toString(36).substr(2, 9)}`,
-    triageStatus: referral.triageStatus || "pending",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  
-  MOCK_REFERRALS.push(newReferral);
-  return { data: newReferral };
+  try {
+    const payload = transformToBackendDTO(referral, user.id);
+    console.log("Sending referral payload:", JSON.stringify(payload, null, 2));
+    const response = await api.post<Referral>(BASE_URL, payload);
+    return { data: response.data };
+  } catch (error: any) {
+    console.error("Error creating referral:", error);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
+    throw error;
+  }
 };
 
 export const update$ = async (referral: ReferralFormData): Promise<{ data: Referral }> => {
-  await delay(800);
   if (!referral.id) {
     throw new Error("Referral ID is required for update");
   }
-  const index = MOCK_REFERRALS.findIndex(r => r.id === referral.id);
-  if (index === -1) {
-    throw new Error("Referral not found");
+
+  const user = getUser();
+  if (!user || !user.id) {
+    throw new Error("User must be authenticated to update a referral");
   }
-  
-  const updatedReferral: Referral = {
-    ...MOCK_REFERRALS[index],
-    ...referral,
-    id: referral.id,
-    triageStatus: referral.triageStatus || MOCK_REFERRALS[index].triageStatus,
-    updatedAt: new Date().toISOString()
-  };
-  
-  MOCK_REFERRALS[index] = updatedReferral;
-  return { data: updatedReferral };
+
+  try {
+    const payload = transformToBackendDTO(referral, user.id);
+    console.log("Updating referral payload:", JSON.stringify(payload, null, 2));
+    const response = await api.put<Referral>(BASE_URL, payload);
+    return { data: response.data };
+  } catch (error: any) {
+    console.error("Error updating referral:", error);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
+    throw error;
+  }
 };
 
 export const toggleActive$ = async (id: string): Promise<{ data: Referral }> => {
-  await delay(500);
-  const referral = MOCK_REFERRALS.find(r => r.id === id);
-  if (!referral) {
-    throw new Error("Referral not found");
-  }
-  
-  // Toggle between active and cancelled status
-  referral.status = referral.status === "X" ? "A" : "X";
-  referral.updatedAt = new Date().toISOString();
-  
-  return { data: referral };
+  const response = await api.patch<Referral>(`${BASE_URL}/${id}/toggle-active`);
+  return { data: response.data };
 };
 
 export const completeReferral$ = async (id: string, outcomeNotes: string): Promise<{ data: Referral }> => {
-  await delay(500);
-  const referral = MOCK_REFERRALS.find(r => r.id === id);
-  if (!referral) {
-    throw new Error("Referral not found");
-  }
-  
-  referral.status = "S";
-  referral.outcomeNotes = outcomeNotes;
-  referral.completedDate = new Date().toISOString().split("T")[0];
-  referral.updatedAt = new Date().toISOString();
-  
-  return { data: referral };
+  const response = await api.post<Referral>(`${BASE_URL}/${id}/complete`, { outcomeNotes });
+  return { data: response.data };
 };
 
 

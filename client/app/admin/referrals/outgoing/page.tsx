@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,16 @@ import {
   Clock,
   ArrowUp,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
 import {
@@ -50,15 +60,17 @@ import {
   STATUS_DESCRIPTIONS,
   TRIAGE_STATUS_DESCRIPTIONS,
 } from "@/lib/api/admin/referrals/_model";
+import { toast } from "@/hooks/use-toast";
+import { formatTableDate } from "@/lib/utils";
 
-// Priority badge variants
+// Priority badge variants (using High/Medium/Low like rest of app)
 const getPriorityBadgeVariant = (priority: string) => {
   switch (priority) {
-    case "P1":
+    case "High":
       return "destructive";
-    case "P2":
+    case "Medium":
       return "default";
-    case "P3":
+    case "Low":
       return "secondary";
     default:
       return "outline";
@@ -117,6 +129,26 @@ export default function OutgoingReferralsPage() {
     patientName: "",
     action: "cancel",
   });
+  const [completeDialog, setCompleteDialog] = useState<{
+    isOpen: boolean;
+    referralId: string;
+    patientName: string;
+    outcomeNotes: string;
+  }>({
+    isOpen: false,
+    referralId: "",
+    patientName: "",
+    outcomeNotes: "",
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    referralId: string;
+    patientName: string;
+  }>({
+    isOpen: false,
+    referralId: "",
+    patientName: "",
+  });
   const [filters, setFilters] = useState<FilterState>({
     patientUmrn: "",
     patientName: "",
@@ -134,15 +166,8 @@ export default function OutgoingReferralsPage() {
         setLoading(true);
         setError(null);
 
-        const referralsResponse = await getAll$();
-
-        // Filter only outgoing referrals (referrals created by current department)
-        // For now, we'll show all referrals that are not pending as "outgoing"
-        // In real implementation, this would filter by current user's department
-        const outgoing = referralsResponse.data.filter(
-          (referral) => referral.triageStatus !== "pending"
-        );
-        setReferrals(outgoing);
+        const referralsResponse = await getAll$("outgoing");
+        setReferrals(referralsResponse.data);
       } catch (err) {
         setError("Failed to fetch outgoing referrals. Please try again.");
         console.error("Error fetching data:", err);
@@ -155,175 +180,154 @@ export default function OutgoingReferralsPage() {
   }, []);
 
   // Define table columns
-  const columns: Column<Referral>[] = [
-    {
-      key: "patientUmrn",
-      label: "Patient UMRN",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "text",
-    },
-    {
-      key: "patientName",
-      label: "Patient Name",
-      width: "w-[180px]",
-      sortable: true,
-      filterable: true,
-      filterType: "text",
-    },
-    {
-      key: "age",
-      label: "Age / Gender",
-      width: "w-[100px]",
-      render: (referral) =>
-        `${referral.patientAge} / ${referral.patientGender}`,
-    },
-    {
-      key: "ward",
-      label: "Ward",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Geriatrics", label: "Geriatrics" },
-        { value: "Stroke", label: "Stroke" },
-        { value: "Orthopaedic", label: "Orthopaedic" },
-        { value: "Cardiology", label: "Cardiology" },
-        { value: "Respiratory", label: "Respiratory" },
-      ],
-    },
-    {
-      key: "bedNumber",
-      label: "Bed No.",
-      width: "w-[80px]",
-    },
-    {
-      key: "diagnosis",
-      label: "Diagnosis",
-      width: "w-[200px]",
-      render: (referral) => (
-        <div className="truncate max-w-[200px]" title={referral.diagnosis}>
-          {referral.diagnosis}
-        </div>
-      ),
-    },
-    {
-      key: "destinationDepartment",
-      label: "To",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "Physiotherapy", label: "Physiotherapy" },
-        { value: "Occupational Therapy", label: "Occupational Therapy" },
-        { value: "Speech Therapy", label: "Speech Therapy" },
-        { value: "Dietetics", label: "Dietetics" },
-        { value: "Podiatry", label: "Podiatry" },
-        { value: "Psychology", label: "Psychology" },
-        { value: "Social Work", label: "Social Work" },
-      ],
-    },
-    {
-      key: "referringTherapist",
-      label: "Therapist",
-      width: "w-[150px]",
-    },
-    {
-      key: "referralDate",
-      label: "Referral Date",
-      width: "w-[120px]",
-      sortable: true,
-      render: (referral) =>
-        new Date(referral.referralDate).toLocaleDateString(),
-    },
-    {
-      key: "priority",
-      label: "Priority",
-      width: "w-[80px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "P1", label: "P1" },
-        { value: "P2", label: "P2" },
-        { value: "P3", label: "P3" },
-      ],
-      render: (referral) => (
-        <Badge variant={getPriorityBadgeVariant(referral.priority)}>
-          {referral.priority}
-        </Badge>
-      ),
-    },
-    {
-      key: "triageStatus",
-      label: "Triage Status",
-      width: "w-[120px]",
-      sortable: true,
-      filterable: true,
-      filterType: "select",
-      filterOptions: [
-        { value: "pending", label: "Pending" },
-        { value: "accepted", label: "Accepted" },
-        { value: "rejected", label: "Rejected" },
-        { value: "redirected", label: "Redirected" },
-      ],
-      render: (referral) => {
-        const triageStatus = referral.triageStatus || "pending";
-        return (
-          <Badge
-            variant={getTriageBadgeVariant(triageStatus)}
-            title={TRIAGE_STATUS_DESCRIPTIONS[triageStatus]}
+  const columns: Column<Referral>[] = useMemo(
+    () => [
+      {
+        key: "patient",
+        label: "Patient",
+        width: "w-[180px]",
+        sortable: true,
+        render: (referral) => (
+          <button
+            onClick={() => router.push(`/admin/patients/${referral.patientId}`)}
+            className="text-primary hover:underline text-left font-medium"
           >
-            {triageStatus.charAt(0).toUpperCase() + triageStatus.slice(1)}
-          </Badge>
-        );
+            {referral.patientName}
+          </button>
+        ),
       },
-    },
-    {
-      key: "interventions",
-      label: "Interventions",
-      width: "w-[200px]",
-      render: (referral) => (
-        <div className="flex flex-wrap gap-1 max-w-[200px]">
-          {referral.interventions.slice(0, 2).map((intervention, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {intervention}
-            </Badge>
-          ))}
-          {referral.interventions.length > 2 && (
-            <Badge variant="outline" className="text-xs">
-              +{referral.interventions.length - 2}
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-  ];
+      {
+        key: "originDeptName",
+        label: "Origin",
+        width: "w-[150px]",
+        sortable: true,
+        render: (referral) => (
+          <button
+            onClick={() =>
+              router.push(`/admin/setup/departments/${referral.originDeptId}`)
+            }
+            className="text-primary hover:underline text-left"
+          >
+            {referral.originDeptName}
+          </button>
+        ),
+      },
+      {
+        key: "destinationDeptName",
+        label: "Destination",
+        width: "w-[150px]",
+        sortable: true,
+        render: (referral) => (
+          <button
+            onClick={() =>
+              router.push(
+                `/admin/setup/departments/${referral.destinationDeptId}`
+              )
+            }
+            className="text-primary hover:underline text-left"
+          >
+            {referral.destinationDeptName}
+          </button>
+        ),
+      },
+      {
+        key: "therapistName",
+        label: "Therapist",
+        width: "w-[150px]",
+        sortable: true,
+        render: (referral) =>
+          referral.therapistId && referral.therapistName ? (
+            <button
+              onClick={() =>
+                router.push(`/admin/users/${referral.therapistId}`)
+              }
+              className="text-primary hover:underline text-left"
+            >
+              {referral.therapistName}
+            </button>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        key: "priority",
+        label: "Priority",
+        width: "w-[100px]",
+        sortable: true,
+        render: (referral) => (
+          <Badge variant={getPriorityBadgeVariant(referral.priorityDisplay)}>
+            {referral.priorityDisplay}
+          </Badge>
+        ),
+      },
+      {
+        key: "referralDate",
+        label: "Referral Date",
+        width: "w-[120px]",
+        sortable: true,
+        render: (referral) => formatTableDate(referral.referralDate),
+      },
+    ],
+    [router]
+  );
 
   // Handle referral actions
   const handleReferralAction = (action: string, referralId: string) => {
     switch (action) {
-      case "view-details":
-        router.push(`/admin/referrals/${referralId}`);
-        break;
       case "edit":
         router.push(`/admin/referrals/${referralId}`);
         break;
+      case "delete":
+        const referralToDelete = referrals.find((r) => r.id === referralId);
+        if (referralToDelete) {
+          setDeleteDialog({
+            isOpen: true,
+            referralId: referralId,
+            patientName: referralToDelete.patientName,
+          });
+        }
+        break;
+      case "complete":
+        const completeReferral = referrals.find((r) => r.id === referralId);
+        if (completeReferral) {
+          setCompleteDialog({
+            isOpen: true,
+            referralId: referralId,
+            patientName: completeReferral.patientName,
+            outcomeNotes: "",
+          });
+        }
+        break;
       case "cancel":
       case "activate":
-        const referral = referrals.find((r) => r.id === referralId);
-        if (referral) {
+        const actionReferral = referrals.find((r) => r.id === referralId);
+        if (actionReferral) {
           setActionDialog({
             isOpen: true,
             referralId: referralId,
-            patientName: referral.patientName,
+            patientName: actionReferral.patientName,
             action: action as "cancel" | "activate",
           });
         }
         break;
+    }
+  };
+
+  // Handle delete referral
+  const handleDeleteReferral = async (referralId: string) => {
+    try {
+      await toggleActive$(referralId);
+      // Update local state - remove the referral
+      setReferrals((prev) =>
+        prev.filter((referral) => referral.id !== referralId)
+      );
+      toast({
+        title: "Success",
+        description: "Referral deleted successfully.",
+      });
+    } catch (err) {
+      setError("Failed to delete referral. Please try again.");
+      console.error("Error deleting referral:", err);
     }
   };
 
@@ -332,8 +336,7 @@ export default function OutgoingReferralsPage() {
     const { referralId, action } = actionDialog;
 
     try {
-      // Here you would call the appropriate API endpoint
-      console.log(`${action} referral ${referralId}`);
+      await toggleActive$(referralId);
 
       // Update local state to reflect the change
       setReferrals((prev) =>
@@ -353,6 +356,50 @@ export default function OutgoingReferralsPage() {
       referralId: "",
       patientName: "",
       action: "cancel",
+    });
+  };
+
+  // Handle complete referral
+  const handleCompleteReferral = async () => {
+    const { referralId, outcomeNotes } = completeDialog;
+
+    try {
+      await completeReferral$(referralId, outcomeNotes);
+
+      // Update local state to reflect the change
+      setReferrals((prev) =>
+        prev.map((referral) =>
+          referral.id === referralId
+            ? {
+                ...referral,
+                status: "S",
+                outcomeNotes: outcomeNotes,
+                completedDate: new Date().toISOString().split("T")[0],
+              }
+            : referral
+        )
+      );
+    } catch (err) {
+      setError("Failed to complete referral. Please try again.");
+      console.error("Error completing referral:", err);
+    }
+
+    setCompleteDialog({
+      isOpen: false,
+      referralId: "",
+      patientName: "",
+      outcomeNotes: "",
+    });
+  };
+
+  // Handle confirmed delete
+  const handleConfirmedDelete = async () => {
+    const { referralId } = deleteDialog;
+    await handleDeleteReferral(referralId);
+    setDeleteDialog({
+      isOpen: false,
+      referralId: "",
+      patientName: "",
     });
   };
 
@@ -448,7 +495,6 @@ export default function OutgoingReferralsPage() {
           value={referrals.filter((r) => r.triageStatus === "pending").length}
           description="Awaiting response"
           icon={Clock}
-          variant="secondary"
         />
         <StatsCard
           title="This Week"
@@ -462,7 +508,6 @@ export default function OutgoingReferralsPage() {
           }
           description="Sent this week"
           icon={Calendar}
-          variant="primary"
         />
       </div>
 
@@ -515,44 +560,18 @@ export default function OutgoingReferralsPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() =>
-                      handleReferralAction("view-details", referral.id)
-                    }
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
                     onClick={() => handleReferralAction("edit", referral.id)}
                   >
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit Referral
+                    Edit
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() =>
-                      handleReferralAction(
-                        referral.status === "X" ? "activate" : "cancel",
-                        referral.id
-                      )
-                    }
-                    className={
-                      referral.status === "X"
-                        ? "text-green-600"
-                        : "text-destructive"
-                    }
+                    onClick={() => handleReferralAction("delete", referral.id)}
+                    className="text-destructive"
                   >
-                    {referral.status === "X" ? (
-                      <>
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Activate Referral
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Cancel Referral
-                      </>
-                    )}
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -601,6 +620,104 @@ export default function OutgoingReferralsPage() {
               {actionDialog.action === "activate"
                 ? "Activate Referral"
                 : "Cancel Referral"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Complete Referral Dialog */}
+      <Dialog
+        open={completeDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompleteDialog({
+              isOpen: false,
+              referralId: "",
+              patientName: "",
+              outcomeNotes: "",
+            });
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Referral</DialogTitle>
+            <DialogDescription>
+              Complete the referral for "{completeDialog.patientName}" and add
+              outcome notes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="outcomeNotes">Outcome Notes *</Label>
+              <Textarea
+                id="outcomeNotes"
+                placeholder="Enter outcome notes and treatment results..."
+                value={completeDialog.outcomeNotes}
+                onChange={(e) =>
+                  setCompleteDialog((prev) => ({
+                    ...prev,
+                    outcomeNotes: e.target.value,
+                  }))
+                }
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCompleteDialog({
+                  isOpen: false,
+                  referralId: "",
+                  patientName: "",
+                  outcomeNotes: "",
+                })
+              }
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCompleteReferral}
+              disabled={!completeDialog.outcomeNotes.trim()}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Complete Referral
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDialog({
+              isOpen: false,
+              referralId: "",
+              patientName: "",
+            });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Referral</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the referral for "
+              {deleteDialog.patientName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete Referral
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -54,6 +54,7 @@ import {
   getGenderLabel,
 } from "@/lib/api/admin/patients/_model";
 import { toast } from "@/hooks/use-toast";
+import { formatTableDate } from "@/lib/utils";
 
 // Form validation schema for patient data
 const createPatientFormSchema = () =>
@@ -841,11 +842,9 @@ export default function PatientFormContent({
                             </Badge>
                           </TableCell>
                           <TableCell>{task.assignedTo.join(", ")}</TableCell>
+                          <TableCell>{formatTableDate(task.dueDate)}</TableCell>
                           <TableCell>
-                            {new Date(task.dueDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(task.lastActivity).toLocaleDateString()}
+                            {formatTableDate(task.lastActivity)}
                           </TableCell>
                           <TableCell>
                             <Button variant="ghost" size="sm">
@@ -889,7 +888,7 @@ export default function PatientFormContent({
                           <TableCell>{referral.fromDepartment}</TableCell>
                           <TableCell>{referral.toDepartment}</TableCell>
                           <TableCell>
-                            {new Date(referral.date).toLocaleDateString()}
+                            {formatTableDate(referral.date)}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {referral.notes}
@@ -935,9 +934,7 @@ export default function PatientFormContent({
                     <TableBody>
                       {feedback.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell>
-                            {new Date(item.date).toLocaleDateString()}
-                          </TableCell>
+                          <TableCell>{formatTableDate(item.date)}</TableCell>
                           <TableCell>{item.taskName}</TableCell>
                           <TableCell>{item.ahp}</TableCell>
                           <TableCell>

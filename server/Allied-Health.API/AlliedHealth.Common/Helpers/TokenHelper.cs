@@ -30,6 +30,12 @@ namespace AlliedHealth.Common.Helpers
                     new Claim("Role", user.Role.ToString())
                 };
 
+
+                if (user.DepartmentId.HasValue)
+                {
+                    claims.Add(new Claim("Department", user.DepartmentId.Value.ToString()));
+                }
+
                 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:Key"]));
 
                 var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -145,7 +145,7 @@ function UserNav() {
             </AlertDialogTitle>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-            <AlertDialogCancel className="w-28">Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
               className="w-28 bg-destructive text-white hover:bg-destructive/90"

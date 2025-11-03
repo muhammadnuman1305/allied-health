@@ -27,26 +27,20 @@ import {
   Calendar,
   MapPin,
 } from "lucide-react";
+import { getById$ } from "@/lib/api/aha/_request";
+import { AHAPatientDetails } from "@/lib/api/aha/_model";
 import {
-  getById$,
   getPatientTasks$,
   getPatientReferrals$,
   getPatientFeedback$,
 } from "@/lib/api/admin/patients/_request";
 import {
-  Patient,
   PatientTask,
   PatientReferral,
   PatientFeedback,
-  getGenderLabel,
 } from "@/lib/api/admin/patients/_model";
 
-// Helper to format patient ID as MRN
-const formatMRN = (id: string): string => {
-  const numId = parseInt(id, 10);
-  if (isNaN(numId)) return id;
-  return `MRN${numId.toString().padStart(5, "0")}`;
-};
+// No need for formatMRN since mrn comes directly from API
 
 // Helper functions for badge variants
 const getTaskStatusBadge = (
@@ -101,7 +95,7 @@ export default function PatientDetailContent({
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [patient, setPatient] = useState<Patient | null>(null);
+  const [patient, setPatient] = useState<AHAPatientDetails | null>(null);
   const [tasks, setTasks] = useState<PatientTask[]>([]);
   const [referrals, setReferrals] = useState<PatientReferral[]>([]);
   const [feedback, setFeedback] = useState<PatientFeedback[]>([]);
@@ -114,14 +108,14 @@ export default function PatientDetailContent({
         setIsLoading(true);
         setError(null);
 
-        // Fetch patient data and related information in parallel
+        // Fetch patient data from AHA API and related information in parallel
         const [
           patientResponse,
           tasksResponse,
           referralsResponse,
           feedbackResponse,
         ] = await Promise.all([
-          getById$(patientId),
+          getById$(patientId), // Fetch from AHA API
           getPatientTasks$(patientId),
           getPatientReferrals$(patientId),
           getPatientFeedback$(patientId),
@@ -164,7 +158,7 @@ export default function PatientDetailContent({
               {error || "Patient not found"}
             </p>
             <Button
-              onClick={() => router.push(returnTo || "/user/all-patients")}
+              onClick={() => router.push(returnTo || "/user/my-patients")}
             >
               Back to Patients
             </Button>
@@ -181,7 +175,7 @@ export default function PatientDetailContent({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(returnTo || "/user/all-patients")}
+          onClick={() => router.push(returnTo || "/user/my-patients")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -242,7 +236,7 @@ export default function PatientDetailContent({
                     <Label className="text-sm font-medium text-muted-foreground">
                       Medical Record Number
                     </Label>
-                    <p className="text-sm mt-1">{formatMRN(patient.id)}</p>
+                    <p className="text-sm mt-1">{patient.mrn}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">
@@ -254,9 +248,7 @@ export default function PatientDetailContent({
                     <Label className="text-sm font-medium text-muted-foreground">
                       Gender
                     </Label>
-                    <p className="text-sm mt-1">
-                      {getGenderLabel(patient.gender)}
-                    </p>
+                    <p className="text-sm mt-1">{patient.gender}</p>
                   </div>
                   {patient.dateOfBirth && (
                     <div>
@@ -268,12 +260,6 @@ export default function PatientDetailContent({
                       </p>
                     </div>
                   )}
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Active Tasks
-                    </Label>
-                    <p className="text-sm mt-1">{patient.activeTasks}</p>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -374,7 +360,9 @@ export default function PatientDetailContent({
                       <p className="text-sm font-medium text-muted-foreground">
                         Total Tasks
                       </p>
-                      <p className="text-2xl font-bold mt-1">{tasks.length}</p>
+                      <p className="text-2xl font-bold mt-1">
+                        {patient.totalTasks}
+                      </p>
                     </div>
                     <ClipboardList className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -388,7 +376,7 @@ export default function PatientDetailContent({
                         Total Referrals
                       </p>
                       <p className="text-2xl font-bold mt-1">
-                        {referrals.length}
+                        {patient.totalReferrals}
                       </p>
                     </div>
                     <GitBranch className="h-8 w-8 text-muted-foreground" />

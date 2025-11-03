@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getUser } from "@/lib/auth-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,16 +39,19 @@ import {
   getAHAOptions$,
   getDeptOptions$,
   getWardOptions$,
+  getReferralTaskDetails$,
   TaskSpecialty,
   TaskIntervention,
   AHAOption,
   DeptOption,
   WardOption,
+  GetReferralTaskDetailsDTO,
 } from "@/lib/api/admin/tasks/_request";
 import {
   TaskFormData,
   SubTask,
   TASK_TYPES,
+  priorityNumberToString,
 } from "@/lib/api/admin/tasks/_model";
 import { getAll$ as getAllPatients } from "@/lib/api/admin/patients/_request";
 import { Patient } from "@/lib/api/admin/patients/_model";
@@ -59,14 +62,25 @@ export default function TaskFormContent() {
   const taskId = params.id as string;
   const isNewTask = taskId === "0";
 
-  // Get patientId from URL params if creating a new task from patient page
+  // Get patientId and refId from URL params if creating a new task from patient page or referral
   const searchParams =
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search)
       : null;
   const preSelectedPatientId = searchParams?.get("patientId") || "";
+  const refId = searchParams?.get("refId") || "";
 
   const [loading, setLoading] = useState(false);
+  const [loadingReferralData, setLoadingReferralData] = useState(false);
+  const [isFromReferral, setIsFromReferral] = useState(false);
+  const [referralDataToApply, setReferralDataToApply] =
+    useState<GetReferralTaskDetailsDTO | null>(null);
+
+  // Refs to prevent duplicate API calls
+  const hasFetchedDropdowns = useRef(false);
+  const hasFetchedInterventions = useRef(false);
+  const hasFetchedReferral = useRef(false);
+  const hasFetchedTask = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -86,6 +100,7 @@ export default function TaskFormContent() {
   // Form states
   const [customTaskType, setCustomTaskType] = useState(false);
   const [isDepartmentDisabled, setIsDepartmentDisabled] = useState(false);
+  const [isPatientDisabled, setIsPatientDisabled] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState<TaskFormData>({
@@ -227,8 +242,47 @@ export default function TaskFormContent() {
     }
   }, [preSelectedPatientId]);
 
+  // Fetch referral details AFTER interventions are loaded
+  useEffect(() => {
+    if (
+      isNewTask &&
+      refId &&
+      interventionsLoaded &&
+      interventions.length > 0 &&
+      !hasFetchedReferral.current
+    ) {
+      hasFetchedReferral.current = true;
+      const fetchReferralDetails = async () => {
+        try {
+          setLoadingReferralData(true);
+          setIsFromReferral(true);
+          setError(null);
+
+          const response = await getReferralTaskDetails$(refId);
+          const referralData = response?.data;
+
+          if (!referralData) {
+            throw new Error("No referral data received");
+          }
+
+          setReferralDataToApply(referralData);
+        } catch (err) {
+          setError("Failed to load referral details. Please try again.");
+          console.error("Error fetching referral details:", err);
+        } finally {
+          setLoadingReferralData(false);
+        }
+      };
+
+      fetchReferralDetails();
+    }
+  }, [isNewTask, refId, interventionsLoaded, interventions.length]);
+
   // Load patients, AHA options, departments, and wards on mount
   useEffect(() => {
+    if (hasFetchedDropdowns.current) return;
+    hasFetchedDropdowns.current = true;
+
     const fetchDropdownData = async () => {
       try {
         // Set empty arrays first to prevent undefined errors
@@ -269,8 +323,11 @@ export default function TaskFormContent() {
         setDropdownsLoaded(true);
 
         // Check if user has departmentId in localStorage and pre-select it
+        // BUT skip this if we're creating from a referral (refId is present)
+        // because the department should come from the referral, not the user
         const user = getUser();
         if (
+          !refId && // Don't auto-select user's department if creating from referral
           user?.departmentId &&
           Array.isArray(deptOptionsData) &&
           deptOptionsData.length > 0
@@ -300,10 +357,13 @@ export default function TaskFormContent() {
     };
 
     fetchDropdownData();
-  }, []);
+  }, [refId]);
 
   // Load specialties and interventions on mount
   useEffect(() => {
+    if (hasFetchedInterventions.current) return;
+    hasFetchedInterventions.current = true;
+
     const fetchInterventionsData = async () => {
       try {
         const [specialtiesResponse, interventionsResponse] = await Promise.all([
@@ -332,9 +392,81 @@ export default function TaskFormContent() {
     fetchInterventionsData();
   }, []);
 
+  // Apply referral data after dropdowns and interventions are loaded
+  useEffect(() => {
+    if (
+      referralDataToApply &&
+      dropdownsLoaded &&
+      interventionsLoaded &&
+      isNewTask
+    ) {
+      const referralData = referralDataToApply;
+
+      // Pre-fill form data from referral
+      setFormData((prev) => ({
+        ...prev,
+        patientId: referralData.patientId
+          ? referralData.patientId.toString()
+          : prev.patientId,
+        diagnosis: referralData.diagnosis || prev.diagnosis,
+        goals: referralData.goals || prev.goals,
+        clinicalInstructions:
+          referralData.description || prev.clinicalInstructions,
+        priority:
+          referralData.priority !== undefined && referralData.priority !== null
+            ? priorityNumberToString(referralData.priority)
+            : prev.priority,
+        assignedToDepartment:
+          referralData.departmentId || prev.assignedToDepartment,
+      }));
+
+      // Pre-fill interventions - MUST use actual intervention.id values to match checkboxes
+      if (
+        referralData.interventions &&
+        Array.isArray(referralData.interventions) &&
+        referralData.interventions.length > 0 &&
+        interventions.length > 0
+      ) {
+        // Convert referral IDs to strings for comparison
+        const referralIds = referralData.interventions.map((id) =>
+          String(id).trim()
+        );
+
+        // Find matching interventions and use their EXACT IDs (intervention.id)
+        const matchedInterventionIds = interventions
+          .filter((intervention) => {
+            const interventionIdStr = String(intervention.id).trim();
+            return referralIds.includes(interventionIdStr);
+          })
+          .map((intervention) => intervention.id); // Use exact intervention.id
+
+        // Set selectedInterventions with exact IDs - this will check the checkboxes
+        if (matchedInterventionIds.length > 0) {
+          setSelectedInterventions(matchedInterventionIds);
+        }
+      }
+
+      // Disable patient and department fields (they should remain as-is from referral)
+      if (referralData.patientId && referralData.departmentId) {
+        setIsPatientDisabled(true);
+        setIsDepartmentDisabled(true);
+      }
+
+      // Clear the referral data after applying it
+      setReferralDataToApply(null);
+    }
+  }, [
+    referralDataToApply,
+    dropdownsLoaded,
+    interventionsLoaded,
+    interventions,
+    isNewTask,
+  ]);
+
   // Load task data if editing
   useEffect(() => {
-    if (!isNewTask) {
+    if (!isNewTask && !hasFetchedTask.current) {
+      hasFetchedTask.current = true;
       const fetchTask = async () => {
         try {
           setLoading(true);
@@ -653,6 +785,8 @@ export default function TaskFormContent() {
         endDate: endDate || formData.dueDate,
         // Map endDate to dueDate to maintain compatibility
         dueDate: endDate || formData.dueDate,
+        // Include refId if task is created from a referral, otherwise null
+        refId: refId || null,
         interventions: selectedInterventions,
         interventionAssignments: interventionAssignments,
         interventionSchedules: interventionSchedules,
@@ -768,9 +902,11 @@ export default function TaskFormContent() {
                 <Select
                   value={formData.patientId}
                   onValueChange={(value) => handleChange("patientId", value)}
-                  disabled={!!preSelectedPatientId}
+                  disabled={!!preSelectedPatientId || isPatientDisabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger
+                    disabled={!!preSelectedPatientId || isPatientDisabled}
+                  >
                     <SelectValue placeholder="Select patient..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1251,51 +1387,143 @@ export default function TaskFormContent() {
                               </p>
                             </div>
                             <div className="flex-1 min-w-[220px] space-y-3">
-                              {/* AHA Select */}
-                              <div className="space-y-1">
-                                <Label className="text-xs">
-                                  AHA{" "}
-                                  <span className="text-destructive">*</span>
-                                </Label>
-                                <Select
-                                  value={
-                                    interventionAssignments[interventionId] ||
-                                    "none"
-                                  }
-                                  onValueChange={(value) => {
-                                    setInterventionAssignments({
-                                      ...interventionAssignments,
-                                      [interventionId]:
-                                        value === "none" ? "" : value,
-                                    });
-                                  }}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select AHA..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">None</SelectItem>
-                                    {!dropdownsLoaded ? (
-                                      <SelectItem value="loading" disabled>
-                                        Loading AHAs...
-                                      </SelectItem>
-                                    ) : availableAHAs.length > 0 ? (
-                                      availableAHAs.map((aha) => (
-                                        <SelectItem key={aha.id} value={aha.id}>
-                                          {aha.name}
+                              {/* AHA and Ward in same row */}
+                              <div className="grid grid-cols-2 gap-3">
+                                {/* AHA Select */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs">
+                                    AHA{" "}
+                                    <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Select
+                                    value={
+                                      interventionAssignments[interventionId] ||
+                                      "none"
+                                    }
+                                    onValueChange={(value) => {
+                                      setInterventionAssignments({
+                                        ...interventionAssignments,
+                                        [interventionId]:
+                                          value === "none" ? "" : value,
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Select AHA..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">None</SelectItem>
+                                      {!dropdownsLoaded ? (
+                                        <SelectItem value="loading" disabled>
+                                          Loading AHAs...
                                         </SelectItem>
-                                      ))
-                                    ) : (
-                                      <SelectItem value="no-aha" disabled>
-                                        No AHAs available for this specialty
-                                      </SelectItem>
-                                    )}
-                                  </SelectContent>
-                                </Select>
+                                      ) : availableAHAs.length > 0 ? (
+                                        availableAHAs.map((aha) => (
+                                          <SelectItem
+                                            key={aha.id}
+                                            value={aha.id}
+                                          >
+                                            {aha.name}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="no-aha" disabled>
+                                          No AHAs available for this specialty
+                                        </SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Ward Select */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs">
+                                    Ward{" "}
+                                    <span className="text-destructive">*</span>
+                                  </Label>
+                                  <Select
+                                    value={
+                                      interventionWardAssignments[
+                                        interventionId
+                                      ] || "none"
+                                    }
+                                    onValueChange={(value) => {
+                                      setInterventionWardAssignments({
+                                        ...interventionWardAssignments,
+                                        [interventionId]:
+                                          value === "none" ? "" : value,
+                                      });
+                                    }}
+                                    disabled={!formData.assignedToDepartment}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue
+                                        placeholder={
+                                          !formData.assignedToDepartment
+                                            ? "Select department first"
+                                            : "Select ward..."
+                                        }
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">None</SelectItem>
+                                      {(() => {
+                                        // Filter wards based on selected department
+                                        const selectedDept =
+                                          formData.assignedToDepartment;
+
+                                        if (!selectedDept) {
+                                          return (
+                                            <SelectItem
+                                              value="no-dept"
+                                              disabled
+                                            >
+                                              Select a department first
+                                            </SelectItem>
+                                          );
+                                        }
+
+                                        const availableWards =
+                                          wardOptions.filter((ward) =>
+                                            ward.departments.includes(
+                                              selectedDept
+                                            )
+                                          );
+
+                                        if (!dropdownsLoaded) {
+                                          return (
+                                            <SelectItem
+                                              value="loading"
+                                              disabled
+                                            >
+                                              Loading wards...
+                                            </SelectItem>
+                                          );
+                                        }
+                                        if (availableWards.length > 0) {
+                                          return availableWards.map((ward) => (
+                                            <SelectItem
+                                              key={ward.id}
+                                              value={ward.id}
+                                            >
+                                              {ward.name}
+                                            </SelectItem>
+                                          ));
+                                        }
+                                        return (
+                                          <SelectItem value="no-wards" disabled>
+                                            No wards available for this
+                                            department
+                                          </SelectItem>
+                                        );
+                                      })()}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
 
-                              {/* Start/End/Ward dropdowns */}
-                              <div className="grid grid-cols-3 gap-3 items-end">
+                              {/* Start/End dropdowns */}
+                              <div className="grid grid-cols-2 gap-3 items-end">
                                 <div>
                                   <Label className="text-xs">
                                     Start{" "}
@@ -1488,91 +1716,6 @@ export default function TaskFormContent() {
                                           </SelectItem>
                                         );
                                       })}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="max-w-xs">
-                                  <Label className="text-xs">
-                                    Ward{" "}
-                                    <span className="text-destructive">*</span>
-                                  </Label>
-                                  <Select
-                                    value={
-                                      interventionWardAssignments[
-                                        interventionId
-                                      ] || "none"
-                                    }
-                                    onValueChange={(value) => {
-                                      setInterventionWardAssignments({
-                                        ...interventionWardAssignments,
-                                        [interventionId]:
-                                          value === "none" ? "" : value,
-                                      });
-                                    }}
-                                    disabled={!formData.assignedToDepartment}
-                                  >
-                                    <SelectTrigger className="">
-                                      <SelectValue
-                                        placeholder={
-                                          !formData.assignedToDepartment
-                                            ? "Select department first"
-                                            : "Select ward..."
-                                        }
-                                      />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      {(() => {
-                                        // Filter wards based on selected department
-                                        const selectedDept =
-                                          formData.assignedToDepartment;
-
-                                        if (!selectedDept) {
-                                          return (
-                                            <SelectItem
-                                              value="no-dept"
-                                              disabled
-                                            >
-                                              Select a department first
-                                            </SelectItem>
-                                          );
-                                        }
-
-                                        const availableWards =
-                                          wardOptions.filter((ward) =>
-                                            ward.departments.includes(
-                                              selectedDept
-                                            )
-                                          );
-
-                                        if (!dropdownsLoaded) {
-                                          return (
-                                            <SelectItem
-                                              value="loading"
-                                              disabled
-                                            >
-                                              Loading wards...
-                                            </SelectItem>
-                                          );
-                                        }
-                                        if (availableWards.length > 0) {
-                                          return availableWards.map((ward) => (
-                                            <SelectItem
-                                              key={ward.id}
-                                              value={ward.id}
-                                            >
-                                              {ward.name}
-                                            </SelectItem>
-                                          ));
-                                        }
-                                        return (
-                                          <SelectItem value="no-wards" disabled>
-                                            No wards available for this
-                                            department
-                                          </SelectItem>
-                                        );
-                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </div>

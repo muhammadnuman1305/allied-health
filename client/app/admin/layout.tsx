@@ -87,7 +87,7 @@ export default function AdminLayout({
           />
           {/* Sidebar */}
           <AdminSidebar
-            className="absolute left-0 top-0 h-full w-64 border-r bg-background"
+            className="absolute left-0 top-0 h-full w-64 border-r"
             isCollapsed={false}
           />
         </div>

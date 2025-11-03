@@ -37,20 +37,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/ui/stats-card";
-import { getAll$, getSummary$ } from "@/lib/api/admin/patients/_request";
-import {
-  Patient,
-  PatientSummary,
-  getGenderLabel,
-} from "@/lib/api/admin/patients/_model";
+import { getAll$ as getAHAPatients$ } from "@/lib/api/aha/_request";
+import { AHAPatient } from "@/lib/api/aha/_model";
+import { getSummary$ } from "@/lib/api/admin/patients/_request";
+import { PatientSummary } from "@/lib/api/admin/patients/_model";
 import { useAuth } from "@/hooks/use-auth";
-
-// Helper to format patient ID as MRN
-const formatMRN = (id: string): string => {
-  const numId = parseInt(id, 10);
-  if (isNaN(numId)) return id;
-  return `MRN${numId.toString().padStart(5, "0")}`;
-};
 
 // Helper to format relative time
 const formatRelativeTime = (dateString: string): string => {
@@ -71,7 +62,7 @@ const formatRelativeTime = (dateString: string): string => {
 export default function MyPatientsPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<AHAPatient[]>([]);
   const [summary, setSummary] = useState<PatientSummary>({
     totalPatients: 0,
     newPatients: 0,
@@ -92,7 +83,7 @@ export default function MyPatientsPage() {
         setError(null);
 
         const [patientsResponse, summaryResponse] = await Promise.all([
-          getAll$("Active"),
+          getAHAPatients$("Active", "mine"), // Fetch from AHA API with viewMode="mine"
           getSummary$(),
         ]);
 
@@ -124,9 +115,7 @@ export default function MyPatientsPage() {
     // MRN search filter
     if (mrnSearch) {
       const query = mrnSearch.toLowerCase();
-      filtered = filtered.filter((p) =>
-        formatMRN(p.id).toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((p) => p.mrn?.toLowerCase().includes(query));
     }
 
     // Status filter (by task status)
@@ -136,13 +125,14 @@ export default function MyPatientsPage() {
       filtered = filtered.filter((p) => (p.activeTasks ?? 0) === 0);
     }
 
-    // Sort by last updated (most recent first)
+    // Sort by last activity date (most recent first)
     return filtered.sort((a, b) => {
-      if (!a.lastUpdated && !b.lastUpdated) return 0;
-      if (!a.lastUpdated) return 1;
-      if (!b.lastUpdated) return -1;
+      if (!a.lastActivityDate && !b.lastActivityDate) return 0;
+      if (!a.lastActivityDate) return 1;
+      if (!b.lastActivityDate) return -1;
       return (
-        new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        new Date(b.lastActivityDate).getTime() -
+        new Date(a.lastActivityDate).getTime()
       );
     });
   }, [patients, nameSearch, mrnSearch, statusFilter]);
@@ -152,7 +142,7 @@ export default function MyPatientsPage() {
     switch (action) {
       case "view":
         router.push(
-          `/user/all-patients/${patientId}?returnTo=${encodeURIComponent(
+          `/user/my-patients/${patientId}?returnTo=${encodeURIComponent(
             "/user/my-patients"
           )}`
         );
@@ -172,8 +162,8 @@ export default function MyPatientsPage() {
   const myPatientCounts = useMemo(() => {
     const withTasks = patients.filter((p) => (p.activeTasks ?? 0) > 0).length;
     const recent = patients.filter((p) => {
-      if (!p.lastUpdated) return false;
-      const lastUpdate = new Date(p.lastUpdated);
+      if (!p.lastActivityDate) return false;
+      const lastUpdate = new Date(p.lastActivityDate);
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return lastUpdate >= weekAgo;
@@ -336,7 +326,7 @@ export default function MyPatientsPage() {
                         {patient.fullName}
                       </CardTitle>
                       <p className="text-xs text-muted-foreground">
-                        {formatMRN(patient.id)}
+                        {patient.mrn || "—"}
                       </p>
                     </div>
                     <DropdownMenu>
@@ -386,9 +376,7 @@ export default function MyPatientsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Gender</p>
-                      <p className="font-medium">
-                        {getGenderLabel(patient.gender ?? 0)}
-                      </p>
+                      <p className="font-medium">{patient.gender || "—"}</p>
                     </div>
                   </div>
 
@@ -420,12 +408,12 @@ export default function MyPatientsPage() {
                     </div>
                   )}
 
-                  {/* Last Updated */}
-                  {patient.lastUpdated && (
+                  {/* Last Activity Date */}
+                  {patient.lastActivityDate && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                       <Clock className="h-3 w-3" />
                       <span>
-                        Updated {formatRelativeTime(patient.lastUpdated)}
+                        Updated {formatRelativeTime(patient.lastActivityDate)}
                       </span>
                     </div>
                   )}

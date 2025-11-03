@@ -304,7 +304,7 @@ export function UserSidebar({
                 </AlertDialogTitle>
               </AlertDialogHeader>
               <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-                <AlertDialogCancel className="w-28">Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
                     clearAuth();
@@ -318,9 +318,12 @@ export function UserSidebar({
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Separator before User Info */}
+          {!isCollapsed && user && <Separator className="my-2" />}
+
           {/* User Info Card */}
           {!isCollapsed && user && (
-            <Card className="mt-3">
+            <Card>
               <CardContent className="px-3 py-3">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none truncate">
@@ -336,7 +339,7 @@ export function UserSidebar({
             </Card>
           )}
           {isCollapsed && user && (
-            <div className="mt-3 flex justify-center">
+            <div className="mt-2 flex justify-center">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-xs font-medium text-primary">
                   {user.firstName && user.lastName

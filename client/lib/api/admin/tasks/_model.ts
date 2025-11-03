@@ -96,6 +96,7 @@ export interface TaskFormData {
   subTasks: SubTask[];
   status: "Not Assigned" | "Assigned" | "In Progress" | "Completed";
   outcomeNotes?: string;
+  refId?: string | null; // Optional referral ID if task is created from a referral
   // For form submission with interventions
   interventions?: string[];
   interventionAssignments?: Record<string, string>;
@@ -117,6 +118,7 @@ export interface AddUpdateTaskDTO {
   diagnosis?: string | null;
   goals?: string | null;
   interventions: TaskInterventionDTO[];
+  refId?: string | null; // Optional referral ID if task is created from a referral
 }
 
 export interface TaskInterventionDTO {

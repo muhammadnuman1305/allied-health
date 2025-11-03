@@ -222,41 +222,6 @@ namespace AlliedHealth.Domain.Migrations
                     b.ToTable("Patient", (string)null);
                 });
 
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.PatientOutcome", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AdditionalNote")
-                        .HasMaxLength(250)
-                        .HasColumnType("character varying(250)");
-
-                    b.Property<bool>("AttemptMade")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Declined")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("PatientId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("Refer")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Seen")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Unseen")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PatientId");
-
-                    b.ToTable("PatientOutcome", (string)null);
-                });
-
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Priority", b =>
                 {
                     b.Property<Guid>("Id")
@@ -503,17 +468,26 @@ namespace AlliedHealth.Domain.Migrations
                     b.Property<Guid>("AhaId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("AhaUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
 
                     b.Property<Guid>("InterventionId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateOnly>("StartDate")
+                    b.Property<string>("Outcome")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly?>("OutcomeDate")
                         .HasColumnType("date");
 
-                    b.Property<int>("Status")
+                    b.Property<int>("OutcomeStatus")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
@@ -523,9 +497,13 @@ namespace AlliedHealth.Domain.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AhaUserId");
+
                     b.HasIndex("InterventionId");
 
                     b.HasIndex("TaskId");
+
+                    b.HasIndex("WardId");
 
                     b.ToTable("TaskIntervention", (string)null);
                 });
@@ -727,17 +705,6 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("LastModifiedByUser");
                 });
 
-            modelBuilder.Entity("AlliedHealth.Domain.Entities.PatientOutcome", b =>
-                {
-                    b.HasOne("AlliedHealth.Domain.Entities.Patient", "Patient")
-                        .WithMany("Outcomes")
-                        .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Patient");
-                });
-
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Referral", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.User", null)
@@ -828,6 +795,12 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskIntervention", b =>
                 {
+                    b.HasOne("AlliedHealth.Domain.Entities.User", "AhaUser")
+                        .WithMany()
+                        .HasForeignKey("AhaUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("AlliedHealth.Domain.Entities.Intervention", "Intervention")
                         .WithMany("TaskInterventions")
                         .HasForeignKey("InterventionId")
@@ -840,9 +813,19 @@ namespace AlliedHealth.Domain.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AlliedHealth.Domain.Entities.Ward", "Ward")
+                        .WithMany()
+                        .HasForeignKey("WardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AhaUser");
+
                     b.Navigation("Intervention");
 
                     b.Navigation("Task");
+
+                    b.Navigation("Ward");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
@@ -915,8 +898,6 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Patient", b =>
                 {
-                    b.Navigation("Outcomes");
-
                     b.Navigation("Referrals");
 
                     b.Navigation("Tasks");

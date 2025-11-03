@@ -16,14 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft,
-  Save,
-  FileText,
-  Calendar,
-  Stethoscope,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Save, FileText, Stethoscope, Users } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -44,6 +37,14 @@ import {
 } from "@/lib/api/admin/tasks/_request";
 import { toast } from "@/hooks/use-toast";
 
+// Helper function to count words in a string
+const countWords = (text: string): number => {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
+};
+
 // Form validation schema for referral data
 const createReferralFormSchema = () =>
   z.object({
@@ -53,7 +54,6 @@ const createReferralFormSchema = () =>
       .string()
       .min(1, "Referring therapist is required")
       .max(100, "Therapist name must be less than 100 characters"),
-    referralDate: z.string().min(1, "Referral date is required"),
     priority: z.enum(["P1", "P2", "P3"], {
       required_error: "Please select a priority",
     }),
@@ -72,10 +72,28 @@ const createReferralFormSchema = () =>
     triagedBy: z.string().optional(),
     triagedAt: z.string().optional(),
     redirectToDepartment: z.string().optional(),
-    // New fields replacing notes
-    diagnosis: z.string().optional(),
-    goals: z.string().optional(),
-    clinicalInstructions: z.string().optional(),
+    // New fields replacing notes - now required with minimum word count
+    diagnosis: z
+      .string()
+      .min(1, "Diagnosis is required")
+      .refine(
+        (val) => countWords(val || "") >= 20,
+        "Diagnosis must contain at least 20 words"
+      ),
+    goals: z
+      .string()
+      .min(1, "Goals are required")
+      .refine(
+        (val) => countWords(val || "") >= 20,
+        "Goals must contain at least 20 words"
+      ),
+    clinicalInstructions: z
+      .string()
+      .min(1, "Clinical Instructions are required")
+      .refine(
+        (val) => countWords(val || "") >= 20,
+        "Clinical Instructions must contain at least 20 words"
+      ),
     // Original fields (kept for backward compatibility)
     outcomeNotes: z.string().optional(),
     completedDate: z.string().optional(),
@@ -131,7 +149,6 @@ export default function ReferralFormContent({
       id: isNewReferral ? null : referralId,
       patientId: preSelectedPatientId || "",
       referringTherapist: userFullName,
-      referralDate: new Date().toISOString().split("T")[0],
       priority: "P2",
       interventions: [],
       // Department workflow fields
@@ -158,6 +175,11 @@ export default function ReferralFormContent({
 
   const watchedPatientId = watch("patientId");
   const watchedInterventions = watch("interventions");
+  const watchedOriginDepartment = watch("originDepartment");
+  const watchedDestinationDepartment = watch("destinationDepartment");
+  const watchedDiagnosis = watch("diagnosis");
+  const watchedGoals = watch("goals");
+  const watchedClinicalInstructions = watch("clinicalInstructions");
 
   // Load patients list
   useEffect(() => {
@@ -216,7 +238,8 @@ export default function ReferralFormContent({
     };
 
     loadDepartments();
-  }, [user?.departmentId, setValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setValue]);
 
   // Load specialties and interventions
   useEffect(() => {
@@ -265,10 +288,12 @@ export default function ReferralFormContent({
           // Populate form with referral data
           setValue("id", referralData.id);
           setValue("patientId", referralData.patientId);
-          setValue("referringTherapist", referralData.referringTherapist);
-          setValue("referralDate", referralData.referralDate);
+          setValue(
+            "referringTherapist",
+            referralData.therapistName || referralData.referringTherapist || ""
+          );
           setValue("priority", referralData.priority);
-          setValue("interventions", referralData.interventions);
+          setValue("interventions", referralData.interventions || []);
           // Department workflow fields
           setValue("originDepartment", referralData.originDepartment || "");
           setValue(
@@ -285,12 +310,10 @@ export default function ReferralFormContent({
           );
           // New fields (check if they exist, otherwise use legacy notes field)
           setValue("diagnosis", referralData.diagnosis || "");
-          setValue("goals", (referralData as any).goals || "");
+          setValue("goals", referralData.goals || "");
           setValue(
             "clinicalInstructions",
-            (referralData as any).clinicalInstructions ||
-              referralData.notes ||
-              ""
+            referralData.clinicalInstructions || referralData.notes || ""
           );
           // Original fields
           setValue("outcomeNotes", referralData.outcomeNotes || "");
@@ -320,7 +343,7 @@ export default function ReferralFormContent({
             description: "Failed to load referral data. Please try again.",
             variant: "destructive",
           });
-          router.push("/admin/referrals");
+          router.push("/admin/referrals/outgoing");
         } finally {
           setIsLoadingReferral(false);
         }
@@ -339,24 +362,26 @@ export default function ReferralFormContent({
   }, [watchedPatientId, patients]);
 
   const onSubmit = async (data: FormData) => {
+    // Validate that departments are different
+    if (data.originDepartment === data.destinationDepartment) {
+      toast({
+        title: "Validation Error",
+        description:
+          "Destination department cannot be the same as origin department",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Prepare payload according to backend model
-      // Combine diagnosis, goals, and clinicalInstructions into notes for backend
-      const combinedNotes = [
-        data.diagnosis && `Diagnosis: ${data.diagnosis}`,
-        data.goals && `Goals: ${data.goals}`,
-        data.clinicalInstructions &&
-          `Clinical Instructions: ${data.clinicalInstructions}`,
-      ]
-        .filter(Boolean)
-        .join("\n\n");
-
       const payload: ReferralFormData = {
         id: isNewReferral ? null : data.id || referralId,
         patientId: data.patientId,
         referringTherapist: data.referringTherapist,
-        referralDate: data.referralDate,
+        referralDate: new Date().toISOString().split("T")[0], // Use current date as default
         priority: data.priority,
         interventions: data.interventions,
         status: "A", // Default to Active since status field is removed
@@ -368,8 +393,11 @@ export default function ReferralFormContent({
         triagedBy: data.triagedBy,
         triagedAt: data.triagedAt,
         redirectToDepartment: data.redirectToDepartment,
-        // Original fields (combining new fields into notes for backend)
-        notes: combinedNotes || undefined,
+        // New fields for backend DTO (sent separately, not combined into notes)
+        diagnosis: data.diagnosis,
+        goals: data.goals,
+        clinicalInstructions: data.clinicalInstructions,
+        // Original fields
         outcomeNotes: data.outcomeNotes,
         completedDate: data.completedDate,
         dementiaNotes: data.dementiaNotes,
@@ -392,8 +420,8 @@ export default function ReferralFormContent({
         });
       }
 
-      // Navigate back to referrals list
-      router.push("/admin/referrals");
+      // Navigate back to outgoing referrals list
+      router.push("/admin/referrals/outgoing");
     } catch (error: any) {
       console.error("Error saving referral:", error);
       toast({
@@ -473,16 +501,15 @@ export default function ReferralFormContent({
         {/* Referral Details */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Referral Details
-            </CardTitle>
+            <CardTitle>Referral Details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {/* Patient Selection */}
               <div className="space-y-2">
-                <Label htmlFor="patientId">Patient *</Label>
+                <Label htmlFor="patientId">
+                  Patient <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="patientId"
                   control={control}
@@ -510,7 +537,9 @@ export default function ReferralFormContent({
 
               {/* Origin Department */}
               <div className="space-y-2">
-                <Label htmlFor="originDepartment">Origin Department *</Label>
+                <Label htmlFor="originDepartment">
+                  Origin Department <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="originDepartment"
                   control={control}
@@ -525,7 +554,11 @@ export default function ReferralFormContent({
                       </SelectTrigger>
                       <SelectContent>
                         {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>
+                          <SelectItem
+                            key={dept.id}
+                            value={dept.id}
+                            disabled={dept.id === watchedDestinationDepartment}
+                          >
                             {dept.name}
                           </SelectItem>
                         ))}
@@ -543,7 +576,8 @@ export default function ReferralFormContent({
               {/* Destination Department */}
               <div className="space-y-2">
                 <Label htmlFor="destinationDepartment">
-                  Destination Department *
+                  Destination Department{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Controller
                   name="destinationDepartment"
@@ -555,7 +589,11 @@ export default function ReferralFormContent({
                       </SelectTrigger>
                       <SelectContent>
                         {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>
+                          <SelectItem
+                            key={dept.id}
+                            value={dept.id}
+                            disabled={dept.id === watchedOriginDepartment}
+                          >
                             {dept.name}
                           </SelectItem>
                         ))}
@@ -572,7 +610,8 @@ export default function ReferralFormContent({
               {/* Referring Therapist */}
               <div className="space-y-2">
                 <Label htmlFor="referringTherapist">
-                  Referring Therapist *
+                  Referring Therapist{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="referringTherapist"
@@ -587,24 +626,11 @@ export default function ReferralFormContent({
                 )}
               </div>
 
-              {/* Referral Date */}
-              <div className="space-y-2">
-                <Label htmlFor="referralDate">Referral Date *</Label>
-                <Input
-                  id="referralDate"
-                  type="date"
-                  {...register("referralDate")}
-                />
-                {errors.referralDate && (
-                  <p className="text-sm text-destructive">
-                    {errors.referralDate.message}
-                  </p>
-                )}
-              </div>
-
               {/* Priority */}
               <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
+                <Label htmlFor="priority">
+                  Priority <span className="text-destructive">*</span>
+                </Label>
                 <Controller
                   name="priority"
                   control={control}
@@ -616,9 +642,9 @@ export default function ReferralFormContent({
                       <SelectContent>
                         <SelectItem value="P1">
                           <div className="flex items-center gap-2">
-                            <Badge variant="destructive">High</Badge>
+                            <Badge variant="secondary">Low</Badge>
                             <span className="text-xs text-muted-foreground">
-                              - Urgent, immediate attention
+                              - Non-urgent, can be scheduled
                             </span>
                           </div>
                         </SelectItem>
@@ -632,9 +658,9 @@ export default function ReferralFormContent({
                         </SelectItem>
                         <SelectItem value="P3">
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary">Low</Badge>
+                            <Badge variant="destructive">High</Badge>
                             <span className="text-xs text-muted-foreground">
-                              - Non-urgent, can be scheduled
+                              - Urgent, immediate attention
                             </span>
                           </div>
                         </SelectItem>
@@ -650,38 +676,72 @@ export default function ReferralFormContent({
               </div>
 
               {/* Diagnosis */}
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="diagnosis">Diagnosis</Label>
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis">
+                  Diagnosis <span className="text-destructive">*</span>
+                </Label>
                 <Textarea
                   id="diagnosis"
                   {...register("diagnosis")}
                   placeholder="Enter patient diagnosis"
                   rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Provide the diagnosis or medical condition relevant to this
+                  referral. Minimum 20 words required (
+                  {countWords(watchedDiagnosis || "")} words).
+                </p>
+                {errors.diagnosis && (
+                  <p className="text-sm text-destructive">
+                    {errors.diagnosis.message}
+                  </p>
+                )}
               </div>
 
               {/* Goals */}
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="goals">Goals</Label>
+              <div className="space-y-2">
+                <Label htmlFor="goals">
+                  Goals <span className="text-destructive">*</span>
+                </Label>
                 <Textarea
                   id="goals"
                   {...register("goals")}
                   placeholder="Enter treatment goals"
                   rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Describe the goals or objectives for this referral. Minimum 20
+                  words required ({countWords(watchedGoals || "")} words).
+                </p>
+                {errors.goals && (
+                  <p className="text-sm text-destructive">
+                    {errors.goals.message}
+                  </p>
+                )}
               </div>
 
               {/* Clinical Instructions / Description */}
-              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+              <div className="space-y-2">
                 <Label htmlFor="clinicalInstructions">
-                  Clinical Instructions / Description
+                  Clinical Instructions / Description{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="clinicalInstructions"
                   {...register("clinicalInstructions")}
                   placeholder="Enter clinical instructions and description"
-                  rows={4}
+                  rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Provide clear, detailed instructions. Minimum 20 words
+                  required ({countWords(watchedClinicalInstructions || "")}{" "}
+                  words).
+                </p>
+                {errors.clinicalInstructions && (
+                  <p className="text-sm text-destructive">
+                    {errors.clinicalInstructions.message}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -786,7 +846,7 @@ export default function ReferralFormContent({
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/admin/referrals")}
+            onClick={() => router.push("/admin/referrals/outgoing")}
             disabled={isLoading}
           >
             Cancel

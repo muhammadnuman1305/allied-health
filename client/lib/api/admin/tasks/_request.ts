@@ -266,6 +266,7 @@ const transformToBackendDTO = (formData: TaskFormData): AddUpdateTaskDTO => {
     diagnosis: formData.diagnosis || null,
     goals: formData.goals || null,
     interventions: interventions,
+    refId: formData.refId || null, // Include refId if task is created from a referral
   };
 
   return dto;
@@ -291,6 +292,32 @@ export const update$ = async (task: TaskFormData): Promise<{ data: Task }> => {
     return { data: response.data as Task };
   } catch (error) {
     console.error("Error updating task:", error);
+    throw error;
+  }
+};
+
+// Get referral details for task creation
+export interface GetReferralTaskDetailsDTO {
+  refId: string;
+  patientId: number;
+  departmentId: string;
+  priority: number;
+  diagnosis: string;
+  goals: string;
+  description: string;
+  interventions: string[];
+}
+
+export const getReferralTaskDetails$ = async (refId: string): Promise<{ data: GetReferralTaskDetailsDTO }> => {
+  try {
+    const response = await api.get(`/api/task/referral-details?refId=${refId}`);
+    // Check if response.data exists and has the expected structure
+    if (!response.data) {
+      throw new Error("No data received from API");
+    }
+    return { data: response.data as GetReferralTaskDetailsDTO };
+  } catch (error) {
+    console.error("Error fetching referral task details:", error);
     throw error;
   }
 };

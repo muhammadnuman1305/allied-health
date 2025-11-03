@@ -1,4 +1,4 @@
-using AlliedHealth.Common.Enums;
+        using AlliedHealth.Common.Enums;
 using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
 using Microsoft.AspNetCore.Authorization;

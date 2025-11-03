@@ -22,6 +22,10 @@ namespace AlliedHealth.Service.Implementation.Authentication
                     UserId = parsedUserId;
                 }
 
+                var deptClaim = claims.FindFirst("Department")?.Value;
+                if (Guid.TryParse(deptClaim, out var parsedDeptId))
+                    DepartmentId = parsedDeptId;
+
                 // Check if the user has the "Admin" role
                 IsAdmin = principal.IsInRole("Admin");
 
@@ -37,6 +41,7 @@ namespace AlliedHealth.Service.Implementation.Authentication
         public Guid? UserId { get; }
         public string? UserName { get; }
         public bool IsAdmin { get; } = false;
+        public Guid? DepartmentId { get; }
         public int Role { get; }
         public ClaimsIdentity? Claims { get; set; }
 

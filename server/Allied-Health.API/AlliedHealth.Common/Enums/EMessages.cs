@@ -18,6 +18,8 @@
         public static string InterventionExistAlready { get; set; } = "Intervention with same name already exists.";
         public static string TaskExistAlready { get; set; } = "There is already an active task for this patient.";
         public static string TaskNotExists { get; set; } = "Task doesn't exist.";
+        public static string ReferralExistAlready { get; set; } = "There is already an active task for this patient.";
+        public static string ReferralNotExists { get; set; } = "Referral doesn't exist.";
         public static string IncorrectUserPassword { get; set; } = "Invalid user password.";
     }
 }

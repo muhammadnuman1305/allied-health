@@ -48,7 +48,7 @@ namespace AlliedHealth.Service.Implementation
                              {
                                     TotalPatients = g.Count(),
                                     NewPatients = g.Count(u => u.CreatedDate >= DateTime.UtcNow.AddDays(-7)),
-                                    ActiveTasks = g.Sum(u => u.Tasks.Count(t => t.Status == (int)ETaskStatus.Active)),
+                                    ActiveTasks = g.Sum(u => u.Tasks.Count(t => t.Status == (int)ETaskStatus.InProgress)),
                                     CompletedTasks = g.Sum(u => u.Tasks.Count(t => t.Status == (int)ETaskStatus.Completed))
                              }).FirstOrDefaultAsync();
 

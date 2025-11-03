@@ -359,7 +359,7 @@ export default function AdminDepartmentsSetupPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Departments</CardTitle>
+              <CardTitle>Departments Table</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (

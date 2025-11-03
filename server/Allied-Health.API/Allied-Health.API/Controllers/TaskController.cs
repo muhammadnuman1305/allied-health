@@ -75,6 +75,17 @@ public class TaskController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("referral-details")]
+    public async Task<IActionResult> GetReferralTaskDetails(Guid refId)
+    {
+        var response = await _taskService.GetReferralTaskDetails(refId);
+
+        if (response.Item2 != null || response.Item1 == null)
+            return BadRequest(response.Item2);
+
+        return Ok(response.Item1);
+    }
+
     [HttpGet("aha-options")]
     public async Task<IActionResult> GetAHAOptions()
     {

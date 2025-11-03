@@ -10,7 +10,6 @@ namespace AlliedHealth.Domain
             : base(options) { }
 
         // Core entities
-        public DbSet<PatientOutcome> PatientOutcomes => Set<PatientOutcome>();
         public DbSet<Priority> Priorities => Set<Priority>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Patient> Patients => Set<Patient>();
@@ -22,6 +21,8 @@ namespace AlliedHealth.Domain
         // Newly added entities
         public DbSet<Task> Tasks => Set<Task>();
         public DbSet<TaskIntervention> TaskInterventions => Set<TaskIntervention>();
+        public DbSet<Referral> Referrals => Set<Referral>();
+        public DbSet<ReferralIntervention> ReferralInterventions => Set<ReferralIntervention>();
         public DbSet<Intervention> Interventions => Set<Intervention>();
         public DbSet<Specialty> Specialties => Set<Specialty>();
 

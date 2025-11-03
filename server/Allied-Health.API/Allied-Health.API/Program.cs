@@ -10,6 +10,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using AlliedHealth.Service.Contract.AHA;
+using AlliedHealth.Service.Implementation.AHA;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +40,11 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ISpecialtyService, SpecialtyService>();
 builder.Services.AddScoped<IInterventionService, InterventionService>();
 builder.Services.AddScoped<IReferralService, ReferralService>();
+
+// AHA Services
+builder.Services.AddScoped<IAHAPatientService, AHAPatientService>();
+builder.Services.AddScoped<IAHATaskService, AHATaskService>();
+
 builder.Services.AddScoped<IUtilityService, UtilityService>();
 
 // Configure JWT Authentication

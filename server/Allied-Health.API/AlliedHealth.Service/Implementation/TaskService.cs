@@ -53,7 +53,7 @@ namespace AlliedHealth.Service.Implementation
                              {
                                  TotalTasks = g.Count(),
                                  OverdueTasks = g.Count(x => x.Status == (int)ETaskStatus.Overdue),
-                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.Active),
+                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.InProgress),
                                  CompletedTasks = g.Count(x => x.Status == (int)ETaskStatus.Completed),
 
                                  HighPriority = g.Count(x => x.Priority == (int)ETaskPriorities.High),
@@ -113,10 +113,12 @@ namespace AlliedHealth.Service.Implementation
                 return EMessages.DeptNotExists;
 
             var taskId = Guid.NewGuid();
+            var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
             var newTask = new Task
             {
                 Id = taskId,
+                ReferralId = request.RefId,
                 PatientId = request.PatientId,
                 DepartmentId = request.DepartmentId,
                 Title = request.Title,
@@ -126,14 +128,15 @@ namespace AlliedHealth.Service.Implementation
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals,
                 Description = request.Description,
-                Status = (int)ETaskInterventionOutcomes.Unseen,
-                
+                Status = (int)((request.StartDate > now && request.EndDate > now) ? ETaskStatus.Assigned 
+                               : (request.StartDate <= now && request.EndDate >= now) ? ETaskStatus.InProgress 
+                               : (request.EndDate < now) ? ETaskStatus.Overdue :ETaskStatus.Assigned), // fallback
                 CreatedDate = DateTime.UtcNow,
                 CreatedBy = _userContext.UserId,
                 Hidden = false
             };
 
-            await _dbContext.AddAsync(newTask);
+            await _dbContext.Tasks.AddAsync(newTask);
             await _dbContext.SaveChangesAsync();
 
             foreach(var inv in request.Interventions)
@@ -150,6 +153,13 @@ namespace AlliedHealth.Service.Implementation
                 };
 
                 await _dbContext.TaskInterventions.AddAsync(taskInv);
+            }
+
+            if(request.RefId != Guid.Empty && request.RefId != null)
+            {
+                var referral = await _dbContext.Referrals.FirstOrDefaultAsync(x => x.Id == request.RefId);
+
+                referral.Status = (int)EReferralOutcomes.Accepted;
             }
 
             await _dbContext.SaveChangesAsync();
@@ -228,6 +238,25 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.SaveChangesAsync();
 
             return null;
+        }
+
+        public async Task<(GetReferralTaskDetailsDTO?, string?)> GetReferralTaskDetails(Guid refId)
+        {
+            var referral = await _dbContext.Referrals
+                            .Where(x => x.Id == refId)
+                            .Select(x => new GetReferralTaskDetailsDTO
+                            {
+                                RefId = x.Id,
+                                PatientId = x.PatientId,
+                                DepartmentId = x.DestinationDepartmentId,
+                                Priority = x.Priority,
+                                Diagnosis = x.Diagnosis,
+                                Goals = x.Goals,
+                                Description = x.Description,
+                                Interventions = x.ReferralInterventions.Select(t => t.InterventionId).ToList()
+                            }).FirstOrDefaultAsync();
+
+            return (referral, null);
         }
     }
 }

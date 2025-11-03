@@ -10,5 +10,6 @@ namespace AlliedHealth.Service.Contract
         Task<string?> CreateTask(AddUpdateTaskDTO request);
         Task<string?> UpdateTask(AddUpdateTaskDTO request);
         Task<string?> ToggleHide(Guid id);
+        Task<(GetReferralTaskDetailsDTO?, string?)> GetReferralTaskDetails(Guid refId);
     }
 }

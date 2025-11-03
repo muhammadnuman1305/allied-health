@@ -47,6 +47,7 @@ import {
   Intervention,
   InterventionSummary,
 } from "@/lib/api/admin/interventions/_model";
+import { formatLastUpdated } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -121,8 +122,7 @@ export default function AdminInterventionsSetupPage() {
       label: "Last Updated",
       width: "w-[140px]",
       sortable: true,
-      render: (r) =>
-        r.lastUpdated ? new Date(r.lastUpdated).toLocaleDateString() : "N/A",
+      render: (r) => formatLastUpdated(r.lastUpdated),
     },
   ];
 
@@ -241,7 +241,7 @@ export default function AdminInterventionsSetupPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Interventions</CardTitle>
+            <CardTitle>Interventions Table</CardTitle>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
                 <Button variant="outline" size="sm" onClick={clearAllFilters}>

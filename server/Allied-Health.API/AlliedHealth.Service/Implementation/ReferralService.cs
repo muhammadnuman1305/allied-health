@@ -25,18 +25,28 @@ namespace AlliedHealth.Service.Implementation
 
         public IQueryable<GetReferralDTO> GetAll()
         {
-            var tasks = _dbContext.Tasks
+            var tasks = _dbContext.Referrals
                             .Select(t => new GetReferralDTO
                             {
                                 Id = t.Id,
-                                Title = t.Title,
-                                PatientId  =t.PatientId,
+                                Type = (_userContext.DepartmentId != Guid.Empty
+                                            ? (t.OriginDepartmentId == _userContext.DepartmentId
+                                                ? "outgoing"
+                                                : (t.DestinationDepartmentId == _userContext.DepartmentId ? "incoming" : null))
+                                            : null) ?? string.Empty,
+                                PatientId = t.PatientId,
                                 PatientName = t.Patient.FullName,
-                                DepartmentId = t.DepartmentId,
-                                DepartmentName = t.Department.Name,
+                                OriginDeptId = t.OriginDepartmentId,
+                                OriginDeptName = t.OriginDepartment.Name,
+                                DestinationDeptId = t.DestinationDepartmentId,
+                                DestinationDeptName= t.DestinationDepartment.Name,
+                                TherapistId = t.ReferringTherapist,
+                                TherapistName = _dbContext.Users
+                                                .Where(u => u.Id == t.ReferringTherapist)
+                                                .Select(u => string.Concat(u.FirstName, " ", u.LastName))
+                                                .FirstOrDefault() ?? string.Empty,
                                 Priority = t.Priority,
-                                StartDate = t.StartDate,
-                                EndDate = t.EndDate,
+                                ReferralDate = DateOnly.FromDateTime(t.CreatedDate),
                                 LastUpdated = t.ModifiedDate,
                                 Hidden = t.Hidden,
                             }).AsQueryable();
@@ -53,7 +63,7 @@ namespace AlliedHealth.Service.Implementation
                              {
                                  TotalTasks = g.Count(),
                                  OverdueTasks = g.Count(x => x.Status == (int)ETaskStatus.Overdue),
-                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.Active),
+                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.InProgress),
                                  CompletedTasks = g.Count(x => x.Status == (int)ETaskStatus.Completed),
 
                                  HighPriority = g.Count(x => x.Priority == (int)ETaskPriorities.High),
@@ -71,160 +81,150 @@ namespace AlliedHealth.Service.Implementation
             return summary ?? new GetReferralSummaryDTO();
         }
 
-        public async Task<GetReferralDetailsDTO> GetTask(Guid id)
+        public async Task<GetReferralDetailsDTO> GetReferral(Guid id)
         {
-            var task = await _dbContext.Tasks
+            var task = await _dbContext.Referrals
                         .Where(x => x.Id == id)
                         .Select(x => new GetReferralDetailsDTO
                         {
                             Id = x.Id,
-                            Title = x.Title,
                             PatientId = x.PatientId,
-                            DepartmentId = x.DepartmentId,
+                            OriginDeptId = x.OriginDepartmentId,
+                            DestinationDeptId = x.DestinationDepartmentId,
                             Priority = x.Priority,
                             Diagnosis = x.Diagnosis,
                             Goals = x.Goals,
-                            StartDate = x.StartDate,
-                            EndDate = x.EndDate,
+                            //ReferralDate = x.CreatedDate,
                             Description = x.Description,
-                            Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
-                            {
-                                Id = t.InterventionId,
-                                AhaId = t.AhaId,
-                                WardId = t.WardId,
-                                Start = t.StartDate,
-                                End = t.EndDate,
-                            }).ToList()
+                            Interventions = x.ReferralInterventions.Select(x => x.InterventionId).ToList()
                         }).FirstOrDefaultAsync();
 
             return task;
         }
 
-        public async Task<string?> CreateTask(AddUpdateReferralDTO request)
+        public async Task<string?> CreateReferral(AddUpdateReferralDTO request)
         {
             var patient = await _dbContext.Patients.FirstOrDefaultAsync(x => x.Id == request.PatientId);
 
             if (patient == null)
                 return EMessages.PatientNotExists;
 
-            var dept = await _dbContext.Departments.FirstOrDefaultAsync(x => x.Id == request.DepartmentId);
+            var orgDept = await _dbContext.Departments.FirstOrDefaultAsync(x => x.Id == request.OriginDeptId);
+            var destDept = await _dbContext.Departments.FirstOrDefaultAsync(x => x.Id == request.DestinationDeptId);
 
-            if (dept == null)
-                return EMessages.DeptNotExists;
+            if (orgDept == null)
+                return "Origin " + EMessages.DeptNotExists;
 
-            var taskId = Guid.NewGuid();
+            if (destDept == null)
+                return "Destination " + EMessages.DeptNotExists;
 
-            var newTask = new Task
+            var referralId = Guid.NewGuid();
+
+            var newReferral = new Referral
             {
-                Id = taskId,
+                Id = referralId,
                 PatientId = request.PatientId,
-                DepartmentId = request.DepartmentId,
-                Title = request.Title,
+                OriginDepartmentId = request.OriginDeptId,
+                DestinationDepartmentId = request.DestinationDeptId,
+                ReferringTherapist = request.TherapistId,
                 Priority = request.Priority,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals,
                 Description = request.Description,
-                Status = (int)ETaskInterventionOutcomes.Unseen,
-                
+                Status = (int)EReferralOutcomes.Pending,
                 CreatedDate = DateTime.UtcNow,
                 CreatedBy = _userContext.UserId,
                 Hidden = false
             };
 
-            await _dbContext.AddAsync(newTask);
+            await _dbContext.Referrals.AddAsync(newReferral);
             await _dbContext.SaveChangesAsync();
 
-            foreach(var inv in request.Interventions)
+            foreach (var inv in request.Interventions)
             {
-                var taskInv = new TaskIntervention
+                var refInv = new ReferralIntervention
                 {
                     Id = Guid.NewGuid(),
-                    TaskId = taskId,
-                    InterventionId = inv.Id,
-                    AhaId = inv.AhaId,
-                    StartDate = inv.Start,
-                    EndDate = inv.End,
-                    WardId = inv.WardId
+                    ReferralId = referralId,
+                    InterventionId = inv
                 };
 
-                await _dbContext.TaskInterventions.AddAsync(taskInv);
+                await _dbContext.ReferralInterventions.AddAsync(refInv);
             }
 
             await _dbContext.SaveChangesAsync();
             return null;
         }
 
-        public async Task<string?> UpdateTask(AddUpdateReferralDTO request)
+        public async Task<string?> UpdateReferral(AddUpdateReferralDTO request)
         {
-            var task = await _dbContext.Tasks
-                             .Include(x => x.TaskInterventions)
-                             .FirstOrDefaultAsync(x => x.Id == request.Id);
+            //var task = await _dbContext.Tasks
+            //                 .Include(x => x.TaskInterventions)
+            //                 .FirstOrDefaultAsync(x => x.Id == request.Id);
 
-            if (task == null)
-                return EMessages.TaskNotExists;
+            //if (task == null)
+            //    return EMessages.TaskNotExists;
 
-            task.Title = request.Title;
-            task.Priority = request.Priority;
-            task.StartDate = request.StartDate;
-            task.EndDate = request.EndDate;
-            task.Diagnosis = request.Diagnosis;
-            task.Goals = request.Goals;
-            task.Description = request.Description;
-            task.ModifiedDate = DateTime.UtcNow;
-            task.ModifiedBy = _userContext.UserId;
+            //task.Title = request.Title;
+            //task.Priority = request.Priority;
+            //task.StartDate = request.StartDate;
+            //task.EndDate = request.EndDate;
+            //task.Diagnosis = request.Diagnosis;
+            //task.Goals = request.Goals;
+            //task.Description = request.Description;
+            //task.ModifiedDate = DateTime.UtcNow;
+            //task.ModifiedBy = _userContext.UserId;
 
-            var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
-            var toRemove = task.TaskInterventions
-                            .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
-                            .ToList();
+            //var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
+            //var toRemove = task.TaskInterventions
+            //                .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
+            //                .ToList();
 
-            _dbContext.TaskInterventions.RemoveRange(toRemove);
+            //_dbContext.TaskInterventions.RemoveRange(toRemove);
 
-            // 2️⃣ Update existing interventions and add new ones
-            foreach (var inv in request.Interventions)
-            {
-                var existing = task.TaskInterventions
-                    .FirstOrDefault(ti => ti.InterventionId == inv.Id);
+            //// 2️⃣ Update existing interventions and add new ones
+            //foreach (var inv in request.Interventions)
+            //{
+            //    var existing = task.TaskInterventions
+            //        .FirstOrDefault(ti => ti.InterventionId == inv.Id);
 
-                if (existing != null)
-                {
-                    existing.AhaId = inv.AhaId;
-                    existing.StartDate = inv.Start;
-                    existing.EndDate = inv.End;
-                    existing.WardId = inv.WardId;
-                }
-                else
-                {
-                    // Add new intervention
-                    var newIntervention = new TaskIntervention
-                    {
-                        Id = Guid.NewGuid(),
-                        TaskId = task.Id,
-                        InterventionId = inv.Id,
-                        AhaId = inv.AhaId,
-                        StartDate = inv.Start,
-                        EndDate = inv.End,
-                        WardId = inv.WardId
-                    };
+            //    if (existing != null)
+            //    {
+            //        existing.AhaId = inv.AhaId;
+            //        existing.StartDate = inv.Start;
+            //        existing.EndDate = inv.End;
+            //        existing.WardId = inv.WardId;
+            //    }
+            //    else
+            //    {
+            //        // Add new intervention
+            //        var newIntervention = new TaskIntervention
+            //        {
+            //            Id = Guid.NewGuid(),
+            //            TaskId = task.Id,
+            //            InterventionId = inv.Id,
+            //            AhaId = inv.AhaId,
+            //            StartDate = inv.Start,
+            //            EndDate = inv.End,
+            //            WardId = inv.WardId
+            //        };
 
-                    await _dbContext.TaskInterventions.AddAsync(newIntervention);
-                }
-            }
+            //        await _dbContext.TaskInterventions.AddAsync(newIntervention);
+            //    }
+            //}
 
-            await _dbContext.SaveChangesAsync();
+            //await _dbContext.SaveChangesAsync();
             return null;
         }
 
         public async Task<string?> ToggleHide(Guid id)
         {
-            var task = await _dbContext.Tasks.FirstOrDefaultAsync(t => t.Id == id);
+            var referral = await _dbContext.Referrals.FirstOrDefaultAsync(t => t.Id == id);
 
-            if (task == null)
-                return EMessages.UserNotExists;
+            if (referral == null)
+                return EMessages.ReferralNotExists;
 
-            task.Hidden = !task.Hidden;
+            referral.Hidden = !referral.Hidden;
             await _dbContext.SaveChangesAsync();
 
             return null;

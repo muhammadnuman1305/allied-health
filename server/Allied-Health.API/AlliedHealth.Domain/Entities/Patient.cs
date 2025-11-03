@@ -25,6 +25,5 @@
 
         public ICollection<Task> Tasks { get; set; } = new List<Task>();
         public ICollection<Referral> Referrals { get; set; } = new List<Referral>();
-        public ICollection<PatientOutcome> Outcomes { get; set; } = new List<PatientOutcome>();
     }
 }

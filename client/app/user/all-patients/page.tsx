@@ -4,52 +4,23 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Users,
   Calendar,
   ClipboardList,
   CheckCircle,
-  Settings,
-  Eye,
-  FileText,
-  ArrowRight,
   RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
-import { getAll$, getSummary$ } from "@/lib/api/admin/patients/_request";
-import {
-  Patient,
-  PatientSummary,
-  getGenderLabel,
-} from "@/lib/api/admin/patients/_model";
+import { getAll$ as getAHAPatients$ } from "@/lib/api/aha/_request";
+import { AHAPatient } from "@/lib/api/aha/_model";
+import { getSummary$ } from "@/lib/api/admin/patients/_request";
+import { PatientSummary } from "@/lib/api/admin/patients/_model";
 
-// Helper to format patient ID as MRN
-const formatMRN = (id: string): string => {
-  const numId = parseInt(id, 10);
-  if (isNaN(numId)) return id;
-  return `MRN${numId.toString().padStart(5, "0")}`;
-};
-
-// Helper to format relative time
-const formatRelativeTime = (dateString: string): string => {
+// Helper to format date as readable date string
+const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString();
 };
 
@@ -57,7 +28,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AllPatientsPage() {
   const router = useRouter();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<AHAPatient[]>([]);
   const [summary, setSummary] = useState<PatientSummary>({
     totalPatients: 0,
     newPatients: 0,
@@ -83,8 +54,8 @@ export default function AllPatientsPage() {
 
         // Fetch both patients and summary data in parallel
         const [patientsResponse, summaryResponse] = await Promise.all([
-          getAll$("Active"), // Only show active patients
-          getSummary$(),
+          getAHAPatients$("Active"), // Fetch from AHA API - only show active patients
+          getSummary$(), // Keep summary from original endpoint
         ]);
 
         setPatients(patientsResponse.data);
@@ -101,7 +72,7 @@ export default function AllPatientsPage() {
   }, []);
 
   // Define table columns
-  const columns: Column<Patient>[] = [
+  const columns: Column<AHAPatient>[] = [
     {
       key: "fullName",
       label: "Name",
@@ -120,7 +91,7 @@ export default function AllPatientsPage() {
       sortable: true,
       filterable: true,
       filterType: "text",
-      render: (patient) => formatMRN(patient.id),
+      render: (patient) => patient.mrn || "—",
     },
     {
       key: "age",
@@ -134,7 +105,7 @@ export default function AllPatientsPage() {
       label: "Gender",
       width: "w-[100px]",
       sortable: true,
-      render: (patient) => getGenderLabel(patient.gender ?? 0),
+      render: (patient) => patient.gender || "—",
     },
     {
       key: "primaryPhone",
@@ -149,16 +120,28 @@ export default function AllPatientsPage() {
       sortable: true,
       render: (patient) => (patient.activeTasks ?? 0).toString(),
     },
+    // {
+    //   key: "lastUpdated",
+    //   label: "Last Updated",
+    //   width: "w-[140px]",
+    //   sortable: true,
+    //   render: (patient) =>
+    //     patient.lastUpdated ? (
+    //       <span title={new Date(patient.lastUpdated).toLocaleString()}>
+    //         {formatRelativeTime(patient.lastUpdated)}
+    //       </span>
+    //     ) : (
+    //       <span>—</span>
+    //     ),
+    // },
     {
-      key: "lastUpdated",
-      label: "Last Updated",
-      width: "w-[140px]",
+      key: "lastActivityDate",
+      label: "Last Activity Date",
+      width: "w-[160px]",
       sortable: true,
       render: (patient) =>
-        patient.lastUpdated ? (
-          <span title={new Date(patient.lastUpdated).toLocaleString()}>
-            {formatRelativeTime(patient.lastUpdated)}
-          </span>
+        patient.lastActivityDate ? (
+          <span>{formatDate(patient.lastActivityDate)}</span>
         ) : (
           <span>—</span>
         ),
@@ -296,35 +279,35 @@ export default function AllPatientsPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={ITEMS_PER_PAGE}
             loading={loading}
-            actions={(patient) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => handlePatientAction("view", patient.id)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handlePatientAction("tasks", patient.id)}
-                  >
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    Tasks
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handlePatientAction("referrals", patient.id)}
-                  >
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Referrals
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            // actions={(patient) => (
+            //   <DropdownMenu>
+            //     <DropdownMenuTrigger asChild>
+            //       <Button variant="ghost" size="sm">
+            //         <Settings className="h-4 w-4" />
+            //       </Button>
+            //     </DropdownMenuTrigger>
+            //     <DropdownMenuContent align="end">
+            //       <DropdownMenuItem
+            //         onClick={() => handlePatientAction("view", patient.id)}
+            //       >
+            //         <Eye className="mr-2 h-4 w-4" />
+            //         View
+            //       </DropdownMenuItem>
+            //       <DropdownMenuItem
+            //         onClick={() => handlePatientAction("tasks", patient.id)}
+            //       >
+            //         <ClipboardList className="mr-2 h-4 w-4" />
+            //         Tasks
+            //       </DropdownMenuItem>
+            //       <DropdownMenuItem
+            //         onClick={() => handlePatientAction("referrals", patient.id)}
+            //       >
+            //         <ArrowRight className="mr-2 h-4 w-4" />
+            //         Referrals
+            //       </DropdownMenuItem>
+            //     </DropdownMenuContent>
+            //   </DropdownMenu>
+            // )}
           />
         </CardContent>
       </Card>

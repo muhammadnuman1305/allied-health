@@ -386,7 +386,7 @@ export default function AdminWardsSetupPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Wards</CardTitle>
+              <CardTitle>Wards Table</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {hasActiveFilters && (

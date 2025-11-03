@@ -1,596 +1,283 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import {
-  Settings,
-  Bell,
-  Shield,
-  User,
-  Calendar,
-  Clock,
-  Plus,
-} from "lucide-react";
-import { toast } from "sonner";
+import { User, Save } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { getById$, update$ } from "@/lib/api/admin/users/_request";
+import { UserFormData, User as UserType } from "@/lib/api/admin/users/_model";
+import { toast } from "@/hooks/use-toast";
+
+// Form validation schema
+const userSettingsSchema = z.object({
+  id: z.string(),
+  firstName: z
+    .string()
+    .min(1, "First name is required")
+    .max(50, "First name must be less than 50 characters"),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(50, "Last name must be less than 50 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z
+    .string()
+    .max(100, "Password must be less than 100 characters")
+    .optional()
+    .or(z.literal(""))
+    .nullable(),
+});
+
+type FormData = z.infer<typeof userSettingsSchema>;
+
+// Role mapping for display
+const roleMap = {
+  1: "Allied Assistant",
+  2: "Allied Professional",
+} as const;
 
 export default function SettingsPage() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Settings className="h-6 w-6 text-primary" />
-        <h1 className="text-3xl font-bold">User Settings</h1>
-      </div>
+  const { user: authUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [user, setUser] = useState<UserType | null>(null);
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Profile Info */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              <CardTitle>Personal Information</CardTitle>
-            </div>
-            <CardDescription>
-              Manage your personal and contact details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
-                <Input id="firstName" value="Dr. John" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last name</Label>
-                <Input id="lastName" value="Doe" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value="johndoe@hospital.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" value="+92 300 1234567" />
-            </div>
-            <Button>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* Professional Info */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <CardTitle>Professional Details</CardTitle>
-            </div>
-            <CardDescription>
-              Manage your qualifications and specialization
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="specialization">Specialization</Label>
-              <Select defaultValue="cardiology">
-                <SelectTrigger>
-                  <SelectValue placeholder="Select specialization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cardiology">Cardiology</SelectItem>
-                  <SelectItem value="neurology">Neurology</SelectItem>
-                  <SelectItem value="orthopedics">Orthopedics</SelectItem>
-                  <SelectItem value="pediatrics">Pediatrics</SelectItem>
-                  <SelectItem value="general">General Physician</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="qualification">Qualification</Label>
-              <Input id="qualification" value="MBBS, FCPS" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="experience">Years of Experience</Label>
-              <Input id="experience" type="number" value="10" />
-            </div>
-            <Button>Update Professional Info</Button>
-          </CardContent>
-        </Card>
-
-        {/* Availability */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-primary" />
-              <CardTitle>Availability & Notifications</CardTitle>
-            </div>
-            <CardDescription>
-              Set your availability and notification preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="availableDays">Available Days</Label>
-              <Input
-                id="availableDays"
-                placeholder="e.g. Mon, Wed, Fri"
-                value="Mon, Wed, Fri"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="availableTime">Available Time</Label>
-              <Input
-                id="availableTime"
-                placeholder="e.g. 9:00 AM - 1:00 PM"
-                value="9:00 AM - 1:00 PM"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Appointment Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified when a patient books or cancels an appointment
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Admin Announcements</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive important hospital announcements
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-
-            <Button>Save Preferences</Button>
-          </CardContent>
-        </Card>
-
-        {/* Vacation & Leave Requests */}
-        <VacationLeaveCard />
-      </div>
-
-      {/* Reschedule Requests */}
-      <RescheduleRequestsCard />
-    </div>
-  );
-}
-
-// Vacation & Leave Requests Component
-function VacationLeaveCard() {
-  const [vacations, setVacations] = useState([
-    {
-      id: "1",
-      startDate: "2024-02-15",
-      endDate: "2024-02-20",
-      type: "vacation",
-      reason: "Family vacation",
-      status: "approved",
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(userSettingsSchema),
+    defaultValues: {
+      id: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: null,
     },
-    {
-      id: "2",
-      startDate: "2024-03-10",
-      endDate: "2024-03-12",
-      type: "sick",
-      reason: "Medical appointment",
-      status: "pending",
-    },
-  ]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    startDate: "",
-    endDate: "",
-    type: "vacation",
-    reason: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newVacation = {
-      id: Date.now().toString(),
-      ...formData,
-      status: "pending" as const,
+  // Load user data
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!authUser?.id) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      try {
+        setIsLoadingUser(true);
+        const response = await getById$(authUser.id);
+        const userData = response.data;
+        setUser(userData);
+
+        // Populate form with user data
+        setValue("id", userData.id);
+        setValue("firstName", userData.firstName);
+        setValue("lastName", userData.lastName);
+        setValue("email", userData.email);
+        setValue("password", null); // Don't populate password for security
+      } catch (error) {
+        console.error("Error loading user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load user data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingUser(false);
+      }
     };
-    setVacations([...vacations, newVacation]);
-    setIsDialogOpen(false);
-    setFormData({ startDate: "", endDate: "", type: "vacation", reason: "" });
-    toast.success("Vacation request submitted successfully");
-  };
 
-  const statusConfig = {
-    pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
-    approved: { label: "Approved", className: "bg-green-100 text-green-800" },
-    rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
-  };
+    loadUser();
+  }, [authUser?.id, setValue]);
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle>Vacation Requests</CardTitle>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Request Leave
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request Vacation or Leave</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Start Date *</Label>
-                    <Input
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, startDate: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>End Date *</Label>
-                    <Input
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, endDate: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Type *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vacation">Vacation</SelectItem>
-                      <SelectItem value="sick">Sick Leave</SelectItem>
-                      <SelectItem value="personal">Personal Leave</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Reason *</Label>
-                  <Textarea
-                    value={formData.reason}
-                    onChange={(e) =>
-                      setFormData({ ...formData, reason: e.target.value })
-                    }
-                    placeholder="Please provide a reason for your leave request..."
-                    required
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" className="flex-1">
-                    Submit Request
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <CardDescription>
-          Request and manage your vacation and leave requests
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {vacations.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No leave requests yet
-            </p>
-          ) : (
-            vacations.map((vacation) => {
-              const status = statusConfig[vacation.status];
-              return (
-                <div
-                  key={vacation.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className={status.className}>{status.label}</Badge>
-                      <Badge variant="outline">{vacation.type}</Badge>
-                    </div>
-                    <p className="text-sm font-medium">
-                      {vacation.startDate} to {vacation.endDate}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {vacation.reason}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+  const onSubmit = async (data: FormData) => {
+    if (!user) return;
 
-// Reschedule Requests Component
-function RescheduleRequestsCard() {
-  const [reschedules, setReschedules] = useState([
-    {
-      id: "1",
-      taskId: "T001",
-      taskTitle: "Nutrition Assessment - John Smith",
-      originalDate: "2024-01-20",
-      requestedDate: "2024-01-22",
-      reason: "Conflicting appointment",
-      status: "pending",
-    },
-    {
-      id: "2",
-      taskId: "T002",
-      taskTitle: "Follow-up Consultation - Maria Garcia",
-      originalDate: "2024-01-25",
-      requestedDate: "2024-01-26",
-      reason: "Family emergency",
-      status: "approved",
-    },
-  ]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    taskId: "",
-    taskTitle: "",
-    originalDate: "",
-    requestedDate: "",
-    reason: "",
-  });
+    setIsLoading(true);
+    try {
+      // Prepare payload - keep role and isAdmin unchanged
+      const payload: UserFormData = {
+        id: data.id,
+        username: null, // Don't send username for updates
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password || null,
+        role: user.role,
+        isAdmin: user.isAdmin,
+        selectedSpecialties: user.selectedSpecialties || [],
+      };
 
-  // Mock tasks for dropdown
-  const availableTasks = [
-    {
-      id: "T001",
-      title: "Nutrition Assessment - John Smith",
-      date: "2024-01-20",
-    },
-    {
-      id: "T002",
-      title: "Follow-up Consultation - Maria Garcia",
-      date: "2024-01-25",
-    },
-    {
-      id: "T003",
-      title: "Physical Therapy Session - Robert Wilson",
-      date: "2024-01-28",
-    },
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const task = availableTasks.find((t) => t.id === formData.taskId);
-    const newReschedule = {
-      id: Date.now().toString(),
-      taskId: formData.taskId,
-      taskTitle: task?.title || formData.taskTitle,
-      originalDate: task?.date || formData.originalDate,
-      requestedDate: formData.requestedDate,
-      reason: formData.reason,
-      status: "pending" as const,
-    };
-    setReschedules([...reschedules, newReschedule]);
-    setIsDialogOpen(false);
-    setFormData({
-      taskId: "",
-      taskTitle: "",
-      originalDate: "",
-      requestedDate: "",
-      reason: "",
-    });
-    toast.success("Reschedule request submitted successfully");
-  };
-
-  const handleTaskSelect = (taskId: string) => {
-    const task = availableTasks.find((t) => t.id === taskId);
-    if (task) {
-      setFormData({
-        ...formData,
-        taskId: task.id,
-        taskTitle: task.title,
-        originalDate: task.date,
+      await update$(payload);
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully.",
       });
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Error",
+        description:
+          error.response?.data?.message ||
+          "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const statusConfig = {
-    pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800" },
-    approved: { label: "Approved", className: "bg-green-100 text-green-800" },
-    rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
-  };
+  // Show loading state while fetching user data
+  if (isLoadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Loading user data...</span>
+      </div>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            <CardTitle>Reschedule Requests</CardTitle>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Request Reschedule
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Request Reschedule</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label>Select Task *</Label>
-                  <Select
-                    value={formData.taskId}
-                    onValueChange={handleTaskSelect}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a task to reschedule" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTasks.map((task) => (
-                        <SelectItem key={task.id} value={task.id}>
-                          {task.title} ({task.date})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.taskId && (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">User Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your personal information and account settings
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            User Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* First Name */}
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  {...register("firstName")}
+                  placeholder="Enter first name"
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-destructive">
+                    {errors.firstName.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  {...register("lastName")}
+                  placeholder="Enter last name"
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-destructive">
+                    {errors.lastName.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Username (Read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={user?.username || ""}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Username cannot be changed
+                </p>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register("email")}
+                  placeholder="Enter email address"
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Role (Read-only) */}
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Input
+                  id="role"
+                  value={
+                    user
+                      ? roleMap[user.role as keyof typeof roleMap] || "Unknown"
+                      : ""
+                  }
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  Password (leave blank to keep current)
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...register("password")}
+                  placeholder="Enter new password (optional)"
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex items-center gap-4 pt-6">
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
                   <>
-                    <div>
-                      <Label>Original Date</Label>
-                      <Input value={formData.originalDate} disabled />
-                    </div>
-                    <div>
-                      <Label>Requested Date *</Label>
-                      <Input
-                        type="date"
-                        value={formData.requestedDate}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            requestedDate: e.target.value,
-                          })
-                        }
-                        required
-                        min={new Date().toISOString().split("T")[0]}
-                      />
-                    </div>
-                    <div>
-                      <Label>Reason *</Label>
-                      <Textarea
-                        value={formData.reason}
-                        onChange={(e) =>
-                          setFormData({ ...formData, reason: e.target.value })
-                        }
-                        placeholder="Please provide a reason for rescheduling..."
-                        required
-                        rows={3}
-                      />
-                    </div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Update Profile
                   </>
                 )}
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={
-                      !formData.taskId ||
-                      !formData.requestedDate ||
-                      !formData.reason
-                    }
-                  >
-                    Submit Request
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <CardDescription>
-          Request to reschedule assigned tasks and appointments
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {reschedules.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No reschedule requests yet
-            </p>
-          ) : (
-            reschedules.map((reschedule) => {
-              const status = statusConfig[reschedule.status];
-              return (
-                <div
-                  key={reschedule.id}
-                  className="flex items-start justify-between p-3 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className={status.className}>{status.label}</Badge>
-                    </div>
-                    <p className="text-sm font-medium">
-                      {reschedule.taskTitle}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Original: {reschedule.originalDate} → Requested:{" "}
-                      {reschedule.requestedDate}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Reason: {reschedule.reason}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

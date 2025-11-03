@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,11 +20,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
 import {
-  Search,
   Filter,
   Clock,
   CheckCircle,
@@ -40,6 +39,9 @@ import {
   Info,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getTaskDetailsById$, getMyTasks$ } from "@/lib/api/aha/_request";
+import type { AHATaskDetails } from "@/lib/api/aha/_model";
+import api from "@/lib/api/axios";
 
 // Intervention status types
 type InterventionStatus =
@@ -79,143 +81,9 @@ interface Task {
   endDate: string;
   priority: "High" | "Medium" | "Low";
   departmentName?: string;
-  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed";
+  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed" | "Overdue";
   interventions: TaskIntervention[];
 }
-
-// Helper to get current date and future dates
-const getToday = () => {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
-};
-
-const getDateRange = (daysFromNow: number, duration: number = 7) => {
-  const start = new Date();
-  start.setDate(start.getDate() + daysFromNow);
-  const end = new Date(start);
-  end.setDate(end.getDate() + duration);
-  return {
-    start: start.toISOString().split("T")[0],
-    end: end.toISOString().split("T")[0],
-  };
-};
-
-// Mock data with interventions - using current dates
-const mockTasks: Task[] = [
-  (() => {
-    const dateRange = getDateRange(-3, 7);
-    return {
-      id: "T001",
-      title: "Initial Assessment - John Smith",
-      description:
-        "Complete initial health assessment for new patient John Smith",
-      patientId: "P001",
-      patientName: "John Smith",
-      patientMrn: "MRN00001",
-      startDate: dateRange.start,
-      endDate: dateRange.end,
-      priority: "High",
-      departmentName: "Cardiology",
-      status: "Assigned",
-      interventions: [
-        {
-          id: "I001",
-          interventionId: "INT001",
-          interventionName: "Physical Therapy Assessment",
-          assignedToUserId: "CURRENT_USER",
-          assignedToUserName: "You",
-          status: "Unseen",
-          statusCode: "U",
-          startDate: dateRange.start,
-          endDate: dateRange.end,
-          wardId: "W001",
-          wardName: "General Ward",
-        },
-        {
-          id: "I002",
-          interventionId: "INT002",
-          interventionName: "Nutrition Consultation",
-          assignedToUserId: "CURRENT_USER",
-          assignedToUserName: "You",
-          status: "Seen",
-          statusCode: "S",
-          outcome:
-            "Patient assessed. Diet plan created and discussed with patient.",
-          outcomeDate: getDateRange(-2).start,
-          startDate: dateRange.start,
-          endDate: dateRange.end,
-          wardId: "W001",
-          wardName: "General Ward",
-        },
-      ],
-    };
-  })(),
-  (() => {
-    const dateRange = getDateRange(-5, 10);
-    return {
-      id: "T002",
-      title: "Follow-up Consultation - Maria Garcia",
-      description: "Follow-up consultation for diabetes management",
-      patientId: "P002",
-      patientName: "Maria Garcia",
-      patientMrn: "MRN00002",
-      startDate: dateRange.start,
-      endDate: dateRange.end,
-      priority: "Medium",
-      departmentName: "Endocrinology",
-      status: "In Progress",
-      interventions: [
-        {
-          id: "I003",
-          interventionId: "INT003",
-          interventionName: "Blood Glucose Monitoring",
-          assignedToUserId: "CURRENT_USER",
-          assignedToUserName: "You",
-          status: "Attempted",
-          statusCode: "A",
-          startDate: dateRange.start,
-          endDate: dateRange.end,
-          wardId: "W002",
-          wardName: "Endocrinology Ward",
-        },
-      ],
-    };
-  })(),
-  (() => {
-    const dateRange = getDateRange(-7, 7);
-    return {
-      id: "T003",
-      title: "Physical Therapy Session - Robert Wilson",
-      description: "Post-surgery physical therapy session",
-      patientId: "P003",
-      patientName: "Robert Wilson",
-      patientMrn: "MRN00003",
-      startDate: dateRange.start,
-      endDate: dateRange.end,
-      priority: "Low",
-      departmentName: "Physical Therapy",
-      status: "Completed",
-      interventions: [
-        {
-          id: "I004",
-          interventionId: "INT004",
-          interventionName: "Mobility Training",
-          assignedToUserId: "CURRENT_USER",
-          assignedToUserName: "You",
-          status: "Seen",
-          statusCode: "S",
-          outcome:
-            "Patient completed mobility training session. Progress noted in patient record.",
-          outcomeDate: getDateRange(-2).start,
-          startDate: dateRange.start,
-          endDate: dateRange.end,
-          wardId: "W003",
-          wardName: "Orthopedic Ward",
-        },
-      ],
-    };
-  })(),
-];
 
 const statusConfig = {
   "Not Assigned": {
@@ -235,6 +103,10 @@ const statusConfig = {
     label: "Completed",
     color:
       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  },
+  Overdue: {
+    label: "Overdue",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
   },
 };
 
@@ -297,35 +169,48 @@ export default function MyTasksPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [patientFilter, setPatientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedIntervention, setSelectedIntervention] =
     useState<TaskIntervention | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskDetails, setTaskDetails] = useState<AHATaskDetails | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const [isOutcomeDialogOpen, setIsOutcomeDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [outcomeText, setOutcomeText] = useState("");
+
+  const fetchTasks = useCallback(async () => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await getMyTasks$(user.id);
+      setTasks(response.data as Task[]);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      setError("Failed to load tasks. Please try again.");
+      toast.error("Failed to load tasks. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
-    if (user) {
-      // Filter tasks to show only those with interventions assigned to current user
-      const userTasks = mockTasks.filter((task) =>
-        task.interventions.some(
-          (intervention) => intervention.assignedToUserId === "CURRENT_USER"
-        )
-      );
-      setTasks(userTasks);
-    }
-  }, [user]);
+    fetchTasks();
+  }, [fetchTasks]);
 
   // Get interventions assigned to current user
   const getUserInterventions = (): TaskIntervention[] => {
     const interventions: TaskIntervention[] = [];
     tasks.forEach((task) => {
       task.interventions.forEach((intervention) => {
-        if (intervention.assignedToUserId === "CURRENT_USER") {
+        if (user && intervention.assignedToUserId === user.id) {
           interventions.push({
             ...intervention,
             id: `${task.id}-${intervention.id}`,
@@ -338,23 +223,26 @@ export default function MyTasksPage() {
 
   const allInterventions = getUserInterventions();
 
+  // Get unique patients from tasks
+  const uniquePatients = Array.from(
+    new Map(
+      tasks.map((task) => [
+        task.patientId,
+        { id: task.patientId, name: task.patientName, mrn: task.patientMrn },
+      ])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
   // Filter tasks/interventions
   const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.interventions.some((intervention) =>
-        intervention.interventionName
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      );
+    const matchesPatient =
+      patientFilter === "all" || task.patientId === patientFilter;
     const matchesStatus =
       statusFilter === "all" || task.status === statusFilter;
     const matchesPriority =
       priorityFilter === "all" || task.priority === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    return matchesPatient && matchesStatus && matchesPriority;
   });
 
   // Get task/intervention counts
@@ -380,10 +268,29 @@ export default function MyTasksPage() {
     return today >= task.startDate && today <= task.endDate;
   };
 
-  const handleStatusChange = (
+  // Map intervention status to OutcomeStatus number
+  const getOutcomeStatusNumber = (status: InterventionStatus): number => {
+    switch (status) {
+      case "Seen":
+        return 1;
+      case "Attempted":
+        return 2;
+      case "Declined":
+        return 3;
+      case "Unseen":
+        return 4;
+      case "Handover":
+        return 5;
+      default:
+        return 4;
+    }
+  };
+
+  const handleStatusChange = async (
     taskId: string,
     interventionId: string,
-    newStatus: InterventionStatus
+    newStatus: InterventionStatus,
+    outcome?: string
   ) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -396,75 +303,31 @@ export default function MyTasksPage() {
       return;
     }
 
-    setTasks(
-      tasks.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            interventions: t.interventions.map((intervention) => {
-              if (intervention.id === interventionId) {
-                const statusConfig =
-                  interventionStatusConfig[
-                    newStatus as keyof typeof interventionStatusConfig
-                  ];
-                return {
-                  ...intervention,
-                  status: newStatus,
-                  statusCode: statusConfig.code,
-                };
-              }
-              return intervention;
-            }),
-          };
-        }
-        return t;
-      })
-    );
-    setIsStatusDialogOpen(false);
-    setSelectedIntervention(null);
-    setSelectedTask(null);
-    toast.success("Intervention status updated successfully");
-  };
+    try {
+      // Call API to update intervention status
+      const response = await api.put("/api/aha-task", {
+        taskInvId: interventionId,
+        outcomeStatus: getOutcomeStatusNumber(newStatus),
+        outcome: outcome || "",
+      });
 
-  const handleSaveOutcome = (
-    taskId: string,
-    interventionId: string,
-    outcome: string
-  ) => {
-    if (!outcome.trim()) {
-      toast.error("Outcome text is required");
-      return;
+      // Close dialog first
+      setIsStatusDialogOpen(false);
+      setSelectedIntervention(null);
+      setSelectedTask(null);
+
+      // Re-fetch tasks to get the latest data from the server
+      await fetchTasks();
+
+      toast.success("Intervention status updated successfully");
+    } catch (err) {
+      console.error("Error updating intervention status:", err);
+      toast.error("Failed to update intervention status. Please try again.");
     }
-
-    setTasks(
-      tasks.map((task) => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            interventions: task.interventions.map((intervention) => {
-              if (intervention.id === interventionId) {
-                return {
-                  ...intervention,
-                  outcome: outcome,
-                  outcomeDate: new Date().toISOString().split("T")[0],
-                };
-              }
-              return intervention;
-            }),
-          };
-        }
-        return task;
-      })
-    );
-    setOutcomeText("");
-    setIsOutcomeDialogOpen(false);
-    setSelectedIntervention(null);
-    setSelectedTask(null);
-    toast.success("Outcome saved successfully");
   };
 
   const handleNavigateToPatient = (patientId: string) => {
-    router.push(`/user/all-patients/${patientId}`);
+    router.push(`/user/my-patients/${patientId}`);
   };
 
   return (
@@ -503,15 +366,20 @@ export default function MyTasksPage() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks, patients, interventions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <Select value={patientFilter} onValueChange={setPatientFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="All Patients" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Patients</SelectItem>
+            {uniquePatients.map((patient) => (
+              <SelectItem key={patient.id} value={patient.id}>
+                {patient.name}
+                {patient.mrn && ` (${patient.mrn})`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="All Status" />
@@ -538,7 +406,22 @@ export default function MyTasksPage() {
       </div>
 
       {/* Tasks List */}
-      {filteredTasks.length === 0 ? (
+      {isLoading ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">Loading tasks...</p>
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
+            <p className="text-destructive text-lg">Error loading tasks</p>
+            <p className="text-sm text-muted-foreground mt-2">{error}</p>
+          </CardContent>
+        </Card>
+      ) : filteredTasks.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
@@ -552,11 +435,14 @@ export default function MyTasksPage() {
         <div className="space-y-4">
           {filteredTasks.map((task) => {
             const status =
-              statusConfig[task.status as keyof typeof statusConfig];
+              statusConfig[task.status as keyof typeof statusConfig] ||
+              statusConfig["Not Assigned"];
             const priority =
-              priorityConfig[task.priority as keyof typeof priorityConfig];
+              priorityConfig[task.priority as keyof typeof priorityConfig] ||
+              priorityConfig["Medium"];
             const userInterventions = task.interventions.filter(
-              (intervention) => intervention.assignedToUserId === "CURRENT_USER"
+              (intervention) =>
+                user && intervention.assignedToUserId === user.id
             );
             const isWithinDateRange = isDateInTaskRange(task);
 
@@ -575,11 +461,6 @@ export default function MyTasksPage() {
                         <Badge variant="outline" className={priority.color}>
                           {priority.label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5" />
-                          {new Date(task.startDate).toLocaleDateString()} -{" "}
-                          {new Date(task.endDate).toLocaleDateString()}
-                        </span>
                       </div>
                       <h3 className="text-xl font-bold mb-2">{task.title}</h3>
                       <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
@@ -589,24 +470,58 @@ export default function MyTasksPage() {
                         <span className="flex items-center gap-1.5">
                           <User className="h-4 w-4" />
                           <span className="font-medium">Patient:</span>{" "}
-                          {task.patientName}
-                          {task.patientMrn && (
-                            <span className="text-muted-foreground/70">
-                              ({task.patientMrn})
-                            </span>
-                          )}
+                          <button
+                            onClick={() =>
+                              handleNavigateToPatient(task.patientId)
+                            }
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {task.patientName}
+                            {task.patientMrn && (
+                              <span className="text-muted-foreground/70">
+                                {" "}
+                                ({task.patientMrn})
+                              </span>
+                            )}
+                          </button>
                         </span>
                         {task.departmentName && (
                           <span className="flex items-center gap-1.5">
-                            <span className="font-medium">Dept:</span>{" "}
+                            <span className="font-medium">Department:</span>{" "}
                             {task.departmentName}
                           </span>
                         )}
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4" />
+                          <span className="font-medium">Date Range:</span>{" "}
+                          {new Date(task.startDate).toLocaleDateString()} -{" "}
+                          {new Date(task.endDate).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                     <Dialog
                       open={isViewDialogOpen}
-                      onOpenChange={setIsViewDialogOpen}
+                      onOpenChange={async (open) => {
+                        setIsViewDialogOpen(open);
+                        if (open) {
+                          try {
+                            setSelectedTask(task);
+                            const response = await getTaskDetailsById$(task.id);
+                            setTaskDetails(response.data);
+                          } catch (err) {
+                            console.error("Error fetching task details:", err);
+                            toast.error(
+                              "Failed to load task details. Please try again."
+                            );
+                            setIsViewDialogOpen(false);
+                            setSelectedTask(null);
+                            setTaskDetails(null);
+                          }
+                        } else {
+                          setSelectedTask(null);
+                          setTaskDetails(null);
+                        }
+                      }}
                     >
                       <DialogTrigger asChild>
                         <Button
@@ -618,13 +533,19 @@ export default function MyTasksPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Task Details</DialogTitle>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:h-5 [&>button]:w-5 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button]:top-[1.625rem]">
+                        <DialogHeader className="pb-2">
+                          <DialogTitle className="text-xl font-semibold leading-tight">
+                            Task Details
+                          </DialogTitle>
                         </DialogHeader>
-                        {selectedTask && (
+                        <div className="-mx-6 mb-4">
+                          <Separator />
+                        </div>
+                        {selectedTask && taskDetails && (
                           <TaskDetailView
                             task={selectedTask}
+                            taskDetails={taskDetails}
                             onNavigateToPatient={handleNavigateToPatient}
                           />
                         )}
@@ -644,7 +565,7 @@ export default function MyTasksPage() {
                         </p>
                       ) : (
                         <div className="space-y-3">
-                          {userInterventions.map((intervention) => {
+                          {userInterventions.map((intervention, index) => {
                             const interventionStatus =
                               interventionStatusConfig[
                                 intervention.status as keyof typeof interventionStatusConfig
@@ -652,7 +573,7 @@ export default function MyTasksPage() {
 
                             return (
                               <Card
-                                key={intervention.id}
+                                key={`${task.id}-${intervention.id}-${index}`}
                                 className="border bg-card hover:shadow-sm transition-shadow"
                               >
                                 <CardContent className="p-4">
@@ -771,12 +692,14 @@ export default function MyTasksPage() {
                                                       selectedIntervention.status
                                                     }
                                                     onStatusChange={(
-                                                      newStatus
+                                                      newStatus,
+                                                      outcome
                                                     ) =>
                                                       handleStatusChange(
                                                         selectedTask.id,
                                                         selectedIntervention.id,
-                                                        newStatus
+                                                        newStatus,
+                                                        outcome
                                                       )
                                                     }
                                                     onCancel={() => {
@@ -787,93 +710,6 @@ export default function MyTasksPage() {
                                                         null
                                                       );
                                                       setSelectedTask(null);
-                                                    }}
-                                                  />
-                                                )}
-                                            </DialogContent>
-                                          </Dialog>
-
-                                          <Dialog
-                                            open={
-                                              isOutcomeDialogOpen &&
-                                              selectedIntervention?.id ===
-                                                intervention.id &&
-                                              selectedTask?.id === task.id
-                                            }
-                                            onOpenChange={(open) => {
-                                              setIsOutcomeDialogOpen(open);
-                                              if (open) {
-                                                setSelectedIntervention(
-                                                  intervention
-                                                );
-                                                setSelectedTask(task);
-                                                setOutcomeText(
-                                                  intervention.outcome || ""
-                                                );
-                                              } else {
-                                                setSelectedIntervention(null);
-                                                setSelectedTask(null);
-                                                setOutcomeText("");
-                                              }
-                                            }}
-                                          >
-                                            <DialogTrigger asChild>
-                                              <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={() => {
-                                                  setSelectedIntervention(
-                                                    intervention
-                                                  );
-                                                  setSelectedTask(task);
-                                                  setOutcomeText(
-                                                    intervention.outcome || ""
-                                                  );
-                                                  setIsOutcomeDialogOpen(true);
-                                                }}
-                                                className="text-xs gap-1.5 whitespace-nowrap"
-                                              >
-                                                <FileText className="h-3.5 w-3.5" />
-                                                {intervention.outcome
-                                                  ? "Edit"
-                                                  : "Add"}{" "}
-                                                Outcome
-                                              </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="max-w-2xl">
-                                              <DialogHeader>
-                                                <DialogTitle>
-                                                  {intervention.outcome
-                                                    ? "Edit Outcome"
-                                                    : "Add Outcome"}
-                                                </DialogTitle>
-                                              </DialogHeader>
-                                              {selectedIntervention &&
-                                                selectedTask && (
-                                                  <OutcomeForm
-                                                    intervention={
-                                                      selectedIntervention
-                                                    }
-                                                    initialOutcome={
-                                                      selectedIntervention.outcome ||
-                                                      ""
-                                                    }
-                                                    onSave={(outcome) =>
-                                                      handleSaveOutcome(
-                                                        selectedTask.id,
-                                                        selectedIntervention.id,
-                                                        outcome
-                                                      )
-                                                    }
-                                                    onCancel={() => {
-                                                      setIsOutcomeDialogOpen(
-                                                        false
-                                                      );
-                                                      setSelectedIntervention(
-                                                        null
-                                                      );
-                                                      setSelectedTask(null);
-                                                      setOutcomeText("");
                                                     }}
                                                   />
                                                 )}
@@ -920,19 +756,24 @@ function UpdateStatusForm({
   intervention: TaskIntervention;
   task: Task;
   currentStatus: InterventionStatus;
-  onStatusChange: (status: InterventionStatus) => void;
+  onStatusChange: (status: InterventionStatus, outcome?: string) => void;
   onCancel: () => void;
 }) {
   const [selectedStatus, setSelectedStatus] =
     useState<InterventionStatus>(currentStatus);
+  const [outcome, setOutcome] = useState(intervention.outcome || "");
 
   useEffect(() => {
     setSelectedStatus(currentStatus);
-  }, [currentStatus]);
+    setOutcome(intervention.outcome || "");
+  }, [currentStatus, intervention.outcome]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onStatusChange(selectedStatus);
+    onStatusChange(
+      selectedStatus,
+      selectedStatus === "Handover" ? outcome : undefined
+    );
   };
 
   return (
@@ -989,6 +830,24 @@ function UpdateStatusForm({
           </Select>
         </div>
       </div>
+      {selectedStatus === "Handover" && (
+        <div>
+          <Label htmlFor="outcome">Outcome *</Label>
+          <Textarea
+            id="outcome"
+            value={outcome}
+            onChange={(e) => setOutcome(e.target.value)}
+            placeholder="Enter the outcome of this intervention..."
+            required
+            rows={4}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Describe what happened during this intervention, results,
+            observations, and any follow-up needed.
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
         <Info className="h-4 w-4 text-muted-foreground" />
         <p className="text-xs text-muted-foreground">
@@ -997,69 +856,12 @@ function UpdateStatusForm({
         </p>
       </div>
       <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
+        <Button
+          type="submit"
+          className="flex-1"
+          disabled={selectedStatus === "Handover" && !outcome.trim()}
+        >
           Update Status
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-// Outcome Form Component
-function OutcomeForm({
-  intervention,
-  initialOutcome,
-  onSave,
-  onCancel,
-}: {
-  intervention: TaskIntervention;
-  initialOutcome: string;
-  onSave: (outcome: string) => void;
-  onCancel: () => void;
-}) {
-  const [outcome, setOutcome] = useState(initialOutcome);
-
-  useEffect(() => {
-    setOutcome(initialOutcome);
-  }, [initialOutcome]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!outcome.trim()) {
-      return;
-    }
-    onSave(outcome);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label>Intervention</Label>
-        <p className="text-sm font-normal mt-1">
-          {intervention.interventionName}
-        </p>
-      </div>
-      <div>
-        <Label htmlFor="outcome">Outcome *</Label>
-        <Textarea
-          id="outcome"
-          value={outcome}
-          onChange={(e) => setOutcome(e.target.value)}
-          placeholder="Enter the outcome of this intervention..."
-          required
-          rows={6}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Describe what happened during this intervention, results,
-          observations, and any follow-up needed.
-        </p>
-      </div>
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {initialOutcome ? "Update Outcome" : "Save Outcome"}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
@@ -1072,16 +874,18 @@ function OutcomeForm({
 // Task Detail View Component
 function TaskDetailView({
   task,
+  taskDetails,
   onNavigateToPatient,
 }: {
   task: Task;
+  taskDetails: AHATaskDetails;
   onNavigateToPatient: (patientId: string) => void;
 }) {
   const status = statusConfig[task.status as keyof typeof statusConfig];
-  const priority = priorityConfig[task.priority as keyof typeof priorityConfig];
-  const userInterventions = task.interventions.filter(
-    (intervention) => intervention.assignedToUserId === "CURRENT_USER"
-  );
+  const priority =
+    priorityConfig[taskDetails.priority as keyof typeof priorityConfig];
+  // All interventions in task are already assigned to the current user (from my-tasks endpoint)
+  const userInterventions = task.interventions;
 
   return (
     <div className="space-y-6">
@@ -1110,48 +914,88 @@ function TaskDetailView({
 
       <div>
         <Label className="text-sm font-medium text-muted-foreground">
-          Task
+          Title
         </Label>
-        <p className="text-base font-semibold mt-1">{task.title}</p>
+        <p className="text-sm mt-1">{taskDetails.title}</p>
       </div>
 
-      <div>
-        <Label className="text-sm font-medium text-muted-foreground">
-          Description
-        </Label>
-        <p className="text-sm mt-1">{task.description}</p>
-      </div>
+      {taskDetails.description && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Description
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.description}
+          </p>
+        </div>
+      )}
+
+      {taskDetails.diagnosis && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Diagnosis
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.diagnosis}
+          </p>
+        </div>
+      )}
+
+      {taskDetails.goals && (
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Goals
+          </Label>
+          <p className="text-sm mt-1 whitespace-pre-wrap">
+            {taskDetails.goals}
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
             Patient
           </Label>
-          <p className="text-base mt-1">
-            {task.patientName}
-            {task.patientMrn && (
-              <span className="text-sm text-muted-foreground ml-2">
-                ({task.patientMrn})
-              </span>
-            )}
-          </p>
+          <p className="text-sm mt-1">{taskDetails.patientName}</p>
         </div>
         <div>
           <Label className="text-sm font-medium text-muted-foreground">
             Department
           </Label>
-          <p className="text-sm mt-1">{task.departmentName || "—"}</p>
+          <p className="text-sm mt-1">{taskDetails.departmentName || "—"}</p>
         </div>
       </div>
 
-      <div>
-        <Label className="text-sm font-medium text-muted-foreground">
-          Date Range
-        </Label>
-        <p className="text-sm mt-1">
-          {new Date(task.startDate).toLocaleDateString()} -{" "}
-          {new Date(task.endDate).toLocaleDateString()}
-        </p>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Start Date
+          </Label>
+          <p className="text-sm mt-1">
+            {taskDetails.startDate
+              ? new Date(taskDetails.startDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
+          </p>
+        </div>
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            End Date
+          </Label>
+          <p className="text-sm mt-1">
+            {taskDetails.endDate
+              ? new Date(taskDetails.endDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "—"}
+          </p>
+        </div>
       </div>
 
       {userInterventions.length > 0 && (
@@ -1160,13 +1004,16 @@ function TaskDetailView({
             Your Interventions
           </Label>
           <div className="space-y-3">
-            {userInterventions.map((intervention) => {
+            {userInterventions.map((intervention, index) => {
               const interventionStatus =
                 interventionStatusConfig[
                   intervention.status as keyof typeof interventionStatusConfig
                 ];
               return (
-                <div key={intervention.id} className="border rounded-lg p-4">
+                <div
+                  key={`${task.id}-${intervention.id}-${index}`}
+                  className="border rounded-lg p-4"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-medium">
                       {intervention.interventionName}

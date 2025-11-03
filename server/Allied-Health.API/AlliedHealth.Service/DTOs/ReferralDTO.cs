@@ -3,14 +3,20 @@
     public class GetReferralDTO
     {
         public Guid Id { get; set; }
-        public required string Title { get; set; }
+        public string Type { get; set; }
         public int PatientId { get; set; }
         public string PatientName { get; set; }
-        public Guid DepartmentId { get; set; }
-        public string DepartmentName { get; set; }
+        public Guid OriginDeptId { get; set; }
+        public string OriginDeptName { get; set; }
+        public Guid DestinationDeptId { get; set; }
+        public string DestinationDeptName { get; set; }
+        public Guid TherapistId { get; set; }
+        public string TherapistName { get; set; }
         public int Priority { get; set; }
-        public DateOnly? StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
+        public DateOnly? ReferralDate { get; set; }
+        public string Diagnosis { get; set; }
+        public string Goals { get; set; }
+        public string Description { get; set; }
         public DateTime? LastUpdated { get; set; }
         public bool Hidden { get; set; }
     }
@@ -19,18 +25,14 @@
     {
         public Guid Id { get; set; }
         public int PatientId { get; set; }
-        public Guid DepartmentId { get; set; }
-        public required string Title { get; set; }
+        public Guid OriginDeptId { get; set; }
+        public Guid DestinationDeptId { get; set; }
         public int Priority { get; set; }
-        public DateOnly? StartDate { get; set; }
-        public DateOnly? EndDate { get; set; }
+        public DateOnly? ReferralDate { get; set; }
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string Description { get; set; }
-        public DateTime? LastUpdated { get; set; }
-        public bool Hidden { get; set; }
-
-        public List<TaskInterventionDTO> Interventions { get; set; } = new List<TaskInterventionDTO>();
+        public List<Guid> Interventions { get; set; } = new List<Guid>();
     }
 
     
@@ -60,24 +62,14 @@
 
         // Task Details
         public int PatientId { get; set; }
-        public Guid DepartmentId { get; set; }
-        public string Title { get; set; }
+        public Guid OriginDeptId { get; set; }
+        public Guid DestinationDeptId { get; set; }
+        public Guid TherapistId { get; set; }
         public int Priority { get; set; }
-        public DateOnly StartDate { get; set; }
-        public DateOnly EndDate { get; set; }
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string? Description { get; set; }
 
-        public List<TaskInterventionDTO> Interventions { get; set; }
-    }
-
-    public class ReferralInterventionDTO
-    {
-        public Guid Id { get; set; }
-        public Guid AhaId { get; set; }
-        public Guid WardId { get; set; }
-        public DateOnly Start { get; set; }
-        public DateOnly End { get; set; }
+        public List<Guid> Interventions { get; set; } = new List<Guid>();
     }
 }

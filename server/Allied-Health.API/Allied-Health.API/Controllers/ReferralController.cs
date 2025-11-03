@@ -10,12 +10,12 @@ namespace Allied_Health.API.Controllers;
 [Route("api/[controller]")]
 public class ReferralController : ControllerBase
 {
-    private readonly ITaskService _taskService;
+    private readonly IReferralService _refService;
     private readonly IUtilityService _utilityService;
 
-    public ReferralController(ITaskService taskService, IUtilityService utilityService)
+    public ReferralController(IReferralService refService, IUtilityService utilityService)
     {
-        _taskService = taskService;
+        _refService = refService;
         _utilityService = utilityService;
     }
 
@@ -23,42 +23,42 @@ public class ReferralController : ControllerBase
     [EnableQuery]
     public async Task<IActionResult> GetAll()
     {
-        var response = _taskService.GetAll();
+        var response = _refService.GetAll();
         return Ok(response);
     }
 
     [HttpGet("summary")] 
     public async Task<IActionResult> GetSummary()
     {
-        var response = await _taskService.GetSummary();
+        var response = await _refService.GetSummary();
         return Ok(response);
     }
 
     [HttpGet("{id}")] 
-    public async Task<IActionResult> GetTask(Guid id)
+    public async Task<IActionResult> GetReferral(Guid id)
     {
-        var response = await _taskService.GetTask(id);
+        var response = await _refService.GetReferral(id);
         return Ok(response);
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> CreateTask([FromBody] AddUpdateTaskDTO request)
+    public async Task<IActionResult> CreateReferral([FromBody] AddUpdateReferralDTO request)
     {
-        var response = await _taskService.CreateTask(request);
+        var response = await _refService.CreateReferral(request);
 
         if (response != null)
-            return BadRequest(EMessages.TaskExistAlready);
+            return BadRequest(EMessages.ReferralExistAlready);
 
         return Ok(response);
     } 
 
     [HttpPut("")]
-    public async Task<IActionResult> UpdateTask([FromBody] AddUpdateTaskDTO request)
+    public async Task<IActionResult> UpdateReferral([FromBody] AddUpdateReferralDTO request)
     {
-        var response = await _taskService.UpdateTask(request);
+        var response = await _refService.UpdateReferral(request);
 
         if (response != null)
-            return BadRequest(EMessages.TaskExistAlready);
+            return BadRequest(EMessages.ReferralExistAlready);
 
         return Ok(response);
     }
@@ -66,11 +66,11 @@ public class ReferralController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> ToggleHide(Guid id)
     {
-        var response = await _taskService.ToggleHide(id);
+        var response = await _refService.ToggleHide(id);
 
 
         if (response != null)
-            return BadRequest(EMessages.TaskNotExists);
+            return BadRequest(EMessages.ReferralNotExists);
 
         return Ok(response);
     }
