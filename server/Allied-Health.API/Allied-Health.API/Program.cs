@@ -102,15 +102,24 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 
 // Add CORS service
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+//var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 
-builder.Services.AddCors(options =>
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll", policy =>
+//        policy.WithOrigins(allowedOrigins)
+//              .AllowAnyHeader()
+//              .AllowAnyMethod());
+//});
+
+builder.Services.AddCors(o =>
 {
-    options.AddPolicy("AllowAll", policy =>
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod());
+    o.AddDefaultPolicy(p => p
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
 });
+
 
 var app = builder.Build();
 
@@ -130,7 +139,8 @@ else
     app.UseHttpsRedirection();
 }
 
-app.UseCors("AllowAll");
+//app.UseCors("AllowAll");
+app.UseCors();
 
 app.UseRouting();
 
@@ -139,5 +149,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/health", () => Results.Ok("OK"));
+
 
 app.Run();
