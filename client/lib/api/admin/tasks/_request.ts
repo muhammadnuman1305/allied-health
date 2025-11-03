@@ -327,13 +327,27 @@ export const updateStatus$ = async (id: string, status: Task["status"], outcomeN
   try {
     // First get the current task
     const currentTask = await getById$(id);
+    const task = currentTask.data;
+    
+    // Ensure all required TaskFormData fields have values
     const updatedTask: TaskFormData = {
-      ...currentTask.data,
+      id: task.id,
+      patientId: task.patientId,
+      taskType: task.taskType || "",
+      title: task.title,
+      diagnosis: task.diagnosis,
+      goals: task.goals,
+      clinicalInstructions: task.clinicalInstructions || task.description || "",
+      priority: task.priority,
+      dueDate: task.dueDate || task.endDate || new Date().toISOString().split("T")[0],
+      dueTime: task.dueTime || "00:00",
+      startDate: task.startDate,
+      endDate: task.endDate,
+      assignedToDepartment: task.assignedToDepartment || task.departmentName,
+      subTasks: task.subTasks || [],
       status,
       ...(outcomeNotes && { outcomeNotes }),
-      ...(status === "Completed" && {
-        completedDate: new Date().toISOString().split("T")[0],
-      })
+      refId: task.linkedReferral ? undefined : null, // Set refId if needed
     };
     
     // Update using PUT endpoint

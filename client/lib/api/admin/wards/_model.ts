@@ -46,7 +46,7 @@ export interface WardSummary {
 // Ward location types
 export type WardLocationType = "Ground Floor" | "First Floor" | "Second Floor" | "Third Floor" | "ICU" | "Emergency" | "Surgery" | "Rehabilitation" | "Other";
 
-export const WARD_LOCATIONS: WardLocationType[] = [
+export const WARD_LOCATIONS: readonly WardLocationType[] = [
   "Ground Floor",
   "First Floor", 
   "Second Floor",
