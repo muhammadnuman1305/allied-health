@@ -5,12 +5,14 @@ A comprehensive healthcare management system built with Next.js, TypeScript, and
 ## Features
 
 ### 🏥 **Dashboard Overview**
+
 - Personalized dashboard showing all current tasks and activities
 - Quick access to key healthcare management features
 - Real-time overview of pending tasks, patient status, and referrals
 - Recommended actions based on current workload
 
 ### 📋 **Task Management System**
+
 - **Task Filtering**: Filter by status (Not Assigned, Pending, Assigned, In Progress, Completed)
 - **CRUD Operations**: Create, Read, Update, Delete tasks assigned to self
 - **Priority Management**: Set and manage task priorities (Low, Medium, High)
@@ -18,6 +20,7 @@ A comprehensive healthcare management system built with Next.js, TypeScript, and
 - **Search & Filter**: Advanced search and filtering capabilities
 
 ### 👥 **Patient Management**
+
 - **Patient List Access**: View and browse through assigned patients
 - **Patient History Access**: View patient's referral chain and previous assignments
 - **Patient Details**: Comprehensive patient information including medical history
@@ -25,6 +28,7 @@ A comprehensive healthcare management system built with Next.js, TypeScript, and
 - **Department Assignment**: Track patient assignments across departments
 
 ### 🔄 **Referral Management**
+
 - **Referral Creation**: Create referrals between departments with contextual information
 - **Status Tracking**: Monitor referral status (Pending, Accepted, Completed, Rejected)
 - **Department Communication**: Seamless communication between healthcare departments
@@ -32,6 +36,7 @@ A comprehensive healthcare management system built with Next.js, TypeScript, and
 - **Feedback Integration**: Add contextual feedback for inter-department communication
 
 ### 💬 **Feedback Module**
+
 - **Centralized Feedback**: Add and view notes/feedback per task, patient, or referral
 - **Tagging System**: Organize feedback with custom tags
 - **Privacy Controls**: Create private notes visible only to the author
@@ -49,23 +54,27 @@ A comprehensive healthcare management system built with Next.js, TypeScript, and
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+
+- Node.js 18+
 - npm or yarn
 
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd allied-health-hms
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -77,7 +86,7 @@ npm run dev
 ```
 client/
 ├── app/
-│   ├── (user)/
+│   ├── user/
 │   │   ├── dashboard/          # Main dashboard
 │   │   ├── tasks/             # Task management
 │   │   ├── patients/          # Patient management
@@ -85,12 +94,10 @@ client/
 │   │   ├── feedback/          # Feedback module
 │   │   └── ...                # Other user features
 │   ├── (auth)/                # Authentication pages
-│   ├── (landing-page)/        # Landing page
 │   └── admin/                 # Admin features
 ├── components/
 │   ├── ui/                    # Reusable UI components
 │   ├── sidebar/               # Navigation sidebar
-│   └── landing-page/          # Landing page components
 ├── hooks/                     # Custom React hooks
 ├── lib/                       # Utility functions
 └── middleware.ts              # Next.js middleware
@@ -110,6 +117,7 @@ The task management system allows healthcare professionals to:
 - **Delete Tasks**: Remove completed or cancelled tasks
 
 **Key Components:**
+
 - Task overview cards showing counts by status
 - Advanced filtering and search capabilities
 - Task detail views with full information
@@ -126,6 +134,7 @@ The patient management system provides:
 - **Quick Actions**: Fast access to patient-related tasks and referrals
 
 **Key Components:**
+
 - Patient overview cards with status counts
 - Detailed patient history views
 - Referral history tracking
@@ -142,6 +151,7 @@ The referral system enables:
 - **Feedback Loop**: Add feedback throughout the referral process
 
 **Key Components:**
+
 - Referral creation forms with department selection
 - Status tracking with visual indicators
 - Priority management
@@ -158,6 +168,7 @@ The feedback system offers:
 - **Search & Filter**: Find specific feedback quickly
 
 **Key Components:**
+
 - Feedback creation with type selection
 - Tag management system
 - Privacy controls
@@ -200,6 +211,7 @@ The feedback system offers:
 ## Data Structure
 
 ### Task Interface
+
 ```typescript
 interface Task {
   id: string;
@@ -218,6 +230,7 @@ interface Task {
 ```
 
 ### Patient Interface
+
 ```typescript
 interface Patient {
   id: string;
@@ -239,6 +252,7 @@ interface Patient {
 ```
 
 ### Referral Interface
+
 ```typescript
 interface Referral {
   id: string;
