@@ -5,7 +5,6 @@ import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -31,16 +30,6 @@ import {
 import { StatsCard } from "@/components/ui/stats-card";
 import { getById$ } from "@/lib/api/admin/wards/_request";
 import { Ward, getWardLocationDisplayName } from "@/lib/api/admin/wards/_model";
-import {
-  getMatrix$,
-  addMapping$,
-  removeMapping$,
-  validateRemoval$,
-} from "@/lib/api/admin/coverage/_request";
-import {
-  CoverageMatrix,
-  CoverageValidation,
-} from "@/lib/api/admin/coverage/_model";
 import { toast } from "@/hooks/use-toast";
 import WardFormContent from "./ward-form-content";
 
@@ -52,52 +41,9 @@ export default function WardDetailPage() {
   const [ward, setWard] = useState<Ward | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [coverageMatrix, setCoverageMatrix] = useState<CoverageMatrix | null>(
-    null
-  );
-  const [coverageLoading, setCoverageLoading] = useState(false);
-  const [validationDialog, setValidationDialog] = useState<{
-    isOpen: boolean;
-    departmentId: string;
-    wardId: string;
-    validation: CoverageValidation | null;
-  }>({
-    isOpen: false,
-    departmentId: "",
-    wardId: "",
-    validation: null,
-  });
 
   // Ref to prevent duplicate API calls in React Strict Mode
-  const hasFetchedCoverageRef = useRef(false);
   const hasFetchedWardRef = useRef<string | null>(null);
-
-  // Load coverage data
-  useEffect(() => {
-    if (hasFetchedCoverageRef.current) {
-      return;
-    }
-    hasFetchedCoverageRef.current = true;
-
-    const fetchCoverageData = async () => {
-      try {
-        setCoverageLoading(true);
-        const response = await getMatrix$();
-        setCoverageMatrix(response.data);
-      } catch (error) {
-        console.error("Error fetching coverage data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load coverage data",
-          variant: "destructive",
-        });
-      } finally {
-        setCoverageLoading(false);
-      }
-    };
-
-    fetchCoverageData();
-  }, []);
 
   useEffect(() => {
     if (wardId === "0") {
@@ -128,111 +74,6 @@ export default function WardDetailPage() {
 
     fetchWard();
   }, [wardId]);
-
-  // Coverage management functions
-  const isCoverageActive = (departmentId: string) => {
-    if (!coverageMatrix || wardId === "0") return false;
-    return coverageMatrix.mappings.some(
-      (mapping) =>
-        mapping.departmentId === departmentId && mapping.wardId === wardId
-    );
-  };
-
-  const handleCoverageToggle = async (departmentId: string) => {
-    if (wardId === "0") return; // Can't manage coverage for new wards
-
-    const isActive = isCoverageActive(departmentId);
-
-    if (isActive) {
-      // Validate removal
-      try {
-        const validation = await validateRemoval$(departmentId, wardId);
-
-        if (!validation.data.canRemove) {
-          setValidationDialog({
-            isOpen: true,
-            departmentId,
-            wardId,
-            validation: validation.data,
-          });
-          return;
-        }
-
-        // Remove coverage
-        await removeMapping$(departmentId, wardId);
-
-        // Update local state
-        setCoverageMatrix((prev) =>
-          prev
-            ? {
-                ...prev,
-                mappings: prev.mappings.filter(
-                  (mapping) =>
-                    !(
-                      mapping.departmentId === departmentId &&
-                      mapping.wardId === wardId
-                    )
-                ),
-              }
-            : null
-        );
-
-        toast({
-          title: "Success",
-          description: "Coverage removed successfully",
-        });
-      } catch (error) {
-        console.error("Error removing coverage:", error);
-        toast({
-          title: "Error",
-          description: "Failed to remove coverage",
-          variant: "destructive",
-        });
-      }
-    } else {
-      // Add coverage
-      try {
-        await addMapping$({ departmentId, wardId });
-
-        // Update local state
-        setCoverageMatrix((prev) =>
-          prev
-            ? {
-                ...prev,
-                mappings: [
-                  ...prev.mappings,
-                  {
-                    id: `${departmentId}-${wardId}`,
-                    departmentId,
-                    departmentName:
-                      coverageMatrix?.departments.find(
-                        (d) => d.id === departmentId
-                      )?.name || "",
-                    wardId,
-                    wardName: ward?.name || "",
-                    isDefault: false,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  },
-                ],
-              }
-            : null
-        );
-
-        toast({
-          title: "Success",
-          description: "Coverage added successfully",
-        });
-      } catch (error) {
-        console.error("Error adding coverage:", error);
-        toast({
-          title: "Error",
-          description: "Failed to add coverage",
-          variant: "destructive",
-        });
-      }
-    }
-  };
 
   if (loading) {
     return (
@@ -488,49 +329,6 @@ export default function WardDetailPage() {
           </TabsContent>
         </Tabs>
       )}
-
-      {/* Validation Dialog */}
-      <AlertDialog
-        open={validationDialog.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setValidationDialog({
-              isOpen: false,
-              departmentId: "",
-              wardId: "",
-              validation: null,
-            });
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Cannot Remove Coverage
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {validationDialog.validation?.reason ||
-                "This coverage cannot be removed due to existing dependencies."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setValidationDialog({
-                  isOpen: false,
-                  departmentId: "",
-                  wardId: "",
-                  validation: null,
-                });
-              }}
-            >
-              Understood
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

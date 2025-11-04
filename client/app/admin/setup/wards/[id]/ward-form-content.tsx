@@ -23,16 +23,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -48,17 +38,8 @@ import {
   WardFormData,
   DepartmentOption,
 } from "@/lib/api/admin/wards/_model";
-import {
-  getMatrix$,
-  addMapping$,
-  removeMapping$,
-  validateRemoval$,
-} from "@/lib/api/admin/coverage/_request";
-import {
-  CoverageMatrix,
-  CoverageValidation,
-} from "@/lib/api/admin/coverage/_model";
-import { Building2, Plus, Minus, AlertTriangle } from "lucide-react";
+// Coverage API imports removed - endpoint not available
+import { Building2, Plus, Minus } from "lucide-react";
 
 // Form validation schema
 const wardFormSchema = z.object({
@@ -96,21 +77,6 @@ export default function WardFormContent({
   const [initialLoading, setInitialLoading] = useState(
     isEdit && wardId !== "0"
   );
-  const [coverageMatrix, setCoverageMatrix] = useState<CoverageMatrix | null>(
-    null
-  );
-  const [coverageLoading, setCoverageLoading] = useState(false);
-  const [validationDialog, setValidationDialog] = useState<{
-    isOpen: boolean;
-    departmentId: string;
-    wardId: string;
-    validation: CoverageValidation | null;
-  }>({
-    isOpen: false,
-    departmentId: "",
-    wardId: "",
-    validation: null,
-  });
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [departmentOptions, setDepartmentOptions] = useState<
     DepartmentOption[]
@@ -119,7 +85,6 @@ export default function WardFormContent({
     useState(true);
 
   // Refs to prevent duplicate API calls in React Strict Mode
-  const hasFetchedCoverageRef = useRef(false);
   const hasFetchedWardRef = useRef<string | null>(null);
   const hasFetchedDepartmentsRef = useRef(false);
 
@@ -136,32 +101,7 @@ export default function WardFormContent({
     },
   });
 
-  // Load coverage data
-  useEffect(() => {
-    if (hasFetchedCoverageRef.current) {
-      return;
-    }
-    hasFetchedCoverageRef.current = true;
-
-    const fetchCoverageData = async () => {
-      try {
-        setCoverageLoading(true);
-        const response = await getMatrix$();
-        setCoverageMatrix(response.data);
-      } catch (error) {
-        console.error("Error fetching coverage data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load coverage data",
-          variant: "destructive",
-        });
-      } finally {
-        setCoverageLoading(false);
-      }
-    };
-
-    fetchCoverageData();
-  }, []);
+  // Coverage API endpoint not available - working with local state only
 
   // Load ward data for editing
   useEffect(() => {
@@ -274,145 +214,28 @@ export default function WardFormContent({
     fetchDepartmentOptions();
   }, []);
 
-  // Coverage management functions
+  // Coverage management functions - working with local state only (API endpoint not available)
   const isCoverageActive = (departmentId: string) => {
-    // For new wards or when editing, check local selection state first
-    if (selectedDepartments.length > 0) {
-      return selectedDepartments.includes(departmentId);
-    }
-    if (wardId === "0") {
-      return false;
-    }
-    // Fallback to coverage matrix if available
-    if (!coverageMatrix) return false;
-    return coverageMatrix.mappings.some(
-      (mapping) =>
-        mapping.departmentId === departmentId && mapping.wardId === wardId
-    );
+    return selectedDepartments.includes(departmentId);
   };
 
-  const handleCoverageToggle = async (departmentId: string) => {
+  const handleCoverageToggle = (departmentId: string) => {
     const isActive = isCoverageActive(departmentId);
 
-    if (wardId === "0") {
-      // For new wards, just toggle local selection state
-      if (isActive) {
-        setSelectedDepartments((prev) =>
-          prev.filter((id) => id !== departmentId)
-        );
-      } else {
-        setSelectedDepartments((prev) => {
-          // Prevent duplicates by checking if departmentId already exists
-          if (prev.includes(departmentId)) {
-            return prev;
-          }
-          return [...prev, departmentId];
-        });
-      }
-      return;
-    }
-
-    // For existing wards, handle API calls
     if (isActive) {
-      // Validate removal
-      try {
-        const validation = await validateRemoval$(departmentId, wardId);
-
-        if (!validation.data.canRemove) {
-          setValidationDialog({
-            isOpen: true,
-            departmentId,
-            wardId,
-            validation: validation.data,
-          });
-          return;
-        }
-
-        // Remove coverage
-        await removeMapping$(departmentId, wardId);
-
-        // Update local state
-        setCoverageMatrix((prev) =>
-          prev
-            ? {
-                ...prev,
-                mappings: prev.mappings.filter(
-                  (mapping) =>
-                    !(
-                      mapping.departmentId === departmentId &&
-                      mapping.wardId === wardId
-                    )
-                ),
-              }
-            : null
-        );
-
-        // Update selectedDepartments to keep in sync
-        setSelectedDepartments((prev) =>
-          prev.filter((id) => id !== departmentId)
-        );
-
-        toast({
-          title: "Success",
-          description: "Coverage removed successfully",
-        });
-      } catch (error) {
-        console.error("Error removing coverage:", error);
-        toast({
-          title: "Error",
-          description: "Failed to remove coverage",
-          variant: "destructive",
-        });
-      }
+      // Remove from selection
+      setSelectedDepartments((prev) =>
+        prev.filter((id) => id !== departmentId)
+      );
     } else {
-      // Add coverage
-      try {
-        await addMapping$({ departmentId, wardId });
-
-        // Update local state
-        setCoverageMatrix((prev) =>
-          prev
-            ? {
-                ...prev,
-                mappings: [
-                  ...prev.mappings,
-                  {
-                    id: `${departmentId}-${wardId}`,
-                    departmentId,
-                    departmentName:
-                      departmentOptions.find((d) => d.id === departmentId)
-                        ?.name || "",
-                    wardId,
-                    wardName: ward?.name || "",
-                    isDefault: false,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  },
-                ],
-              }
-            : null
-        );
-
-        // Update selectedDepartments to keep in sync
-        setSelectedDepartments((prev) => {
-          if (prev.includes(departmentId)) {
-            return prev;
-          }
-          return [...prev, departmentId];
-        });
-
-        toast({
-          title: "Success",
-          description: "Coverage added successfully",
-        });
-      } catch (error) {
-        console.error("Error adding coverage:", error);
-        toast({
-          title: "Error",
-          description: "Failed to add coverage",
-          variant: "destructive",
-        });
-      }
+      // Add to selection
+      setSelectedDepartments((prev) => {
+        // Prevent duplicates
+        if (prev.includes(departmentId)) {
+          return prev;
+        }
+        return [...prev, departmentId];
+      });
     }
   };
 
@@ -620,12 +443,7 @@ export default function WardFormContent({
                       Coverage Departments
                     </Label>
                     <Badge variant="outline" className="text-xs">
-                      {selectedDepartments.length > 0
-                        ? selectedDepartments.length
-                        : coverageMatrix?.mappings.filter(
-                            (m) => m.wardId === wardId
-                          ).length || 0}{" "}
-                      assigned
+                      {selectedDepartments.length} assigned
                     </Badge>
                   </div>
 
@@ -648,15 +466,21 @@ export default function WardFormContent({
                           return (
                             <div
                               key={dept.id}
-                              className={`flex items-center justify-between p-3 rounded-lg border ${
+                              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                                 isCovered
-                                  ? "bg-green-50 border-green-200"
-                                  : "hover:bg-muted/50"
+                                  ? "bg-primary/10 border-primary/20 dark:bg-muted dark:border-border"
+                                  : "bg-card border-border hover:bg-muted/50"
                               }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div>
-                                  <div className="font-medium text-sm">
+                                  <div
+                                    className={`font-medium text-sm ${
+                                      isCovered
+                                        ? "text-primary dark:text-foreground"
+                                        : "text-foreground"
+                                    }`}
+                                  >
                                     {dept.name}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
@@ -703,49 +527,6 @@ export default function WardFormContent({
           </div>
         </form>
       </Form>
-
-      {/* Validation Dialog */}
-      <AlertDialog
-        open={validationDialog.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setValidationDialog({
-              isOpen: false,
-              departmentId: "",
-              wardId: "",
-              validation: null,
-            });
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Cannot Remove Coverage
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {validationDialog.validation?.reason ||
-                "This coverage cannot be removed due to existing dependencies."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setValidationDialog({
-                  isOpen: false,
-                  departmentId: "",
-                  wardId: "",
-                  validation: null,
-                });
-              }}
-            >
-              Understood
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
