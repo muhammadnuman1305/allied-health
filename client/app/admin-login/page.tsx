@@ -19,6 +19,7 @@ import { login$ } from "../../lib/api/auth/_request";
 import { useToast } from "@/hooks/use-toast";
 import { LoginPayload } from "@/lib/api/auth/_model";
 import { getUser, redirectBasedOnRole } from "@/lib/auth-utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -109,25 +110,39 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-red-50 to-background p-4">
-      <Card className="w-full max-w-md shadow-lg border-red-200">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50/50 via-background to-background dark:from-background dark:via-background dark:to-red-950/10 p-4 relative">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Theme toggle - top right */}
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
+
+      <Card className="w-full max-w-md shadow-xl dark:shadow-2xl border-red-200 dark:border-red-900/30 dark:bg-[#171717] relative z-0">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-red-100 rounded-full">
-              <Shield className="h-8 w-8 text-red-600" />
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+              <Shield className="h-8 w-8 text-red-600 dark:text-red-400" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center text-red-900">
+          <CardTitle className="text-2xl font-bold text-center text-red-900 dark:text-red-100">
             Admin Access
           </CardTitle>
-          <CardDescription className="text-center text-red-700">
+          <CardDescription className="text-center text-red-700 dark:text-red-300">
             Enter your admin credentials to access the dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-red-900">
+              <Label
+                htmlFor="username"
+                className="text-red-900 dark:text-red-100"
+              >
                 Username
               </Label>
               <Input
@@ -137,17 +152,20 @@ export default function AdminLoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="border-red-200 focus:border-red-500"
+                className="border-red-200 dark:border-red-900/50 focus:border-red-500 dark:focus:border-red-400 dark:bg-muted/50"
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-red-900">
+                <Label
+                  htmlFor="password"
+                  className="text-red-900 dark:text-red-100"
+                >
                   Password
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-red-600 hover:underline"
+                  className="text-sm text-red-600 dark:text-red-400 hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -158,12 +176,12 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-red-200 focus:border-red-500"
+                className="border-red-200 dark:border-red-900/50 focus:border-red-500 dark:focus:border-red-400 dark:bg-muted/50"
               />
             </div>
             <Button
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700"
+              className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -181,11 +199,11 @@ export default function AdminLoginPage() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-center text-red-700">
+          <div className="text-sm text-center text-red-700 dark:text-red-300">
             Need user access?{" "}
             <Link
               href="/login"
-              className="text-red-600 hover:underline font-medium"
+              className="text-red-600 dark:text-red-400 hover:underline font-medium"
             >
               User Login
             </Link>
