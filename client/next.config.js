@@ -1,40 +1,15 @@
+// client/next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Basic configuration for stability
-  experimental: {
-    // Disable experimental features that might cause issues
-    memoryBasedWorkersCount: false,
-  },
-  // Optimize images
+  reactStrictMode: true,
   images: {
-    domains: ["localhost"],
+    // add your real domains later; "localhost" won't exist on Vercel
+    domains: [],
   },
-  // Ensure proper module resolution
-  webpack: (config, { isServer }) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-    };
-    // Fix for recharts SSR issues
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      recharts: require.resolve("recharts"),
-    };
-
-    // Ensure client reference manifest is generated correctly
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        usedExports: true,
-      };
-    }
-
-    return config;
-  },
-  // Transpile recharts for better compatibility
-  transpilePackages: ["recharts"],
-  // Ensure proper output directory
-  distDir: ".next",
+  // no experimental flags
+  // no custom distDir
+  // no webpack overrides
+  // no aliases/transpile for recharts
 };
 
 module.exports = nextConfig;
