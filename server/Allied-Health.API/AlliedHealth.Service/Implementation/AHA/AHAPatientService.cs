@@ -27,9 +27,7 @@ namespace AlliedHealth.Service.Implementation.AHA
             var patientsList = _dbContext.Patients
                                 .AsNoTracking()
                                 .Where(p =>
-                                    // if viewMode != "mine" → allow all
                                     !string.Equals(viewMode, "mine", StringComparison.OrdinalIgnoreCase)
-                                    // else only patients where any task has an intervention by current AHA
                                     || p.Tasks.Any(t => t.TaskInterventions.Any(i => i.AhaUserId == _userContext.UserId))
                                 )
                                 .Select(t => new GetAHAPatientDTO
@@ -40,7 +38,7 @@ namespace AlliedHealth.Service.Implementation.AHA
                                     Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",
                                     Phone = t.PrimaryPhone,
                                     ActiveTasks = t.Tasks.Count(x => x.Status == (int)ETaskStatus.InProgress),
-                                    LastActivityDate = t.Tasks.Max(x => x.ModifiedDate),
+                                    LastActivityDate = t.Tasks.Select(x => (DateTime?)x.ModifiedDate).Max(),
                                     Hidden = t.Hidden
                                 }).AsQueryable();
 

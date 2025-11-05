@@ -8,7 +8,7 @@
         public string Gender { get; set; }
         public string Phone { get; set; }
         public int ActiveTasks { get; set; }
-        public DateTime LastActivityDate { get; set; }
+        public DateTime? LastActivityDate { get; set; }
         public bool Hidden { get; set; }
     }
 
