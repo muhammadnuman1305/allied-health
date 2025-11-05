@@ -299,3 +299,31 @@ export const getMyTasks$ = async (userId: string): Promise<{ data: ReturnType<ty
   }
 };
 
+// Fetch my tasks by date range (for calendar view)
+// Uses OData filters similar to admin calendar
+// Filters tasks that overlap with the month date range
+export const getMyTasksByDateRange$ = async (
+  userId: string,
+  monthFirstDate: string, // YYYY-MM-DD format - first day of month
+  monthLastDate: string // YYYY-MM-DD format - last day of month
+): Promise<{ data: GetMyTasksDTO[] }> => {
+  try {
+    // OData filter: tasks that overlap with the date range
+    // A task overlaps if: (startDate <= monthLastDate AND endDate >= monthFirstDate)
+    // For nullable DateOnly types, check for null first and compare without quotes
+    // OData DateOnly comparison: no quotes around date values
+    // We want tasks where:
+    // - startDate exists and is <= monthLastDate, OR startDate is null
+    // - endDate exists and is >= monthFirstDate, OR endDate is null
+    // - At least one date exists (not both null)
+    const filter = `(startDate le ${monthLastDate} or startDate eq null) and (endDate ge ${monthFirstDate} or endDate eq null) and (startDate ne null or endDate ne null)`;
+    const url = `${TASK_BASE_URL}/my-tasks?$filter=${encodeURIComponent(filter)}`;
+    
+    const response = await api.get<GetMyTasksDTO[]>(url);
+    return { data: response.data };
+  } catch (error) {
+    console.error("Error fetching my tasks by date range:", error);
+    throw error;
+  }
+};
+

@@ -63,8 +63,8 @@ export function UserSidebar({
       "all-tasks": "Task Management",
       "my-tasks": "Task Management",
       patients: "Patient Management",
-      feedback: "Feedback Management",
-      schedule: "Schedule Management",
+      // feedback: "Feedback Management",
+      // schedule: "Schedule Management",
     };
 
     // Check both segments[1] (if no /user prefix) and segments[2] (if /user prefix exists)
@@ -134,31 +134,31 @@ export function UserSidebar({
         },
       ],
     },
-    {
-      title: "Feedback Management",
-      items: [
-        {
-          title: "Feedbacks",
-          href: "/user/feedback",
-          icon: <MessageSquare className="h-5 w-5" />,
-        },
-      ],
-    },
-    {
-      title: "Schedule Management",
-      items: [
-        {
-          title: "Vacation Requests",
-          href: "/user/schedule/vacation-requests",
-          icon: <CalendarDays className="h-5 w-5" />,
-        },
-        {
-          title: "Reschedule Requests",
-          href: "/user/schedule/reschedule-requests",
-          icon: <Clock className="h-5 w-5" />,
-        },
-      ],
-    },
+    // {
+    //   title: "Feedback Management",
+    //   items: [
+    //     {
+    //       title: "Feedbacks",
+    //       href: "/user/feedback",
+    //       icon: <MessageSquare className="h-5 w-5" />,
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Schedule Management",
+    //   items: [
+    //     {
+    //       title: "Vacation Requests",
+    //       href: "/user/schedule/vacation-requests",
+    //       icon: <CalendarDays className="h-5 w-5" />,
+    //     },
+    //     {
+    //       title: "Reschedule Requests",
+    //       href: "/user/schedule/reschedule-requests",
+    //       icon: <Clock className="h-5 w-5" />,
+    //     },
+    //   ],
+    // },
   ];
 
   return (

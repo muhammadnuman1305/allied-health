@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -26,90 +28,84 @@ import {
   FileText,
   ArrowRight,
   Calendar as CalendarIcon,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMyTasksByDateRange$ } from "@/lib/api/aha/_request";
+import type { GetMyTasksDTO } from "@/lib/api/aha/_model";
+import { useAuth } from "@/hooks/use-auth";
 
 // Event interface - supports multi-day events
 interface CalendarEvent {
   id: string;
   title: string;
   type: "appointment" | "task" | "referral" | "meeting";
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
+  startDate: string; // YYYY-MM-DD (always non-null)
+  endDate: string; // YYYY-MM-DD (always non-null)
   patientId?: string;
   patientName?: string;
+  patientMrn?: string;
   description: string;
   status: "scheduled" | "completed" | "cancelled";
   priority: "low" | "medium" | "high";
+  departmentName?: string;
+  therapistName?: string;
+  interventionCount?: number;
 }
 
-// Mock data with multi-day events
-const initialMockEvents: CalendarEvent[] = [
-  {
-    id: "1",
-    title: "Patient Consultation - John Smith",
-    type: "appointment",
-    startDate: "2024-01-15",
-    endDate: "2024-01-15",
-    patientId: "P001",
-    patientName: "John Smith",
-    description: "Follow-up consultation for hypertension management",
-    status: "scheduled",
-    priority: "high",
-  },
-  {
-    id: "2",
-    title: "Task Review - Blood Pressure Monitoring",
+// Helper function to transform GetMyTasksDTO to CalendarEvent
+const transformTaskToEvent = (task: GetMyTasksDTO): CalendarEvent | null => {
+  // Helper to safely get date string
+  const toYmd = (s?: string | null) => (s ?? "").trim();
+
+  const start = toYmd(task.startDate);
+  const end = toYmd(task.endDate);
+
+  // Skip if we have neither start nor end date
+  if (!start && !end) {
+    return null;
+  }
+
+  // Determine status based on task status number
+  // 1=Assigned, 2=InProgress, 3=Completed, 4=Overdue
+  let eventStatus: "scheduled" | "completed" | "cancelled" = "scheduled";
+  if (task.status === 3) {
+    eventStatus = "completed";
+  }
+
+  // Map priority number to lowercase
+  // 1=Low, 2=Medium, 3=High
+  const priorityMap: Record<number, "low" | "medium" | "high"> = {
+    1: "low",
+    2: "medium",
+    3: "high",
+  };
+
+  const priority: "low" | "medium" | "high" =
+    priorityMap[task.priority] || "medium";
+
+  // Use startDate if available, otherwise use endDate; if only end provided, use it for both
+  // Ensure we always have valid date strings (never null or empty)
+  const startDate = start || end || new Date().toISOString().split("T")[0];
+  const endDate = end || startDate;
+
+  return {
+    id: task.id,
+    title: task.title,
     type: "task",
-    startDate: "2024-01-15",
-    endDate: "2024-01-17",
-    description: "Review blood pressure readings for assigned patients",
-    status: "scheduled",
-    priority: "medium",
-  },
-  {
-    id: "3",
-    title: "Referral Meeting - Cardiology",
-    type: "referral",
-    startDate: "2024-01-15",
-    endDate: "2024-01-15",
-    description: "Discuss patient referral to cardiology department",
-    status: "scheduled",
-    priority: "high",
-  },
-  {
-    id: "4",
-    title: "Patient Consultation - Maria Garcia",
-    type: "appointment",
-    startDate: "2024-01-16",
-    endDate: "2024-01-16",
-    patientId: "P002",
-    patientName: "Maria Garcia",
-    description: "Diabetes management consultation",
-    status: "scheduled",
-    priority: "medium",
-  },
-  {
-    id: "5",
-    title: "Team Meeting",
-    type: "meeting",
-    startDate: "2024-01-16",
-    endDate: "2024-01-16",
-    description: "Weekly team meeting to discuss patient cases",
-    status: "scheduled",
-    priority: "low",
-  },
-  {
-    id: "6",
-    title: "Multi-day Project Review",
-    type: "task",
-    startDate: "2024-01-20",
-    endDate: "2024-01-25",
-    description: "Review and update project documentation",
-    status: "scheduled",
-    priority: "high",
-  },
-];
+    startDate,
+    endDate,
+    patientId: task.patientId.toString(),
+    patientName: task.patientName,
+    patientMrn: task.mrn,
+    description: task.title, // Using title as description
+    status: eventStatus,
+    priority,
+    departmentName: task.departmentName,
+    therapistName: task.therapistName,
+    interventionCount: task.interventions?.length || 0,
+  };
+};
 
 const typeConfig = {
   appointment: {
@@ -172,6 +168,7 @@ const DAYS_OF_WEEK = [
 ];
 
 export default function CalendarPage() {
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
@@ -179,7 +176,63 @@ export default function CalendarPage() {
   const [isRescheduleDialogOpen, setIsRescheduleDialogOpen] = useState(false);
   const [eventToReschedule, setEventToReschedule] =
     useState<CalendarEvent | null>(null);
-  const [events] = useState<CalendarEvent[]>(initialMockEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get first and last day of current month for API filtering
+  const monthDateRange = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Format as YYYY-MM-DD
+    const formatDate = (date: Date): string => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
+    return {
+      firstDate: formatDate(firstDay),
+      lastDate: formatDate(lastDay),
+    };
+  }, [currentMonth]);
+
+  // Fetch tasks when month changes
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await getMyTasksByDateRange$(
+          user.id,
+          monthDateRange.firstDate,
+          monthDateRange.lastDate
+        );
+        const tasks = response.data;
+        const calendarEvents = tasks
+          .map(transformTaskToEvent)
+          .filter((event): event is CalendarEvent => event !== null);
+        setEvents(calendarEvents);
+      } catch (error) {
+        console.error("Error fetching tasks for calendar:", error);
+        // Keep existing events on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [monthDateRange.firstDate, monthDateRange.lastDate, user?.id]);
 
   // Get calendar days for the current month
   const calendarDays = useMemo(() => {
@@ -335,7 +388,7 @@ export default function CalendarPage() {
 
       {/* Calendar Grid */}
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 relative">
           {/* Day headers */}
           <div className="grid grid-cols-7 border-b border-border">
             {DAYS_OF_WEEK.map((day) => (
@@ -480,6 +533,11 @@ export default function CalendarPage() {
               );
             })}
           </div>
+          {isLoading && (
+            <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+              <p className="text-muted-foreground">Loading tasks...</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -488,10 +546,19 @@ export default function CalendarPage() {
         open={!!selectedEvent}
         onOpenChange={() => setSelectedEvent(null)}
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Event Details</DialogTitle>
+        <DialogContent className="max-w-md dark:bg-[#171717] [&>button]:hidden">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <DialogTitle className="text-lg font-semibold">
+              Event Details
+            </DialogTitle>
+            <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </DialogHeader>
+          <div className="-mx-6 w-[calc(100%+3rem)]">
+            <Separator />
+          </div>
           {selectedEvent && (
             <div className="space-y-4">
               <div>
@@ -520,9 +587,37 @@ export default function CalendarPage() {
               {selectedEvent.patientName && (
                 <div>
                   <Label className="text-sm font-medium">Patient</Label>
-                  <p className="text-sm">{selectedEvent.patientName}</p>
+                  <p className="text-sm">
+                    {selectedEvent.patientName}
+                    {selectedEvent.patientMrn &&
+                      ` (MRN: ${selectedEvent.patientMrn})`}
+                  </p>
                 </div>
               )}
+
+              {selectedEvent.departmentName && (
+                <div>
+                  <Label className="text-sm font-medium">Department</Label>
+                  <p className="text-sm">{selectedEvent.departmentName}</p>
+                </div>
+              )}
+
+              {selectedEvent.therapistName && (
+                <div>
+                  <Label className="text-sm font-medium">Therapist</Label>
+                  <p className="text-sm">{selectedEvent.therapistName}</p>
+                </div>
+              )}
+
+              {selectedEvent.interventionCount !== undefined &&
+                selectedEvent.interventionCount > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium">Interventions</Label>
+                    <p className="text-sm">
+                      {selectedEvent.interventionCount} intervention(s)
+                    </p>
+                  </div>
+                )}
 
               <div>
                 <Label className="text-sm font-medium">Description</Label>
