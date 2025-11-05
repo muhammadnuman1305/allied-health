@@ -1,5 +1,4 @@
-﻿using AlliedHealth.Service.DTOs;
-using AlliedHealth.Service.DTOs.AHA;
+﻿using AlliedHealth.Service.DTOs.AHA;
 
 namespace AlliedHealth.Service.Contract.AHA
 {

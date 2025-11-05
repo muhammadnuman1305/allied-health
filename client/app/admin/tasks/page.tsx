@@ -290,6 +290,7 @@ export default function AdminTasksPage() {
         { value: "Assigned", label: "Assigned" },
         { value: "In Progress", label: "In Progress" },
         { value: "Completed", label: "Completed" },
+        { value: "Overdue", label: "Overdue" },
       ],
       render: (task) => (
         <Badge variant={getStatusBadgeVariant(task.status)}>

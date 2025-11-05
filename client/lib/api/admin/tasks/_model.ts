@@ -20,7 +20,7 @@ export interface Task {
   assignedToStaff?: string;
   assignedToStaffName?: string;
   subTasks?: SubTask[];
-  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed";
+  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed" | "Overdue";
   
   // Optional referral linkage
   linkedReferral?: boolean;
@@ -64,6 +64,7 @@ export interface GetTaskDTO {
   goals?: string;
   lastUpdated?: string; // DateTime
   hidden: boolean;
+  status?: number; // ETaskStatus enum: 1=Assigned, 2=InProgress, 3=Completed, 4=Overdue
   interventions?: Array<{
     id: string;
     ahaId: string;
@@ -94,7 +95,7 @@ export interface TaskFormData {
   endDate?: string; // For backend DTO
   assignedToDepartment?: string;
   subTasks: SubTask[];
-  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed";
+  status: "Not Assigned" | "Assigned" | "In Progress" | "Completed" | "Overdue";
   outcomeNotes?: string;
   refId?: string | null; // Optional referral ID if task is created from a referral
   // For form submission with interventions
@@ -195,6 +196,8 @@ export const getStatusBadgeVariant = (status: string) => {
       return "default"; // Blue
     case "Assigned":
       return "secondary"; // Light blue
+    case "Overdue":
+      return "destructive"; // Red - urgent
     case "Not Assigned":
       return "outline"; // Gray
     default:
@@ -215,6 +218,27 @@ export const priorityNumberToString = (priority: number): "High" | "Medium" | "L
       return "High"; // Urgent mapped to High
     default:
       return "Medium";
+  }
+};
+
+// Helper to convert status number to display string
+export const statusNumberToString = (
+  status: number | undefined
+): "Not Assigned" | "Assigned" | "In Progress" | "Completed" | "Overdue" => {
+  if (status === undefined || status === null) {
+    return "Not Assigned";
+  }
+  switch (status) {
+    case 1:
+      return "Assigned";
+    case 2:
+      return "In Progress";
+    case 3:
+      return "Completed";
+    case 4:
+      return "Overdue";
+    default:
+      return "Not Assigned";
   }
 };
 

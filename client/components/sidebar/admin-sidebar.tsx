@@ -74,8 +74,8 @@ export function AdminSidebar({
         roles: "User Management",
         permissions: "User Management",
         patients: "Patient Management",
-        tasks: "Patient Management",
         content: "Patient Management",
+        tasks: "Task Management",
         media: "Patient Management",
         referrals: "Referral Management",
         "create-referral": "Referral Management",
@@ -164,16 +164,21 @@ export function AdminSidebar({
           href: "/admin/patients",
           icon: <User className="h-5 w-5" />,
         },
-        {
-          title: "Tasks",
-          href: "/admin/tasks",
-          icon: <ClipboardList className="h-5 w-5" />,
-        },
         // {
         //   title: "Health Resources",
         //   href: "/admin/content",
         //   icon: <FileCog className="h-5 w-5" />,
         // },
+      ],
+    },
+    {
+      title: "Task Management",
+      items: [
+        {
+          title: "Tasks",
+          href: "/admin/tasks",
+          icon: <ClipboardList className="h-5 w-5" />,
+        },
       ],
     },
     {

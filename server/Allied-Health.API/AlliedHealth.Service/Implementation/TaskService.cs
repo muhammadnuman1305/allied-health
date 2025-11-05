@@ -25,6 +25,8 @@ namespace AlliedHealth.Service.Implementation
 
         public IQueryable<GetTaskDTO> GetAll()
         {
+            var now = DateOnly.FromDateTime(DateTime.UtcNow);
+
             var tasks = _dbContext.Tasks
                             .Select(t => new GetTaskDTO
                             {
@@ -36,6 +38,11 @@ namespace AlliedHealth.Service.Implementation
                                 DepartmentName = t.Department.Name,
                                 Priority = t.Priority,
                                 StartDate = t.StartDate,
+                                Status = (int)(t.StartDate > now
+                                         ? ETaskStatus.Assigned
+                                         : (t.TaskInterventions.Any(x => x.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen)
+                                                ? (t.EndDate < now ? ETaskStatus.Overdue : ETaskStatus.InProgress)
+                                                : ETaskStatus.Completed)),
                                 EndDate = t.EndDate,
                                 LastUpdated = t.ModifiedDate,
                                 Hidden = t.Hidden,

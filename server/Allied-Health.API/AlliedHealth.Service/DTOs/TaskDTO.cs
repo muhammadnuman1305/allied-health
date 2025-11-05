@@ -9,6 +9,7 @@
         public Guid DepartmentId { get; set; }
         public string DepartmentName { get; set; }
         public int Priority { get; set; }
+        public int Status { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public DateTime? LastUpdated { get; set; }

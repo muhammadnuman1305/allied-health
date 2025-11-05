@@ -24,6 +24,7 @@ namespace AlliedHealth.Service.Implementation.AHA
         public IQueryable<GetAHATaskDTO> GetAll()
         {
             var tasks = _dbContext.Tasks
+                            .AsNoTracking()
                             .Select(t => new GetAHATaskDTO
                             {
                                 Id = t.Id,

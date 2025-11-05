@@ -25,21 +25,25 @@ namespace AlliedHealth.Service.Implementation.AHA
         public IQueryable<GetAHAPatientDTO> GetAll(string viewMode)
         {
             var patientsList = _dbContext.Patients
-                                .Where(x => !string.Equals(viewMode, "mine", StringComparison.OrdinalIgnoreCase) || 
-                                            x.Tasks.Any(t => t.TaskInterventions.Any(i => i.AhaUserId == _userContext.UserId)))
-                            //.Where(t => t.Id != _userContext.UserId)
-                            .Select(t => new GetAHAPatientDTO
-                            {
-                                Id = t.Id,
-                                Mrn = "MRN" + t.Id.ToString("D5"),
-                                FullName = t.FullName,
-                                Age = DateTime.Now.Year - t.DateOfBirth.Year,
-                                Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",
-                                Phone = t.PrimaryPhone,
-                                ActiveTasks = t.Tasks.Count(x => x.Status == (int)ETaskStatus.InProgress),
-                                LastActivityDate = t.Tasks.Max(x => x.ModifiedDate),
-                                Hidden = t.Hidden
-                            }).AsQueryable();
+                                .AsNoTracking()
+                                .Where(p =>
+                                    // if viewMode != "mine" → allow all
+                                    !string.Equals(viewMode, "mine", StringComparison.OrdinalIgnoreCase)
+                                    // else only patients where any task has an intervention by current AHA
+                                    || p.Tasks.Any(t => t.TaskInterventions.Any(i => i.AhaUserId == _userContext.UserId))
+                                )
+                                .Select(t => new GetAHAPatientDTO
+                                {
+                                    Id = t.Id,
+                                    Mrn = "MRN" + t.Id.ToString("D5"),
+                                    FullName = t.FullName,
+                                    Age = DateTime.Now.Year - t.DateOfBirth.Year,
+                                    Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",
+                                    Phone = t.PrimaryPhone,
+                                    ActiveTasks = t.Tasks.Count(x => x.Status == (int)ETaskStatus.InProgress),
+                                    LastActivityDate = t.Tasks.Max(x => x.ModifiedDate),
+                                    Hidden = t.Hidden
+                                }).AsQueryable();
 
             return patientsList;
         }

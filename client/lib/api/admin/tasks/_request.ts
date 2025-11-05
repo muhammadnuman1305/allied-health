@@ -1,4 +1,4 @@
-import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, priorityNumberToString, priorityStringToNumber } from "./_model";
+import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, priorityNumberToString, priorityStringToNumber, statusNumberToString } from "./_model";
 import api from "../../axios";
 
 // Types for specialties and interventions
@@ -38,13 +38,14 @@ export interface PatientOption {
 
 // Transform backend GetTaskDTO to frontend Task
 const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
-  // Infer status: if assigned, default to "Assigned", otherwise "Not Assigned"
-  // Note: Backend doesn't provide status, so we infer based on assignedTo
-  let inferredStatus: Task["status"] = "Not Assigned";
-  if (dto.assignedTo) {
-    // If assigned but no clear indication of progress, default to "Assigned"
-    // Completed status would need explicit backend support
-    inferredStatus = "Assigned";
+  // Use status from backend if available, otherwise infer from assignedTo
+  let taskStatus: Task["status"] = "Not Assigned";
+  if (dto.status !== undefined && dto.status !== null) {
+    // Use status from backend enum
+    taskStatus = statusNumberToString(dto.status);
+  } else if (dto.assignedTo) {
+    // Fallback: if assigned but no status, default to "Assigned"
+    taskStatus = "Assigned";
   }
   
   // Transform interventions if they exist
@@ -86,7 +87,7 @@ const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
     lastUpdated: dto.lastUpdated,
     updatedAt: dto.lastUpdated, // Alias
     hidden: dto.hidden,
-    status: inferredStatus,
+    status: taskStatus,
     // Add interventions data for form use
     interventions: interventions,
     interventionAssignments: interventionAssignments,
