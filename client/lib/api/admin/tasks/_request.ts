@@ -30,6 +30,12 @@ export interface WardOption {
   departments: string[];
 }
 
+export interface PatientOption {
+  id: string;
+  name: string;
+  mrn?: string;
+}
+
 // Transform backend GetTaskDTO to frontend Task
 const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
   // Infer status: if assigned, default to "Assigned", otherwise "Not Assigned"
@@ -113,6 +119,32 @@ export const getAll$ = async (statusFilter: "All" | "Active" | "Hidden" = "All")
     return { data: tasks };
   } catch (error) {
     console.error("Error fetching tasks:", error);
+    throw error;
+  }
+};
+
+// Fetch tasks by date range (for calendar view)
+export const getByDateRange$ = async (
+  monthFirstDate: string, // YYYY-MM-DD format - first day of month
+  monthLastDate: string // YYYY-MM-DD format - last day of month
+): Promise<{ data: Task[] }> => {
+  try {
+    // OData filter: startDate >= monthFirstDate AND endDate <= monthLastDate
+    // This finds tasks that start on or after the first day of month
+    // and end on or before the last day of month
+    // Also filter out hidden tasks
+    // For nullable DateOnly types, check for null first and compare without quotes
+    // OData DateOnly comparison: no quotes around date values
+    // Format: startDate ne null and startDate ge YYYY-MM-DD and endDate ne null and endDate le YYYY-MM-DD
+    const filter = `startDate ne null and startDate ge ${monthFirstDate} and endDate ne null and endDate le ${monthLastDate} and (hidden eq false or hidden eq null)`;
+    const url = `/api/task?$filter=${encodeURIComponent(filter)}`;
+    
+    const response = await api.get(url);
+    const dtos = response.data as GetTaskDTO[];
+    const tasks = dtos.map(transformTaskFromBackend);
+    return { data: tasks };
+  } catch (error) {
+    console.error("Error fetching tasks by date range:", error);
     throw error;
   }
 };
@@ -421,6 +453,23 @@ export const getWardOptions$ = async (): Promise<{ data: WardOption[] }> => {
     return { data: response.data as WardOption[] };
   } catch (error) {
     console.error("Error fetching ward options:", error);
+    throw error;
+  }
+};
+
+// Get patient options for tasks
+export const getPatientOptions$ = async (): Promise<{ data: PatientOption[] }> => {
+  try {
+    const response = await api.get("/api/task/patient-options");
+    // Transform API response: convert id to string if it's a number
+    const data = (response.data as Array<{ id: number | string; name: string; mrn?: string }>).map(patient => ({
+      id: String(patient.id),
+      name: patient.name,
+      mrn: patient.mrn,
+    }));
+    return { data };
+  } catch (error) {
+    console.error("Error fetching patient options:", error);
     throw error;
   }
 };

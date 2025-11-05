@@ -40,6 +40,7 @@ builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ISpecialtyService, SpecialtyService>();
 builder.Services.AddScoped<IInterventionService, InterventionService>();
 builder.Services.AddScoped<IReferralService, ReferralService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // AHA Services
 builder.Services.AddScoped<IAHAPatientService, AHAPatientService>();

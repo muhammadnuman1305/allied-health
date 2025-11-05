@@ -42,6 +42,8 @@ namespace AlliedHealth.Service.Implementation.AHA
 
         public IQueryable<GetMyTasksDTO> GetMyTasks()
         {
+            var now = DateOnly.FromDateTime(DateTime.UtcNow);
+
             var tasks = _dbContext.Tasks
                         .Where(x => x.TaskInterventions.Any(t => t.AhaId == _userContext.UserId))
                         .Select(x => new GetMyTasksDTO
@@ -54,10 +56,15 @@ namespace AlliedHealth.Service.Implementation.AHA
                             DepartmentName = x.Department.Name,
                             TherapistName = x.Department.DeptHeadUser.FirstName + " " + x.Department.DeptHeadUser.LastName,
                             Priority = x.Priority,
-                            Status = x.Status,
+                            Status = (int)(x.StartDate > now    
+                                        ? ETaskStatus.Assigned
+                                        : (x.TaskInterventions.Any(t => t.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen)
+                                                ? (x.EndDate < now ? ETaskStatus.Overdue : ETaskStatus.InProgress)
+                                                : ETaskStatus.Completed)),
                             StartDate = x.StartDate,
                             EndDate = x.EndDate,
                             Interventions = x.TaskInterventions
+                                            .Where(t => t.AhaId == _userContext.UserId)
                                             .Select(t => new AHATaskInterventionDTO
                                             {
                                                 TaskInvId = t.Id,

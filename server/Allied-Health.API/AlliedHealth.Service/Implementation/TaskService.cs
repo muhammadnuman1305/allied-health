@@ -149,6 +149,7 @@ namespace AlliedHealth.Service.Implementation
                     AhaId = inv.AhaId,
                     StartDate = inv.Start,
                     EndDate = inv.End,
+                    OutcomeStatus = (int)ETaskInterventionOutcomes.Unseen,
                     WardId = inv.WardId
                 };
 

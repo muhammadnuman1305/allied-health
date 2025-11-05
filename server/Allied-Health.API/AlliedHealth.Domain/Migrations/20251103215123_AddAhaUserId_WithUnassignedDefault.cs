@@ -23,8 +23,7 @@ namespace AlliedHealth.Domain.Migrations
                 name: "AhaUserId",
                 table: "TaskIntervention",
                 type: "uuid",
-                nullable: false,
-                defaultValue: new Guid("2364fbbe-d949-4291-96d2-12b6f92f59a7"));
+                nullable: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "Outcome",

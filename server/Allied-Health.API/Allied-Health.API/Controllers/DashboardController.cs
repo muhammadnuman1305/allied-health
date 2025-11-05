@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
-using AlliedHealth.Service.Contract.AHA;
+using AlliedHealth.Service.Contract;
 
 namespace Allied_Health.API.Controllers;
 
@@ -10,35 +10,18 @@ namespace Allied_Health.API.Controllers;
 [Authorize]
 public class DashboardController : ControllerBase
 {
-    private readonly IAHAPatientService _patientService;
-    public DashboardController(IAHAPatientService patientService)
+    private readonly IDashboardService _dashboardService;
+
+    public DashboardController(IDashboardService dashboardService)
     {
-        _patientService = patientService;
+        _dashboardService = dashboardService;
     }
 
     [HttpGet("")]
     [EnableQuery]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetDashboardDetails()
     {
-        //var response = _patientService.GetAll();
-        //return Ok(response);
-
-        return Ok();
-    }
-
-    [HttpGet("summary")]
-    public async Task<IActionResult> GetSummary()
-    {
-        var response = await _patientService.GetSummary();
-
-        return Ok(response);
-    }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetPatient([FromRoute] int id)
-    {
-        var response = await _patientService.GetPatient(id);
-
+        var response = await _dashboardService.GetDashboardDetails();
         return Ok(response);
     }
 }

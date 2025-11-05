@@ -123,7 +123,9 @@ namespace AlliedHealth.Service.Implementation
 
         public async Task<string?> UpdateDepartment(AddUpdateDepartmentDTO request)
         {
-            var dept = await _dbContext.Departments.FirstOrDefaultAsync(t => t.Id == request.Id);
+            var dept = await _dbContext.Departments
+                            .FirstOrDefaultAsync(t => t.Id == request.Id);
+
 
             if (dept == null)
                 return EMessages.DeptNotExists;
@@ -145,6 +147,11 @@ namespace AlliedHealth.Service.Implementation
             {
                 prevDeptHead.DepartmentId = null;
                 deptHead.DepartmentId = request.Id;
+
+                var referrals = await _dbContext.Referrals.Where(x => x.DestinationDepartmentId == dept.Id).ToListAsync();
+
+                foreach (var referral in referrals)
+                    referral.ReferringTherapist = deptHead.Id;
             }
 
             dept.Name = request.Name;

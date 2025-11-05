@@ -39,12 +39,14 @@ import {
   getAHAOptions$,
   getDeptOptions$,
   getWardOptions$,
+  getPatientOptions$,
   getReferralTaskDetails$,
   TaskSpecialty,
   TaskIntervention,
   AHAOption,
   DeptOption,
   WardOption,
+  PatientOption,
   GetReferralTaskDetailsDTO,
 } from "@/lib/api/admin/tasks/_request";
 import {
@@ -53,8 +55,6 @@ import {
   TASK_TYPES,
   priorityNumberToString,
 } from "@/lib/api/admin/tasks/_model";
-import { getAll$ as getAllPatients } from "@/lib/api/admin/patients/_request";
-import { Patient } from "@/lib/api/admin/patients/_model";
 
 export default function TaskFormContent() {
   const router = useRouter();
@@ -81,12 +81,13 @@ export default function TaskFormContent() {
   const hasFetchedInterventions = useRef(false);
   const hasFetchedReferral = useRef(false);
   const hasFetchedTask = useRef(false);
+  const hasSetPatient = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   // Dropdown data - initialize with empty arrays to prevent undefined errors
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [ahaOptions, setAhaOptions] = useState<AHAOption[]>([]);
   const [deptOptions, setDeptOptions] = useState<DeptOption[]>([]);
   const [wardOptions, setWardOptions] = useState<WardOption[]>([]);
@@ -235,12 +236,33 @@ export default function TaskFormContent() {
     return order;
   };
 
-  // Set pre-selected patient when available
+  // Set pre-selected patient when dropdowns are loaded (for new tasks only)
   useEffect(() => {
-    if (preSelectedPatientId) {
-      setFormData((prev) => ({ ...prev, patientId: preSelectedPatientId }));
+    if (
+      isNewTask &&
+      preSelectedPatientId &&
+      dropdownsLoaded &&
+      patients.length > 0 &&
+      !formData.patientId && // Only set if not already set
+      !hasSetPatient.current // Prevent duplicate execution
+    ) {
+      // Check if the patientId exists in the loaded patients
+      const patientExists = patients.some(
+        (patient) => patient.id === preSelectedPatientId
+      );
+      if (patientExists) {
+        hasSetPatient.current = true;
+        setFormData((prev) => ({ ...prev, patientId: preSelectedPatientId }));
+        setIsPatientDisabled(true);
+      }
     }
-  }, [preSelectedPatientId]);
+  }, [
+    isNewTask,
+    preSelectedPatientId,
+    dropdownsLoaded,
+    patients,
+    formData.patientId,
+  ]);
 
   // Fetch referral details AFTER interventions are loaded
   useEffect(() => {
@@ -297,13 +319,13 @@ export default function TaskFormContent() {
           deptOptionsResponse,
           wardOptionsResponse,
         ] = await Promise.all([
-          getAllPatients(),
+          getPatientOptions$(),
           getAHAOptions$(),
           getDeptOptions$(),
           getWardOptions$(),
         ]);
 
-        // Patients API returns { data: Patient[] }
+        // Patient Options API returns { data: PatientOption[] }
         const patientsData = patientsResponse?.data || [];
         setPatients(Array.isArray(patientsData) ? patientsData : []);
 
@@ -321,29 +343,6 @@ export default function TaskFormContent() {
 
         // Mark dropdowns as loaded
         setDropdownsLoaded(true);
-
-        // Check if user has departmentId in localStorage and pre-select it
-        // BUT skip this if we're creating from a referral (refId is present)
-        // because the department should come from the referral, not the user
-        const user = getUser();
-        if (
-          !refId && // Don't auto-select user's department if creating from referral
-          user?.departmentId &&
-          Array.isArray(deptOptionsData) &&
-          deptOptionsData.length > 0
-        ) {
-          // Check if the departmentId exists in the loaded departments
-          const departmentExists = deptOptionsData.some(
-            (dept) => dept.id === user.departmentId
-          );
-          if (departmentExists) {
-            setFormData((prev) => ({
-              ...prev,
-              assignedToDepartment: user.departmentId!,
-            }));
-            setIsDepartmentDisabled(true);
-          }
-        }
       } catch (err) {
         console.error("Error fetching dropdown data:", err);
         setError("Failed to load form data. Please try again.");
@@ -358,6 +357,38 @@ export default function TaskFormContent() {
 
     fetchDropdownData();
   }, [refId]);
+
+  // Set user's department when dropdowns are loaded (for new tasks only)
+  useEffect(() => {
+    if (
+      isNewTask &&
+      !refId && // Don't auto-select user's department if creating from referral
+      dropdownsLoaded &&
+      deptOptions.length > 0 &&
+      !formData.assignedToDepartment // Only set if not already set
+    ) {
+      const user = getUser();
+      if (user?.departmentId) {
+        // Check if the departmentId exists in the loaded departments
+        const departmentExists = deptOptions.some(
+          (dept) => dept.id === user.departmentId
+        );
+        if (departmentExists) {
+          setFormData((prev) => ({
+            ...prev,
+            assignedToDepartment: user.departmentId!,
+          }));
+          setIsDepartmentDisabled(true);
+        }
+      }
+    }
+  }, [
+    isNewTask,
+    refId,
+    dropdownsLoaded,
+    deptOptions,
+    formData.assignedToDepartment,
+  ]);
 
   // Load specialties and interventions on mount
   useEffect(() => {
@@ -821,7 +852,7 @@ export default function TaskFormContent() {
   const getSelectedPatientName = () => {
     if (!Array.isArray(patients)) return "Select patient...";
     const patient = patients.find((p) => p.id === formData.patientId);
-    return patient ? `${patient.fullName}` : "Select patient...";
+    return patient ? `${patient.name}` : "Select patient...";
   };
 
   if (loading) {
@@ -917,7 +948,7 @@ export default function TaskFormContent() {
                     ) : Array.isArray(patients) && patients.length > 0 ? (
                       patients.map((patient) => (
                         <SelectItem key={patient.id} value={patient.id}>
-                          {patient.fullName}
+                          {patient.name}
                         </SelectItem>
                       ))
                     ) : (
