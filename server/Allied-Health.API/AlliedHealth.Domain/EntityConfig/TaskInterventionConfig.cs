@@ -23,7 +23,7 @@ namespace AlliedHealth.Domain.EntityConfigs
             b.Property(x => x.InterventionId)
                 .IsRequired();
 
-            b.Property(x => x.AhaId)
+            b.Property(x => x.AhaUserId)
                 .IsRequired();
 
             b.Property(x => x.WardId)

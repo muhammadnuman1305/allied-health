@@ -26,7 +26,7 @@ namespace AlliedHealth.Service.Implementation.AHA
         {
             var patientsList = _dbContext.Patients
                                 .Where(x => !string.Equals(viewMode, "mine", StringComparison.OrdinalIgnoreCase) || 
-                                            x.Tasks.Any(t => t.TaskInterventions.Any(i => i.AhaId == _userContext.UserId)))
+                                            x.Tasks.Any(t => t.TaskInterventions.Any(i => i.AhaUserId == _userContext.UserId)))
                             //.Where(t => t.Id != _userContext.UserId)
                             .Select(t => new GetAHAPatientDTO
                             {

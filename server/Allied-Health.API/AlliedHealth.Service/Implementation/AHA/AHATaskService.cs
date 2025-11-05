@@ -45,7 +45,7 @@ namespace AlliedHealth.Service.Implementation.AHA
             var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
             var tasks = _dbContext.Tasks
-                        .Where(x => x.TaskInterventions.Any(t => t.AhaId == _userContext.UserId))
+                        .Where(x => x.TaskInterventions.Any(t => t.AhaUserId == _userContext.UserId))
                         .Select(x => new GetMyTasksDTO
                         {
                             Id = x.Id,
@@ -64,7 +64,7 @@ namespace AlliedHealth.Service.Implementation.AHA
                             StartDate = x.StartDate,
                             EndDate = x.EndDate,
                             Interventions = x.TaskInterventions
-                                            .Where(t => t.AhaId == _userContext.UserId)
+                                            .Where(t => t.AhaUserId == _userContext.UserId)
                                             .Select(t => new AHATaskInterventionDTO
                                             {
                                                 TaskInvId = t.Id,
@@ -91,7 +91,7 @@ namespace AlliedHealth.Service.Implementation.AHA
                              .Select(g => new GetAHATaskSummaryDTO
                              {
                                  TotalTasks = g.Count(),
-                                 MyTasks = g.Count(x => x.TaskInterventions.Any(ti => ti.AhaId == _userContext.UserId)),
+                                 MyTasks = g.Count(x => x.TaskInterventions.Any(ti => ti.AhaUserId == _userContext.UserId)),
                                  //OverdueTasks = g.Count(x => x.Status == (int)ETaskStatus.Overdue),
                                  //ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.Active),
                                  CompletedTasks = g.Count(x => x.Status == (int)ETaskStatus.Completed),

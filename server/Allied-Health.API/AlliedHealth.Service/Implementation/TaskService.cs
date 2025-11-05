@@ -90,7 +90,7 @@ namespace AlliedHealth.Service.Implementation
                             Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
                             {
                                 Id = t.InterventionId,
-                                AhaId = t.AhaId,
+                                AhaId = t.AhaUserId,
                                 WardId = t.WardId,
                                 Start = t.StartDate,
                                 End = t.EndDate,
@@ -146,7 +146,7 @@ namespace AlliedHealth.Service.Implementation
                     Id = Guid.NewGuid(),
                     TaskId = taskId,
                     InterventionId = inv.Id,
-                    AhaId = inv.AhaId,
+                    AhaUserId = inv.AhaId,
                     StartDate = inv.Start,
                     EndDate = inv.End,
                     OutcomeStatus = (int)ETaskInterventionOutcomes.Unseen,
@@ -201,7 +201,7 @@ namespace AlliedHealth.Service.Implementation
 
                 if (existing != null)
                 {
-                    existing.AhaId = inv.AhaId;
+                    existing.AhaUserId = inv.AhaId;
                     existing.StartDate = inv.Start;
                     existing.EndDate = inv.End;
                     existing.WardId = inv.WardId;
@@ -214,7 +214,7 @@ namespace AlliedHealth.Service.Implementation
                         Id = Guid.NewGuid(),
                         TaskId = task.Id,
                         InterventionId = inv.Id,
-                        AhaId = inv.AhaId,
+                        AhaUserId = inv.AhaId,
                         StartDate = inv.Start,
                         EndDate = inv.End,
                         WardId = inv.WardId

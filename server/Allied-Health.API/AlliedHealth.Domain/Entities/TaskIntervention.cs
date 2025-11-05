@@ -5,7 +5,7 @@
         public Guid Id { get; set; }
         public Guid TaskId { get; set; }                 // FK -> Task
         public Guid InterventionId { get; set; }          // FK -> Intervention
-        public Guid AhaId { get; set; }
+        public Guid AhaUserId { get; set; }
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
         public Guid WardId { get; set; }
