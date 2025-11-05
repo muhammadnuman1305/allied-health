@@ -35,7 +35,6 @@ namespace AlliedHealth.Service.Implementation.AHA
                                 .Select(t => new GetAHAPatientDTO
                                 {
                                     Id = t.Id,
-                                    Mrn = "MRN" + t.Id.ToString("D5"),
                                     FullName = t.FullName,
                                     Age = DateTime.Now.Year - t.DateOfBirth.Year,
                                     Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",

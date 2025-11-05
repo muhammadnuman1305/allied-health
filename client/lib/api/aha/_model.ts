@@ -4,7 +4,7 @@
 export interface GetAHAPatientDTO {
   id: number;
   fullName: string;
-  mrn: string;
+  mrn?: string; // Optional - may not come from API, will be generated on frontend
   age: number;
   gender: string; // "Male", "Female", "Other"
   phone: string;
@@ -30,7 +30,7 @@ export interface AHAPatient {
 export interface GetAHAPatientDetailsDTO {
   id: number;
   fullName: string;
-  mrn: string;
+  mrn?: string; // Optional - may not come from API, will be generated on frontend
   age: number;
   gender: string; // "Male", "Female", "Other"
   dateOfBirth: string; // DateOnly format: YYYY-MM-DD
@@ -69,7 +69,8 @@ export interface GetTaskDTO {
   id: string; // Guid
   title: string;
   patientName: string;
-  mrn: string;
+  mrn?: string; // Optional - may not come from API, will be generated on frontend if patientId available
+  patientId?: number; // Optional - may be needed for MRN generation
   departmentName: string;
   therapistName: string;
   totalInterventions: number;
@@ -150,7 +151,7 @@ export interface GetMyTasksDTO {
   title: string;
   patientId: number;
   patientName: string;
-  mrn: string;
+  mrn?: string; // Optional - may not come from API, will be generated on frontend
   departmentId: string; // Guid
   departmentName: string;
   therapistName: string;

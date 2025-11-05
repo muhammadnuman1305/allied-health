@@ -10,12 +10,22 @@ const toStringId = (id: number | string): string => {
   return id;
 };
 
+// Helper to generate MRN from patient ID if not provided
+const generateMRN = (patientId: number, mrn?: string): string => {
+  // If MRN is provided and not empty, use it
+  if (mrn && mrn.trim() !== "") {
+    return mrn;
+  }
+  // Otherwise, generate MRN from patient ID (e.g., MRN000123)
+  return `MRN${patientId.toString().padStart(6, "0")}`;
+};
+
 // Transform backend DTO to frontend model
 const transformAHAPatient = (dto: GetAHAPatientDTO): AHAPatient => {
   return {
     id: toStringId(dto.id),
     fullName: dto.fullName,
-    mrn: dto.mrn,
+    mrn: generateMRN(dto.id, dto.mrn),
     age: dto.age,
     gender: dto.gender,
     primaryPhone: dto.phone,
@@ -65,7 +75,7 @@ const transformAHAPatientDetails = (dto: GetAHAPatientDetailsDTO): AHAPatientDet
   return {
     id: toStringId(dto.id),
     fullName: dto.fullName,
-    mrn: dto.mrn,
+    mrn: generateMRN(dto.id, dto.mrn),
     age: dto.age,
     gender: dto.gender,
     dateOfBirth: dto.dateOfBirth,
@@ -124,13 +134,18 @@ const priorityNumberToString = (priority: number): "High" | "Medium" | "Low" => 
 
 // Transform backend task DTO to frontend model
 const transformAHATask = (dto: GetTaskDTO): AHATask => {
+  // Generate MRN if patientId is available and MRN is not provided
+  const patientMrn = dto.patientId 
+    ? generateMRN(dto.patientId, dto.mrn)
+    : (dto.mrn || undefined);
+  
   return {
     id: toStringId(dto.id),
     title: dto.title,
     description: dto.title, // Using title as description fallback, can be enhanced later
-    patientId: "", // Not provided in DTO, may need to fetch separately if needed
+    patientId: dto.patientId ? toStringId(dto.patientId) : "", // Use patientId if available
     patientName: dto.patientName,
-    patientMrn: dto.mrn || undefined,
+    patientMrn,
     startDate: dto.startDate || new Date().toISOString().split('T')[0],
     endDate: dto.endDate || new Date().toISOString().split('T')[0],
     priority: priorityNumberToString(dto.priority),
@@ -269,13 +284,16 @@ const transformMyTask = (dto: GetMyTasksDTO, userId: string): {
 } => {
   const today = new Date().toISOString().split("T")[0];
   
+  // Generate MRN from patientId if not provided
+  const patientMrn = generateMRN(dto.patientId, dto.mrn);
+  
   return {
     id: dto.id,
     title: dto.title,
     description: dto.title, // Using title as description fallback
     patientId: toStringId(dto.patientId),
     patientName: dto.patientName,
-    patientMrn: dto.mrn || undefined,
+    patientMrn,
     startDate: dto.startDate || today,
     endDate: dto.endDate || today,
     priority: priorityNumberToString(dto.priority),
