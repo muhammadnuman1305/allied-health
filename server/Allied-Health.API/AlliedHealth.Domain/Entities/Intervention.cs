@@ -15,5 +15,6 @@
         // Navigation
         public Specialty Specialty { get; set; } = default!;
         public ICollection<TaskIntervention> TaskInterventions { get; set; } = new List<TaskIntervention>();
+        public ICollection<InterventionComponent> Components { get; set; } = new List<InterventionComponent>();
     }
 }

@@ -1,0 +1,67 @@
+## Build results
+bin/
+obj/
+out/
+
+## User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+
+## VS Code
+.vscode/
+
+## Logs
+*.log
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Environment files
+.env
+.env.*
+
+## ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+## Publish output
+publish/
+*.publishproj
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+## Dotnet tools
+.dotnet/
+
+## Coverage reports
+coverage/
+*.coverage
+*.coveragexml
+
+## Test results
+TestResults/
+
+## Database files (optional, depends on your setup)
+*.mdf
+*.ldf
+
+## Secrets (VERY IMPORTANT)
+appsettings.Development.json
+secrets.json
+
+## Docker
+docker-compose.override.yml
+
+## Misc
+*.cache
+*.tmp

@@ -1,6 +1,8 @@
 // Referral data models
+import type { SelectedComponentInput } from "@/lib/api/admin/tasks/_model";
+export type { SelectedComponentInput };
 
-// API Response interface (what comes from backend)
+// API Response interface (what comes from backend — list endpoint)
 export interface ReferralAPIResponse {
   id: string;
   type: "incoming" | "outgoing";
@@ -19,6 +21,23 @@ export interface ReferralAPIResponse {
   description?: string | null;
   lastUpdated: string;
   hidden: boolean;
+}
+
+// API Response interface for GET /api/referral/{id} (detail endpoint)
+export interface GetReferralDetailsAPIResponse {
+  id: string;
+  patientId: number;
+  originDeptId: string;
+  destinationDeptId: string;
+  priority: number;
+  referralDate?: string | null;
+  diagnosis?: string | null;
+  goals?: string | null;
+  description?: string | null;
+  interventions: Array<{
+    id: string;
+    components: Array<{ componentType: string; value: string }>;
+  }>;
 }
 
 // Frontend Referral interface (transformed from API)
@@ -43,6 +62,7 @@ export interface Referral {
   priorityNumber: number; // 1, 2, or 3
   priorityDisplay: "High" | "Medium" | "Low"; // Display text for badges
   interventions?: string[];
+  interventionComponents?: Record<string, SelectedComponentInput[]>;
   status?: "S" | "A" | "D" | "U" | "X"; // S=Success, A=Active, D=Discharged, U=Unavailable, X=Cancelled
   // Department workflow fields
   originDeptId: string;
@@ -78,6 +98,7 @@ export interface ReferralFormData {
   referralDate: string;
   priority: "P1" | "P2" | "P3";
   interventions: string[];
+  interventionComponents?: Record<string, SelectedComponentInput[]>;
   status: "S" | "A" | "D" | "U" | "X";
   // Department workflow fields
   originDepartment: string;

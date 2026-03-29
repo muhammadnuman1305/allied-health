@@ -174,5 +174,6 @@ export interface AHATaskInterventionDTO {
   outcomeDate: string | null; // DateOnly format: YYYY-MM-DD
   startDate: string; // DateOnly format: YYYY-MM-DD
   endDate: string; // DateOnly format: YYYY-MM-DD
+  components: Array<{ componentType: string; value: string }>;
 }
 

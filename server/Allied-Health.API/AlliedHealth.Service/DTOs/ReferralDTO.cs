@@ -32,7 +32,19 @@
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string Description { get; set; }
-        public List<Guid> Interventions { get; set; } = new List<Guid>();
+        public List<ReferralInterventionItemDTO> Interventions { get; set; } = new List<ReferralInterventionItemDTO>();
+    }
+
+    public class ReferralInterventionItemDTO
+    {
+        public Guid Id { get; set; }  // InterventionId
+        public List<ReferralSelectedComponentDTO> Components { get; set; } = new List<ReferralSelectedComponentDTO>();
+    }
+
+    public class ReferralSelectedComponentDTO
+    {
+        public string ComponentType { get; set; } = default!;
+        public string Value { get; set; } = default!;
     }
 
     
@@ -70,6 +82,6 @@
         public string Goals { get; set; }
         public string? Description { get; set; }
 
-        public List<Guid> Interventions { get; set; } = new List<Guid>();
+        public List<ReferralInterventionItemDTO> Interventions { get; set; } = new List<ReferralInterventionItemDTO>();
     }
 }

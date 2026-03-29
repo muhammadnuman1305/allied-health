@@ -97,7 +97,14 @@ namespace AlliedHealth.Service.Implementation
                                 {
                                     Id = x.Id,
                                     SpecialtyId = x.SpecialtyId,
-                                    Name = x.Name
+                                    Name = x.Name,
+                                    Components = x.Components
+                                        .GroupBy(c => c.ComponentType.Name)
+                                        .Select(g => new InterventionComponentGroupDTO
+                                        {
+                                            Type = g.Key,
+                                            Values = g.Select(c => c.Value).ToList()
+                                        }).ToList()
                                 }).ToListAsync();
 
             return inv;

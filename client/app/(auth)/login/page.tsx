@@ -6,26 +6,22 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { login$ } from "@/lib/api/auth/_request";
 import { useToast } from "@/hooks/use-toast";
 import { LoginPayload } from "@/lib/api/auth/_model";
 import { getUser, redirectBasedOnRole } from "@/lib/auth-utils";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { User } from "lucide-react";
+import { LogIn, Eye, EyeOff, ShieldCheck, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"assistant" | "professional">(
+    "assistant"
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -46,12 +42,10 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const payload: LoginPayload = {
-        username,
-        password,
-        role: 1,
-      };
+      const role = activeTab === "professional" ? 2 : 1;
+      const payload: LoginPayload = { username, password, role };
       const response = await login$(payload);
+
       if (response && response.data.accessToken) {
         localStorage.setItem(
           "user",
@@ -72,7 +66,7 @@ export default function LoginPage() {
           variant: "default",
           duration: 1500,
         });
-        router.push("/user/dashboard");
+        router.push(role === 2 ? "/ahp/dashboard" : "/aha/dashboard");
       } else {
         toast({
           title: "Login Failed",
@@ -102,37 +96,79 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-muted/40 dark:from-background dark:via-muted/5 dark:to-muted/10 p-4 relative">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 dark:bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 dark:bg-primary/10 rounded-full blur-3xl"></div>
-      </div>
+  const isProfessional = activeTab === "professional";
 
+  const theme = isProfessional
+    ? {
+        iconBg: "bg-purple-50 dark:bg-purple-900/20",
+        iconColor: "text-purple-600 dark:text-purple-400",
+        forgotLink: "text-purple-600 dark:text-purple-400 hover:underline",
+        button: "bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white",
+        activeTab: "bg-purple-50 dark:bg-background text-purple-600 shadow-sm",
+      }
+    : {
+        iconBg: "bg-green-50 dark:bg-green-900/20",
+        iconColor: "text-green-600 dark:text-green-400",
+        forgotLink: "text-green-600 dark:text-green-400 hover:underline",
+        button: "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white",
+        activeTab: "bg-green-50 dark:bg-background text-green-600 shadow-sm",
+      };
+
+  return (
+    <div className={`min-h-screen flex flex-col items-center justify-center bg-[#fafbfc] dark:bg-background p-4 relative ${isProfessional ? "theme-purple" : ""}`}>
       {/* Theme toggle - top right */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md shadow-xl dark:shadow-2xl border-border/50 dark:bg-[#171717] dark:border-border/50 relative z-0">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-full">
-              <User className="h-8 w-8 text-primary dark:text-primary" />
+      <div className="w-full max-w-md space-y-5">
+        {/* Tab switcher */}
+        <div className="flex bg-white dark:bg-muted rounded-2xl p-1.5 gap-1.5 border border-gray-200 dark:border-border shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("assistant")}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              activeTab === "assistant"
+                ? theme.activeTab
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Assistant
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("professional")}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              activeTab === "professional"
+                ? theme.activeTab
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Professional
+          </button>
+        </div>
+
+        {/* Login card */}
+        <div className="bg-white dark:bg-[#171717] rounded-2xl shadow-sm border border-gray-100 dark:border-border/50 px-8 py-10">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`inline-flex p-3 rounded-xl ${theme.iconBg}`}>
+                <LogIn className={`h-6 w-6 ${theme.iconColor}`} />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
             </div>
+            <p className="text-muted-foreground text-sm">
+              {isProfessional
+                ? "Sign in to your professional account to continue"
+                : "Sign in to your assistant account to continue"}
+            </p>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">
-            Welcome back
-          </CardTitle>
-          <CardDescription className="text-center">
-            Enter your credentials to sign in to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -140,50 +176,76 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="h-12 bg-gray-50 dark:bg-muted/50 border-gray-200 dark:border-border rounded-xl"
               />
             </div>
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
+                  className={`text-sm ${theme.forgotLink}`}
                 >
                   Forgot password?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 bg-gray-50 dark:bg-muted/50 border-gray-200 dark:border-border rounded-xl pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+
+            <Button
+              type="submit"
+              className={`w-full h-12 rounded-xl text-base font-semibold ${theme.button}`}
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   <span>Signing in...</span>
                 </div>
               ) : (
-                "Sign in"
+                <div className="flex items-center space-x-2">
+                  <LogIn className="h-4 w-4" />
+                  <span>Log In</span>
+                </div>
               )}
             </Button>
           </form>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-center text-muted-foreground">
-            Admin access?{" "}
-            <Link
-              href="/admin-login"
-              className="text-primary hover:underline font-medium"
-            >
-              Admin Login
-            </Link>
+        </div>
+
+        {/* Footer badges */}
+        <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground pt-1">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+            <span>Secure Login</span>
           </div>
-        </CardFooter>
-      </Card>
+          <div className="flex items-center gap-1.5">
+            <Lock className="h-3.5 w-3.5 text-blue-500" />
+            <span>Data Protected</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

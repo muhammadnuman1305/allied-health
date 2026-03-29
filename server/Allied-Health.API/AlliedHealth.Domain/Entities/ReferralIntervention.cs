@@ -11,5 +11,6 @@ namespace AlliedHealth.Domain.Entities
         // Navigation
         public Referral Referral { get; set; } = default!;
         public Intervention Intervention { get; set; } = default!;
+        public ICollection<ReferralInterventionComponent> SelectedComponents { get; set; } = new List<ReferralInterventionComponent>();
     }
 }

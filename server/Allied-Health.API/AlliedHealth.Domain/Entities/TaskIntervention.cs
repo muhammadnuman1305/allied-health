@@ -20,5 +20,6 @@
         public User AhaUser { get; set; }
         public Task Task { get; set; } = default!;
         public Intervention Intervention { get; set; } = default!;
+        public ICollection<TaskInterventionComponent> SelectedComponents { get; set; } = new List<TaskInterventionComponent>();
     }
 }

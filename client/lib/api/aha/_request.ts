@@ -235,6 +235,7 @@ const transformAHATaskIntervention = (dto: AHATaskInterventionDTO, taskId: strin
   endDate: string;
   wardId?: string;
   wardName?: string;
+  components: Array<{ componentType: string; value: string }>;
 } => {
   const status = outcomeStatusNumberToString(dto.outcomeStatus);
   const statusCodeMap: Record<typeof status, "S" | "A" | "D" | "U" | "X"> = {
@@ -264,6 +265,7 @@ const transformAHATaskIntervention = (dto: AHATaskInterventionDTO, taskId: strin
     endDate: dto.endDate,
     wardId: dto.wardId,
     wardName: dto.wardName,
+    components: dto.components ?? [],
   };
 };
 

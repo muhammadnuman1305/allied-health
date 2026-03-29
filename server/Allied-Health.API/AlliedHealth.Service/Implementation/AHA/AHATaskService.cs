@@ -78,6 +78,11 @@ namespace AlliedHealth.Service.Implementation.AHA
                                                 OutcomeDate = t.OutcomeDate,
                                                 StartDate = t.StartDate,
                                                 EndDate = t.EndDate,
+                                                Components = t.SelectedComponents.Select(c => new AHASelectedComponentDTO
+                                                {
+                                                    ComponentType = c.ComponentType.Name,
+                                                    Value = c.Value,
+                                                }).ToList(),
                                             }).ToList()
                         }).AsQueryable();
 
@@ -118,14 +123,24 @@ namespace AlliedHealth.Service.Implementation.AHA
                             EndDate = x.EndDate,
                             Description = x.Description,
                             TotalInterventions = x.TaskInterventions.Count(),
-                            //Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
-                            //{
-                            //    Id = t.InterventionId,
-                            //    AhaId = t.AhaId,
-                            //    WardId = t.WardId,
-                            //    Start = t.StartDate,
-                            //    End = t.EndDate,
-                            //}).ToList()
+                            Interventions = x.TaskInterventions.Select(t => new AHATaskInterventionDTO
+                            {
+                                TaskInvId = t.Id,
+                                WardId = t.WardId,
+                                WardName = t.Ward.Name,
+                                InterventionId = t.InterventionId,
+                                InterventionName = t.Intervention.Name,
+                                OutcomeStatus = t.OutcomeStatus,
+                                Outcome = t.Outcome,
+                                OutcomeDate = t.OutcomeDate,
+                                StartDate = t.StartDate,
+                                EndDate = t.EndDate,
+                                Components = t.SelectedComponents.Select(c => new AHASelectedComponentDTO
+                                {
+                                    ComponentType = c.ComponentType.Name,
+                                    Value = c.Value,
+                                }).ToList(),
+                            }).ToList(),
                         }).FirstOrDefaultAsync();
 
             return task;

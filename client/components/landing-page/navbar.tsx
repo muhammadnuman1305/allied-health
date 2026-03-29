@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, User, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { Menu, User, PanelLeft, LogOut } from "lucide-react";
 import { Breadcrumb } from "../breadcrumb";
 import { ThemeToggle } from "../theme-toggle";
 import { Button } from "../ui/button";
@@ -24,6 +24,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -41,7 +42,7 @@ export function Navbar({
   const pathname = usePathname();
 
   return (
-    <div className="h-20 border-b px-4 flex items-center justify-between">
+    <div className="h-16 border-b px-4 flex items-center justify-between bg-card">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -49,11 +50,7 @@ export function Navbar({
           onClick={onToggleSidebar}
           className="lg:flex hidden"
         >
-          {isSidebarCollapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
+          <PanelLeft className="h-5 w-5" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
         <Button
@@ -69,7 +66,6 @@ export function Navbar({
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
-        <UserNav />
       </div>
     </div>
   );
@@ -120,7 +116,7 @@ function UserNav() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href="/user/settings" className="cursor-pointer">
+              <Link href="/aha/settings" className="cursor-pointer">
                 Settings
               </Link>
             </DropdownMenuItem>
@@ -137,21 +133,23 @@ function UserNav() {
       </DropdownMenu>
 
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <AlertDialogContent className="max-w-md p-8">
-          <AlertDialogHeader className="items-center">
-            <LogOut className="h-8 w-8 text-destructive mb-2" />
-            <AlertDialogTitle className="text-center text-lg font-semibold">
-              Are you sure you want to logout?
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-semibold">
+              Confirm Logout
             </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to logout? You will need to sign in again to access your account.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-row justify-start gap-2 mt-2 sm:justify-start">
             <AlertDialogAction
               onClick={handleLogout}
-              className="w-28 bg-destructive text-white hover:bg-destructive/90"
+              className="bg-destructive text-white hover:bg-destructive/90"
             >
               Logout
             </AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -101,6 +101,11 @@ namespace AlliedHealth.Service.Implementation
                                 WardId = t.WardId,
                                 Start = t.StartDate,
                                 End = t.EndDate,
+                                Components = t.SelectedComponents.Select(c => new SelectedComponentDTO
+                                {
+                                    ComponentType = c.ComponentType.Name,
+                                    Value = c.Value
+                                }).ToList()
                             }).ToList()
                         }).FirstOrDefaultAsync();
 
@@ -135,9 +140,9 @@ namespace AlliedHealth.Service.Implementation
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals,
                 Description = request.Description,
-                Status = (int)((request.StartDate > now && request.EndDate > now) ? ETaskStatus.Assigned 
-                               : (request.StartDate <= now && request.EndDate >= now) ? ETaskStatus.InProgress 
-                               : (request.EndDate < now) ? ETaskStatus.Overdue :ETaskStatus.Assigned), // fallback
+                Status = (int)((request.StartDate > now && request.EndDate > now) ? ETaskStatus.Assigned
+                               : (request.StartDate <= now && request.EndDate >= now) ? ETaskStatus.InProgress
+                               : (request.EndDate < now) ? ETaskStatus.Overdue : ETaskStatus.Assigned),
                 CreatedDate = DateTime.UtcNow,
                 CreatedBy = _userContext.UserId,
                 Hidden = false
@@ -146,11 +151,16 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.Tasks.AddAsync(newTask);
             await _dbContext.SaveChangesAsync();
 
-            foreach(var inv in request.Interventions)
+            // Pre-fetch component type lookup to avoid per-row queries
+            var compTypeMap = await _dbContext.ComponentTypes
+                .ToDictionaryAsync(ct => ct.Name, ct => ct.Id);
+
+            foreach (var inv in request.Interventions)
             {
+                var taskInvId = Guid.NewGuid();
                 var taskInv = new TaskIntervention
                 {
-                    Id = Guid.NewGuid(),
+                    Id = taskInvId,
                     TaskId = taskId,
                     InterventionId = inv.Id,
                     AhaUserId = inv.AhaId,
@@ -161,12 +171,29 @@ namespace AlliedHealth.Service.Implementation
                 };
 
                 await _dbContext.TaskInterventions.AddAsync(taskInv);
+
+                // Save any component values the clinician selected (zero is valid)
+                if (inv.Components != null)
+                {
+                    foreach (var comp in inv.Components)
+                    {
+                        if (compTypeMap.TryGetValue(comp.ComponentType, out var typeId))
+                        {
+                            await _dbContext.TaskInterventionComponents.AddAsync(new TaskInterventionComponent
+                            {
+                                Id = Guid.NewGuid(),
+                                TaskInterventionId = taskInvId,
+                                ComponentTypeId = typeId,
+                                Value = comp.Value.Trim()
+                            });
+                        }
+                    }
+                }
             }
 
-            if(request.RefId != Guid.Empty && request.RefId != null)
+            if (request.RefId != Guid.Empty && request.RefId != null)
             {
                 var referral = await _dbContext.Referrals.FirstOrDefaultAsync(x => x.Id == request.RefId);
-
                 referral.Status = (int)EReferralOutcomes.Accepted;
             }
 
@@ -178,11 +205,34 @@ namespace AlliedHealth.Service.Implementation
         {
             var task = await _dbContext.Tasks
                              .Include(x => x.TaskInterventions)
+                                 .ThenInclude(ti => ti.SelectedComponents)
                              .FirstOrDefaultAsync(x => x.Id == request.Id);
 
             if (task == null)
                 return EMessages.TaskNotExists;
 
+            var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
+
+            // ── Step 1: Remove dropped interventions (CASCADE deletes their components)
+            //           and flush existing SelectedComponents for kept interventions
+            var toRemove = task.TaskInterventions
+                .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
+                .ToList();
+            _dbContext.TaskInterventions.RemoveRange(toRemove);
+
+            var keptByInterventionId = task.TaskInterventions
+                .Where(ti => requestInterventionIds.Contains(ti.InterventionId))
+                .ToDictionary(ti => ti.InterventionId);
+
+            foreach (var kept in keptByInterventionId.Values)
+            {
+                _dbContext.TaskInterventionComponents.RemoveRange(kept.SelectedComponents);
+                kept.SelectedComponents.Clear();
+            }
+
+            await _dbContext.SaveChangesAsync(); // flush all deletions first
+
+            // ── Step 2: Update task scalars
             task.Title = request.Title;
             task.Priority = request.Priority;
             task.StartDate = request.StartDate;
@@ -193,41 +243,55 @@ namespace AlliedHealth.Service.Implementation
             task.ModifiedDate = DateTime.UtcNow;
             task.ModifiedBy = _userContext.UserId;
 
-            var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
-            var toRemove = task.TaskInterventions
-                            .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
-                            .ToList();
+            // Pre-fetch component type lookup
+            var compTypeMap = await _dbContext.ComponentTypes
+                .ToDictionaryAsync(ct => ct.Name, ct => ct.Id);
 
-            _dbContext.TaskInterventions.RemoveRange(toRemove);
-
-            // 2️⃣ Update existing interventions and add new ones
+            // ── Step 3: Upsert interventions and insert fresh SelectedComponents
             foreach (var inv in request.Interventions)
             {
-                var existing = task.TaskInterventions
-                    .FirstOrDefault(ti => ti.InterventionId == inv.Id);
+                Guid taskInvId;
 
-                if (existing != null)
+                if (keptByInterventionId.TryGetValue(inv.Id, out var existing))
                 {
                     existing.AhaUserId = inv.AhaId;
                     existing.StartDate = inv.Start;
                     existing.EndDate = inv.End;
                     existing.WardId = inv.WardId;
+                    taskInvId = existing.Id;
                 }
                 else
                 {
-                    // Add new intervention
-                    var newIntervention = new TaskIntervention
+                    taskInvId = Guid.NewGuid();
+                    await _dbContext.TaskInterventions.AddAsync(new TaskIntervention
                     {
-                        Id = Guid.NewGuid(),
+                        Id = taskInvId,
                         TaskId = task.Id,
                         InterventionId = inv.Id,
                         AhaUserId = inv.AhaId,
                         StartDate = inv.Start,
                         EndDate = inv.End,
-                        WardId = inv.WardId
-                    };
+                        WardId = inv.WardId,
+                        OutcomeStatus = (int)ETaskInterventionOutcomes.Unseen,
+                    });
+                }
 
-                    await _dbContext.TaskInterventions.AddAsync(newIntervention);
+                // Re-insert selected components (zero is valid)
+                if (inv.Components != null)
+                {
+                    foreach (var comp in inv.Components)
+                    {
+                        if (compTypeMap.TryGetValue(comp.ComponentType, out var typeId))
+                        {
+                            await _dbContext.TaskInterventionComponents.AddAsync(new TaskInterventionComponent
+                            {
+                                Id = Guid.NewGuid(),
+                                TaskInterventionId = taskInvId,
+                                ComponentTypeId = typeId,
+                                Value = comp.Value.Trim()
+                            });
+                        }
+                    }
                 }
             }
 

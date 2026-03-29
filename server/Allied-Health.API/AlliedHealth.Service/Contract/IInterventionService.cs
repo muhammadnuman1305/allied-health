@@ -11,5 +11,6 @@ namespace AlliedHealth.Service.Contract
         Task<string?> UpdateIntervention(AddUpdateInterventionDTO request);
         Task<string?> ToggleHide(Guid id);
         Task<List<GetInterventionSpecialtiesDTO>> GetInterventionSpecialities();
+        Task<List<GetComponentTypeDTO>> GetComponentTypes();
     }
 }

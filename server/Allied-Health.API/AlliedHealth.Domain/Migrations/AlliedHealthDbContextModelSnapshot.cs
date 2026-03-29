@@ -22,6 +22,64 @@ namespace AlliedHealth.Domain.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.ComponentType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ComponentType", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Technique"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Activity"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Equipment"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Education"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Environment"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "AssistanceLevel"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Safety"
+                        });
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -144,6 +202,32 @@ namespace AlliedHealth.Domain.Migrations
                     b.HasIndex("SpecialtyId");
 
                     b.ToTable("Intervention", (string)null);
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.InterventionComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ComponentTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InterventionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentTypeId");
+
+                    b.HasIndex("InterventionId");
+
+                    b.ToTable("InterventionComponent", (string)null);
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Patient", b =>
@@ -339,6 +423,32 @@ namespace AlliedHealth.Domain.Migrations
                     b.ToTable("ReferralIntervention", (string)null);
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.ReferralInterventionComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ComponentTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ReferralInterventionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentTypeId");
+
+                    b.HasIndex("ReferralInterventionId");
+
+                    b.ToTable("ReferralInterventionComponent", (string)null);
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Specialty", b =>
                 {
                     b.Property<Guid>("Id")
@@ -503,6 +613,32 @@ namespace AlliedHealth.Domain.Migrations
                     b.HasIndex("WardId");
 
                     b.ToTable("TaskIntervention", (string)null);
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskInterventionComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ComponentTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TaskInterventionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComponentTypeId");
+
+                    b.HasIndex("TaskInterventionId");
+
+                    b.ToTable("TaskInterventionComponent", (string)null);
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
@@ -681,6 +817,25 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Specialty");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.InterventionComponent", b =>
+                {
+                    b.HasOne("AlliedHealth.Domain.Entities.ComponentType", "ComponentType")
+                        .WithMany("InterventionComponents")
+                        .HasForeignKey("ComponentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AlliedHealth.Domain.Entities.Intervention", "Intervention")
+                        .WithMany("Components")
+                        .HasForeignKey("InterventionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ComponentType");
+
+                    b.Navigation("Intervention");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Patient", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.User", "CreatedByUser")
@@ -764,6 +919,25 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Referral");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.ReferralInterventionComponent", b =>
+                {
+                    b.HasOne("AlliedHealth.Domain.Entities.ComponentType", "ComponentType")
+                        .WithMany("ReferralInterventionComponents")
+                        .HasForeignKey("ComponentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AlliedHealth.Domain.Entities.ReferralIntervention", "ReferralIntervention")
+                        .WithMany("SelectedComponents")
+                        .HasForeignKey("ReferralInterventionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ComponentType");
+
+                    b.Navigation("ReferralIntervention");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Task", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.Department", "Department")
@@ -825,6 +999,25 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Ward");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskInterventionComponent", b =>
+                {
+                    b.HasOne("AlliedHealth.Domain.Entities.ComponentType", "ComponentType")
+                        .WithMany("TaskInterventionComponents")
+                        .HasForeignKey("ComponentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AlliedHealth.Domain.Entities.TaskIntervention", "TaskIntervention")
+                        .WithMany("SelectedComponents")
+                        .HasForeignKey("TaskInterventionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ComponentType");
+
+                    b.Navigation("TaskIntervention");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.Department", "Department")
@@ -883,6 +1076,15 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Ward");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.ComponentType", b =>
+                {
+                    b.Navigation("InterventionComponents");
+
+                    b.Navigation("ReferralInterventionComponents");
+
+                    b.Navigation("TaskInterventionComponents");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Department", b =>
                 {
                     b.Navigation("AlliedAssistants");
@@ -890,6 +1092,8 @@ namespace AlliedHealth.Domain.Migrations
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Intervention", b =>
                 {
+                    b.Navigation("Components");
+
                     b.Navigation("TaskInterventions");
                 });
 
@@ -912,6 +1116,11 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("Tasks");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.ReferralIntervention", b =>
+                {
+                    b.Navigation("SelectedComponents");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Specialty", b =>
                 {
                     b.Navigation("Interventions");
@@ -922,6 +1131,11 @@ namespace AlliedHealth.Domain.Migrations
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Task", b =>
                 {
                     b.Navigation("TaskInterventions");
+                });
+
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskIntervention", b =>
+                {
+                    b.Navigation("SelectedComponents");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>

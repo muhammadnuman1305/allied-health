@@ -43,5 +43,7 @@ namespace AlliedHealth.Service.DTOs
         public Guid Id { get; set; }
         public Guid SpecialtyId { get; set; }
         public required string Name { get; set; }
+        /// <summary>Components grouped by type for the expandable task form view.</summary>
+        public List<InterventionComponentGroupDTO> Components { get; set; } = new();
     }
 }

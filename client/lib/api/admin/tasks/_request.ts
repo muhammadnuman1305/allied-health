@@ -1,4 +1,4 @@
-import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, priorityNumberToString, priorityStringToNumber, statusNumberToString } from "./_model";
+import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, SelectedComponentInput, priorityNumberToString, priorityStringToNumber, statusNumberToString } from "./_model";
 import api from "../../axios";
 
 // Types for specialties and interventions
@@ -7,10 +7,16 @@ export interface TaskSpecialty {
   name: string;
 }
 
+export interface TaskInterventionComponent {
+  type: string;
+  values: string[];
+}
+
 export interface TaskIntervention {
   id: string;
   specialtyId: string;
   name: string;
+  components?: TaskInterventionComponent[];
 }
 
 export interface AHAOption {
@@ -53,6 +59,7 @@ const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
   const interventionAssignments: Record<string, string> = {};
   const interventionSchedules: Record<string, { startDate: string; endDate: string }> = {};
   const interventionWardAssignments: Record<string, string> = {};
+  const interventionComponents: Record<string, SelectedComponentInput[]> = {};
 
   if (dto.interventions && Array.isArray(dto.interventions)) {
     dto.interventions.forEach((intervention) => {
@@ -63,6 +70,11 @@ const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
         endDate: intervention.end,
       };
       interventionWardAssignments[intervention.id] = intervention.wardId;
+      // Map saved component selections (may be empty array)
+      interventionComponents[intervention.id] = (intervention.components ?? []).map((c) => ({
+        componentType: c.componentType,
+        value: c.value,
+      }));
     });
   }
 
@@ -93,11 +105,13 @@ const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
     interventionAssignments: interventionAssignments,
     interventionSchedules: interventionSchedules,
     interventionWardAssignments: interventionWardAssignments,
+    interventionComponents: interventionComponents,
   } as Task & {
     interventions?: string[];
     interventionAssignments?: Record<string, string>;
     interventionSchedules?: Record<string, { startDate: string; endDate: string }>;
     interventionWardAssignments?: Record<string, string>;
+    interventionComponents?: Record<string, SelectedComponentInput[]>;
   };
 };
 
@@ -242,7 +256,7 @@ const transformToBackendDTO = (formData: TaskFormData): AddUpdateTaskDTO => {
   // Transform interventions
   const interventions: TaskInterventionDTO[] = [];
   
-  if (formData.interventions && formData.interventionAssignments && 
+  if (formData.interventions && formData.interventionAssignments &&
       formData.interventionSchedules && formData.interventionWardAssignments) {
     formData.interventions.forEach((interventionId) => {
       const ahaId = formData.interventionAssignments![interventionId];
@@ -256,6 +270,8 @@ const transformToBackendDTO = (formData: TaskFormData): AddUpdateTaskDTO => {
           start: schedule.startDate,
           end: schedule.endDate,
           wardId: wardId,
+          // Include selected component values (empty array = no components selected, which is valid)
+          components: formData.interventionComponents?.[interventionId] ?? [],
         });
       }
     });

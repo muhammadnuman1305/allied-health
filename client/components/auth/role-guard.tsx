@@ -23,7 +23,7 @@ export function RoleGuard({
     const checkAccess = () => {
       if (!isAuthenticated()) {
         // Not authenticated, redirect to appropriate login page
-        const loginPath = requiredRole === "admin" ? "/admin-login" : "/login";
+        const loginPath = "/login";
         router.replace(fallbackPath || loginPath);
         return;
       }
@@ -33,14 +33,14 @@ export function RoleGuard({
         roleCheck = isAdmin();
         if (!roleCheck) {
           // User is authenticated but not admin, redirect to user dashboard
-          router.replace(fallbackPath || "/user/dashboard");
+          router.replace(fallbackPath || "/aha/dashboard");
           return;
         }
       } else if (requiredRole === "user") {
         roleCheck = isUser();
         if (!roleCheck) {
           // User is authenticated but is admin, redirect to admin dashboard
-          router.replace(fallbackPath || "/admin/dashboard");
+          router.replace(fallbackPath || "/ahp/dashboard");
           return;
         }
       }

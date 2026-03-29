@@ -39,12 +39,12 @@ export function useAuth() {
     }
 
     if (requiredRole === 1 && !isAdmin()) {
-      router.replace("/user/dashboard");
+      router.replace("/aha/dashboard");
       return false;
     }
 
     if (requiredRole === 2 && !isUser()) {
-      router.replace("/admin/dashboard");
+      router.replace("/ahp/dashboard");
       return false;
     }
 

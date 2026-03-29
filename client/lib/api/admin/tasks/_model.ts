@@ -71,7 +71,14 @@ export interface GetTaskDTO {
     wardId: string;
     start: string;
     end: string;
+    components?: SelectedComponentInput[];
   }>;
+}
+
+/** A single component value selected by a clinician for a task intervention */
+export interface SelectedComponentInput {
+  componentType: string; // e.g. "Technique"
+  value: string;         // e.g. "Hoist transfer"
 }
 
 export interface SubTask {
@@ -104,6 +111,8 @@ export interface TaskFormData {
   interventionSchedules?: Record<string, { startDate: string; endDate: string }>;
   interventionWardAssignments?: Record<string, string>;
   interventionOrder?: Record<string, number>;
+  /** Clinician-selected component values per intervention. Key = interventionId. Zero entries is valid. */
+  interventionComponents?: Record<string, SelectedComponentInput[]>;
 }
 
 // Backend DTO interfaces
@@ -128,6 +137,8 @@ export interface TaskInterventionDTO {
   start: string; // DateOnly format: YYYY-MM-DD
   end: string; // DateOnly format: YYYY-MM-DD
   wardId: string;
+  /** Component values selected by the clinician. Zero entries is valid. */
+  components?: SelectedComponentInput[];
 }
 
 export interface DeptTaskSummary {

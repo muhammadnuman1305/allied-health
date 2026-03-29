@@ -74,6 +74,13 @@ namespace AlliedHealth.Service.DTOs.AHA
         public DateOnly? OutcomeDate { get; set; }
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
+        public List<AHASelectedComponentDTO> Components { get; set; } = new List<AHASelectedComponentDTO>();
+    }
+
+    public class AHASelectedComponentDTO
+    {
+        public string ComponentType { get; set; } = default!;
+        public string Value { get; set; } = default!;
     }
 
     public class UpdateTaskInterventionStatus

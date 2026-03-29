@@ -3,43 +3,51 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  BarChart,
-  Settings,
-  Users,
-  FileText,
+  Briefcase,
   LogOut,
   ChevronDown,
-  ChevronUp,
-  ShieldAlert,
-  BellRing,
-  Database,
-  LineChart,
+  ChevronRight,
+  Settings,
+  LayoutDashboard,
+  ChevronsUpDown,
+  Users,
+  ClipboardList,
   User,
   Building2,
-  Bed,
-  ClipboardList,
-  Stethoscope,
-  Syringe,
+  FileText,
   Plus,
   ArrowDown,
   ArrowUp,
+  Stethoscope,
+  Syringe,
+  Bed,
   Calendar,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { clearAuth } from "@/lib/auth-utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export function AdminSidebar({
   className = "",
@@ -51,337 +59,300 @@ export function AdminSidebar({
   [key: string]: any;
 }) {
   const pathname = usePathname();
-  const [openSections, setOpenSections] = useState({
+  const router = useRouter();
+  const { user } = useAuth();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     Dashboard: true,
   });
-  const router = useRouter();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
-  // Initialize open sections based on current path
   useEffect(() => {
     const segments = pathname.split("/");
-    if (segments.length > 2) {
-      const mainSection = segments[2];
-
-      // Map pathname to section
-      const sectionMap = {
-        dashboard: "Dashboard",
-        analytics: "Dashboard",
-        reports: "Dashboard",
-        calendar: "Dashboard",
-        realtime: "Dashboard",
-        users: "User Management",
-        roles: "User Management",
-        permissions: "User Management",
-        patients: "Patient Management",
-        content: "Patient Management",
-        tasks: "Task Management",
-        media: "Patient Management",
-        referrals: "Referral Management",
-        "create-referral": "Referral Management",
-        incoming: "Referral Management",
-        outgoing: "Referral Management",
-        setup: "Clinical Setup",
-        departments: "Clinical Setup",
-        wards: "Clinical Setup",
-        coverage: "Clinical Setup",
-        system: "System Management",
-        logs: "System Management",
-        security: "System Management",
-        settings: "Settings",
-        // 'billing': 'Billing',
-        // 'subscriptions': 'Billing',
-      };
-
-      if (sectionMap[mainSection as keyof typeof sectionMap]) {
-        setOpenSections((prev) => ({
-          ...prev,
-          [sectionMap[mainSection as keyof typeof sectionMap]]: true,
-        }));
-      }
+    const sectionMap: Record<string, string> = {
+      dashboard: "Dashboard",
+      calendar: "Dashboard",
+      users: "User Management",
+      patients: "Patient Management",
+      tasks: "Task Management",
+      referrals: "Referral Management",
+      setup: "Clinical Setup",
+    };
+    const sectionName = segments[2];
+    if (sectionName && sectionMap[sectionName]) {
+      setOpenSections((prev) => ({ ...prev, [sectionMap[sectionName]]: true }));
     }
   }, [pathname]);
 
   const toggleSection = (section: string) => {
     if (isCollapsed) return;
-    setOpenSections((prev) => ({
-      ...prev,
-      [section]: !prev[section as keyof typeof prev],
-    }));
+    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   const adminSections = [
     {
       title: "Dashboard",
+      icon: <LayoutDashboard className="h-4 w-4" />,
       items: [
-        {
-          title: "Overview",
-          href: "/admin/dashboard",
-          icon: <LayoutDashboard className="h-5 w-5" />,
-        },
-        {
-          title: "Calendar",
-          href: "/admin/calendar",
-          icon: <Calendar className="h-5 w-5" />,
-        },
-        // {
-        //   title: "Analytics",
-        //   href: "/admin/analytics",
-        //   icon: <BarChart className="h-5 w-5" />,
-        // },
-        // {
-        //   title: "Reports",
-        //   href: "/admin/reports",
-        //   icon: <LineChart className="h-5 w-5" />,
-        // },
+        { title: "Overview", href: "/ahp/dashboard" },
+        { title: "Calendar", href: "/ahp/calendar" },
       ],
     },
     {
       title: "User Management",
+      icon: <Users className="h-4 w-4" />,
       items: [
-        {
-          title: "Users",
-          href: "/admin/users",
-          icon: <Users className="h-5 w-5" />,
-        },
-        // {
-        //   title: "Roles",
-        //   href: "/admin/roles",
-        //   icon: <UserCog className="h-5 w-5" />,
-        // },
-        // {
-        //   title: "Permissions",
-        //   href: "/admin/permissions",
-        //   icon: <ShieldCheck className="h-5 w-5" />,
-        // },
+        { title: "Users", href: "/ahp/users" },
       ],
     },
     {
       title: "Patient Management",
+      icon: <User className="h-4 w-4" />,
       items: [
-        {
-          title: "Patients",
-          href: "/admin/patients",
-          icon: <User className="h-5 w-5" />,
-        },
-        // {
-        //   title: "Health Resources",
-        //   href: "/admin/content",
-        //   icon: <FileCog className="h-5 w-5" />,
-        // },
+        { title: "Patients", href: "/ahp/patients" },
       ],
     },
     {
       title: "Task Management",
+      icon: <ClipboardList className="h-4 w-4" />,
       items: [
-        {
-          title: "Tasks",
-          href: "/admin/tasks",
-          icon: <ClipboardList className="h-5 w-5" />,
-        },
+        { title: "Tasks", href: "/ahp/tasks" },
       ],
     },
     {
       title: "Referral Management",
+      icon: <FileText className="h-4 w-4" />,
       items: [
-        {
-          title: "Create Referral",
-          href: "/admin/referrals/0",
-          icon: <Plus className="h-5 w-5" />,
-        },
-        {
-          title: "Incoming Referrals",
-          href: "/admin/referrals/incoming",
-          icon: <ArrowDown className="h-5 w-5" />,
-        },
-        {
-          title: "Outgoing Referrals",
-          href: "/admin/referrals/outgoing",
-          icon: <ArrowUp className="h-5 w-5" />,
-        },
+        { title: "Create Referral", href: "/ahp/referrals/0" },
+        { title: "Incoming Referrals", href: "/ahp/referrals/incoming" },
+        { title: "Outgoing Referrals", href: "/ahp/referrals/outgoing" },
       ],
     },
     {
       title: "Clinical Setup",
+      icon: <Building2 className="h-4 w-4" />,
       items: [
-        {
-          title: "Departments",
-          href: "/admin/setup/departments",
-          icon: <Building2 className="h-5 w-5" />,
-        },
-        {
-          title: "Wards",
-          href: "/admin/setup/wards",
-          icon: <Bed className="h-5 w-5" />,
-        },
-        {
-          title: "Specialties",
-          href: "/admin/setup/specialties",
-          icon: <Stethoscope className="h-5 w-5" />,
-        },
-        {
-          title: "Interventions",
-          href: "/admin/setup/interventions",
-          icon: <Syringe className="h-5 w-5" />,
-        },
+        { title: "Departments", href: "/ahp/setup/departments" },
+        { title: "Wards", href: "/ahp/setup/wards" },
+        { title: "Specialties", href: "/ahp/setup/specialties" },
+        { title: "Interventions", href: "/ahp/setup/interventions" },
       ],
     },
-    // {
-    //   title: "System Management",
-    //   items: [
-    //     {
-    //       title: "Logs",
-    //       href: "/admin/logs",
-    //       icon: <Database className="h-5 w-5" />,
-    //     },
-    //     {
-    //       title: "Roles & Permissions",
-    //       href: "/admin/roles",
-    //       icon: <ShieldAlert className="h-5 w-5" />,
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: "Settings",
-    //   items: [
-    //     {
-    //       title: "General",
-    //       href: "/admin/settings",
-    //       icon: <Settings className="h-5 w-5" />,
-    //     },
-    //   ],
-    // },
   ];
+
+  const userInitials =
+    user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+      : user?.username?.[0]?.toUpperCase() || "P";
+
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.username || "Professional";
 
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out h-screen",
+        "fixed left-0 top-0 z-40 flex flex-col bg-card border-r transition-all duration-300 ease-in-out",
+        "h-screen min-h-0",
         isCollapsed ? "w-[70px]" : "w-72",
         className
       )}
       {...props}
     >
-      {/* Header/Logo Section */}
-      <div className="flex h-20 items-center justify-center border-b px-3">
-        <Link href="/admin/dashboard" className="flex items-center gap-2">
-          <ShieldAlert className="h-6 w-6 text-primary" />
+      {/* Header */}
+      <div className="flex h-16 flex-shrink-0 items-center border-b px-4">
+        <Link href="/ahp/dashboard" className="flex items-center gap-3 min-w-0">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-purple-600">
+            <Briefcase className="h-4 w-4 text-white" />
+          </div>
           {!isCollapsed && (
-            <span className="text-lg font-bold tracking-tight">
-              Allied Health Admin
-            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-none truncate">Allied Professional</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Workspace</p>
+            </div>
           )}
         </Link>
       </div>
 
-      {/* Navigation Section */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        <div className="space-y-4">
-          {adminSections.map((section) => (
-            <div key={section.title}>
-              {!isCollapsed && (
-                <button
-                  onClick={() => toggleSection(section.title)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    openSections[section.title as keyof typeof openSections]
-                      ? "bg-muted text-foreground"
-                      : "hover:bg-muted/50 text-muted-foreground"
-                  )}
-                  aria-expanded={
-                    openSections[section.title as keyof typeof openSections]
-                  }
-                >
-                  <span>{section.title}</span>
-                  {openSections[section.title as keyof typeof openSections] ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-              )}
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-4 px-3" style={{ minHeight: 0 }}>
+        <div className="space-y-2">
+          {adminSections.map((section) => {
+            const isOpen = !!openSections[section.title];
+            const hasActiveItem = section.items.some(
+              (item) =>
+                pathname === item.href ||
+                (pathname.startsWith(item.href + "/") &&
+                  item.href !== "/ahp/dashboard")
+            );
 
-              <div
-                className={cn(
-                  "space-y-2 mt-2",
-                  isCollapsed ? "pl-0" : "pl-2",
-                  isCollapsed
-                    ? "block"
-                    : openSections[section.title as keyof typeof openSections]
-                    ? "block"
-                    : "hidden"
-                )}
-              >
-                {section.items.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                        isCollapsed ? "justify-center" : "justify-start",
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                      title={isCollapsed ? item.title : undefined}
-                      aria-current={isActive ? "page" : undefined}
-                    >
-                      <div
+            return (
+              <div key={section.title}>
+                {/* Collapsed: icon button with right-side dropdown */}
+                {isCollapsed ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
                         className={cn(
-                          "flex-shrink-0",
-                          isActive ? "text-primary" : "text-muted-foreground"
+                          "flex w-full items-center justify-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                          hasActiveItem
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
                         )}
+                        title={section.title}
                       >
-                        {item.icon}
-                      </div>
-                      {!isCollapsed && (
-                        <span className="truncate">{item.title}</span>
+                        <span className="flex-shrink-0">{section.icon}</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="right" align="start" className="w-44 ml-1">
+                      <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{section.title}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {section.items.map((item) => {
+                        const isActive =
+                          pathname === item.href ||
+                          (pathname.startsWith(item.href + "/") &&
+                            item.href !== "/ahp/dashboard");
+                        return (
+                          <DropdownMenuItem key={item.href} asChild>
+                            <Link
+                              href={item.href}
+                              className={cn(
+                                "cursor-pointer",
+                                isActive ? "text-purple-600 dark:text-purple-400 font-medium" : ""
+                              )}
+                            >
+                              {item.title}
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <>
+                    {/* Expanded: section header button */}
+                    <button
+                      onClick={() => toggleSection(section.title)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors justify-between",
+                        hasActiveItem && !isOpen
+                          ? "text-foreground"
+                          : isOpen
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
                       )}
-                    </Link>
-                  );
-                })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex-shrink-0">{section.icon}</span>
+                        <span>{section.title}</span>
+                      </div>
+                      {isOpen
+                        ? <ChevronDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        : <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      }
+                    </button>
+
+                    {/* Sub-items */}
+                    {isOpen && (
+                      <div className="ml-5 mt-1 mb-1 border-l border-border pl-3 space-y-0.5">
+                        {section.items.map((item) => {
+                          const isActive =
+                            pathname === item.href ||
+                            (pathname.startsWith(item.href + "/") &&
+                              item.href !== "/ahp/dashboard");
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className={cn(
+                                "block rounded-md px-3 py-2 text-sm transition-colors",
+                                isActive
+                                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium"
+                                  : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground"
+                              )}
+                              aria-current={isActive ? "page" : undefined}
+                            >
+                              {item.title}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </nav>
 
-      {/* Footer Section */}
-      <div className="mt-auto border-t py-4 px-3 space-y-2">
+      {/* Footer — user card with dropdown */}
+      <div className="shrink-0 mt-auto border-t p-3 pb-4">
         <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm w-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors",
-                isCollapsed ? "justify-center" : "justify-start"
-              )}
-              title={isCollapsed ? "Logout" : undefined}
-            >
-              <LogOut className="h-5 w-5" />
-              {!isCollapsed && <span>Logout</span>}
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-md p-8">
-            <AlertDialogHeader className="items-center">
-              <LogOut className="h-8 w-8 text-destructive mb-2" />
-              <AlertDialogTitle className="text-center text-lg font-semibold">
-                Are you sure you want to logout?
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors",
+                  isCollapsed ? "justify-center" : ""
+                )}
+              >
+                <div className="h-8 w-8 flex-shrink-0 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">{userInitials}</span>
+                </div>
+                {!isCollapsed && user && (
+                  <>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-medium leading-none truncate">{userName}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {user.email || "No email"}
+                      </p>
+                    </div>
+                    <ChevronsUpDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-44 mb-1">
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href="/ahp/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <AlertDialogContent className="max-w-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-lg font-semibold">
+                Confirm Logout
               </AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to logout? You will need to sign in again to access your account.
+              </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row justify-center gap-3 mt-4 sm:justify-center">
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="flex-row justify-start gap-2 mt-2 sm:justify-start">
               <AlertDialogAction
                 onClick={() => {
                   clearAuth();
-                  router.push("/admin-login");
+                  router.push("/login");
                 }}
-                className="w-28 bg-destructive text-white hover:bg-destructive/90"
+                className="bg-destructive text-white hover:bg-destructive/90"
               >
                 Logout
               </AlertDialogAction>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

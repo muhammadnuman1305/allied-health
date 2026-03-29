@@ -5,22 +5,22 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 155 30% 10%;
-    
+    --foreground: 220 15% 10%;
+
     --card: 0 0% 100%;
-    --card-foreground: 155 30% 10%;
-    
+    --card-foreground: 220 15% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 155 30% 10%;
-    
+    --popover-foreground: 220 15% 10%;
+
     --primary: 142 76% 36%;
     --primary-foreground: 355 100% 100%;
-    
+
     --secondary: 142 50% 96%;
     --secondary-foreground: 142 76% 36%;
-    
-    --muted: 142 50% 96%;
-    --muted-foreground: 155 30% 40%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
     
     --accent: 142 50% 96%;
     --accent-foreground: 142 76% 36%;
@@ -28,8 +28,8 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 142 20% 90%;
-    --input: 142 20% 90%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 142 76% 36%;
 
     --chart-1: 142 76% 36%;
@@ -205,4 +205,18 @@
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Admin / Allied Professional purple theme */
+.theme-purple {
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 262 83% 58%;
+}
+
+.theme-purple.dark,
+.theme-purple .dark {
+  --primary: 262 60% 65%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 262 60% 65%;
 }

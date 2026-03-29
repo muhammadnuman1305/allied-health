@@ -98,5 +98,21 @@
         public Guid WardId { get; set; }
         public DateOnly Start { get; set; }
         public DateOnly End { get; set; }
+
+        /// <summary>
+        /// Components the clinician selected for this intervention on this task.
+        /// Zero or more entries — always optional.
+        /// </summary>
+        public List<SelectedComponentDTO> Components { get; set; } = new List<SelectedComponentDTO>();
+    }
+
+    /// <summary>
+    /// A single component value selected by a clinician when assigning an
+    /// intervention to a task (e.g. Technique = "Hoist transfer").
+    /// </summary>
+    public class SelectedComponentDTO
+    {
+        public string ComponentType { get; set; } = default!;
+        public string Value { get; set; } = default!;
     }
 }

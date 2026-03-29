@@ -25,6 +25,10 @@ namespace AlliedHealth.Domain
         public DbSet<ReferralIntervention> ReferralInterventions => Set<ReferralIntervention>();
         public DbSet<Intervention> Interventions => Set<Intervention>();
         public DbSet<Specialty> Specialties => Set<Specialty>();
+        public DbSet<ComponentType> ComponentTypes => Set<ComponentType>();
+        public DbSet<InterventionComponent> InterventionComponents => Set<InterventionComponent>();
+        public DbSet<TaskInterventionComponent> TaskInterventionComponents => Set<TaskInterventionComponent>();
+        public DbSet<ReferralInterventionComponent> ReferralInterventionComponents => Set<ReferralInterventionComponent>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

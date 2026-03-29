@@ -96,7 +96,15 @@ namespace AlliedHealth.Service.Implementation
                             Goals = x.Goals,
                             //ReferralDate = x.CreatedDate,
                             Description = x.Description,
-                            Interventions = x.ReferralInterventions.Select(x => x.InterventionId).ToList()
+                            Interventions = x.ReferralInterventions.Select(ri => new ReferralInterventionItemDTO
+                            {
+                                Id = ri.InterventionId,
+                                Components = ri.SelectedComponents.Select(c => new ReferralSelectedComponentDTO
+                                {
+                                    ComponentType = c.ComponentType.Name,
+                                    Value = c.Value
+                                }).ToList()
+                            }).ToList()
                         }).FirstOrDefaultAsync();
 
             return task;
@@ -140,16 +148,38 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.Referrals.AddAsync(newReferral);
             await _dbContext.SaveChangesAsync();
 
+            // Pre-fetch component type lookup to avoid per-row queries
+            var compTypeMap = await _dbContext.ComponentTypes
+                .ToDictionaryAsync(ct => ct.Name, ct => ct.Id);
+
             foreach (var inv in request.Interventions)
             {
+                var refInvId = Guid.NewGuid();
                 var refInv = new ReferralIntervention
                 {
-                    Id = Guid.NewGuid(),
+                    Id = refInvId,
                     ReferralId = referralId,
-                    InterventionId = inv
+                    InterventionId = inv.Id
                 };
 
                 await _dbContext.ReferralInterventions.AddAsync(refInv);
+
+                if (inv.Components != null)
+                {
+                    foreach (var comp in inv.Components)
+                    {
+                        if (compTypeMap.TryGetValue(comp.ComponentType, out var typeId))
+                        {
+                            await _dbContext.ReferralInterventionComponents.AddAsync(new ReferralInterventionComponent
+                            {
+                                Id = Guid.NewGuid(),
+                                ReferralInterventionId = refInvId,
+                                ComponentTypeId = typeId,
+                                Value = comp.Value.Trim()
+                            });
+                        }
+                    }
+                }
             }
 
             await _dbContext.SaveChangesAsync();
@@ -158,62 +188,86 @@ namespace AlliedHealth.Service.Implementation
 
         public async Task<string?> UpdateReferral(AddUpdateReferralDTO request)
         {
-            //var task = await _dbContext.Tasks
-            //                 .Include(x => x.TaskInterventions)
-            //                 .FirstOrDefaultAsync(x => x.Id == request.Id);
+            var referral = await _dbContext.Referrals
+                                 .Include(x => x.ReferralInterventions)
+                                     .ThenInclude(ri => ri.SelectedComponents)
+                                 .FirstOrDefaultAsync(x => x.Id == request.Id);
 
-            //if (task == null)
-            //    return EMessages.TaskNotExists;
+            if (referral == null)
+                return EMessages.ReferralNotExists;
 
-            //task.Title = request.Title;
-            //task.Priority = request.Priority;
-            //task.StartDate = request.StartDate;
-            //task.EndDate = request.EndDate;
-            //task.Diagnosis = request.Diagnosis;
-            //task.Goals = request.Goals;
-            //task.Description = request.Description;
-            //task.ModifiedDate = DateTime.UtcNow;
-            //task.ModifiedBy = _userContext.UserId;
+            var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
 
-            //var requestInterventionIds = request.Interventions.Select(i => i.Id).ToHashSet();
-            //var toRemove = task.TaskInterventions
-            //                .Where(ti => !requestInterventionIds.Contains(ti.InterventionId))
-            //                .ToList();
+            // ── Step 1: Remove dropped interventions (CASCADE deletes their components)
+            //           and flush existing SelectedComponents for kept interventions
+            var toRemove = referral.ReferralInterventions
+                .Where(ri => !requestInterventionIds.Contains(ri.InterventionId))
+                .ToList();
+            _dbContext.ReferralInterventions.RemoveRange(toRemove);
 
-            //_dbContext.TaskInterventions.RemoveRange(toRemove);
+            var keptByInterventionId = referral.ReferralInterventions
+                .Where(ri => requestInterventionIds.Contains(ri.InterventionId))
+                .ToDictionary(ri => ri.InterventionId);
 
-            //// 2️⃣ Update existing interventions and add new ones
-            //foreach (var inv in request.Interventions)
-            //{
-            //    var existing = task.TaskInterventions
-            //        .FirstOrDefault(ti => ti.InterventionId == inv.Id);
+            foreach (var kept in keptByInterventionId.Values)
+            {
+                _dbContext.ReferralInterventionComponents.RemoveRange(kept.SelectedComponents);
+                kept.SelectedComponents.Clear();
+            }
 
-            //    if (existing != null)
-            //    {
-            //        existing.AhaId = inv.AhaId;
-            //        existing.StartDate = inv.Start;
-            //        existing.EndDate = inv.End;
-            //        existing.WardId = inv.WardId;
-            //    }
-            //    else
-            //    {
-            //        // Add new intervention
-            //        var newIntervention = new TaskIntervention
-            //        {
-            //            Id = Guid.NewGuid(),
-            //            TaskId = task.Id,
-            //            InterventionId = inv.Id,
-            //            AhaId = inv.AhaId,
-            //            StartDate = inv.Start,
-            //            EndDate = inv.End,
-            //            WardId = inv.WardId
-            //        };
+            await _dbContext.SaveChangesAsync(); // flush all deletions first
 
-            //        await _dbContext.TaskInterventions.AddAsync(newIntervention);
-            //    }
-            //}
+            // ── Step 2: Update referral scalars
+            referral.Priority = request.Priority;
+            referral.Diagnosis = request.Diagnosis;
+            referral.Goals = request.Goals;
+            referral.Description = request.Description;
+            referral.ModifiedDate = DateTime.UtcNow;
+            referral.ModifiedBy = _userContext.UserId;
 
-            //await _dbContext.SaveChangesAsync();
+            // Pre-fetch component type lookup
+            var compTypeMap = await _dbContext.ComponentTypes
+                .ToDictionaryAsync(ct => ct.Name, ct => ct.Id);
+
+            // ── Step 3: Upsert interventions and insert fresh SelectedComponents
+            foreach (var inv in request.Interventions)
+            {
+                Guid refInvId;
+
+                if (keptByInterventionId.TryGetValue(inv.Id, out var existing))
+                {
+                    refInvId = existing.Id;
+                }
+                else
+                {
+                    refInvId = Guid.NewGuid();
+                    await _dbContext.ReferralInterventions.AddAsync(new ReferralIntervention
+                    {
+                        Id = refInvId,
+                        ReferralId = referral.Id,
+                        InterventionId = inv.Id
+                    });
+                }
+
+                if (inv.Components != null)
+                {
+                    foreach (var comp in inv.Components)
+                    {
+                        if (compTypeMap.TryGetValue(comp.ComponentType, out var typeId))
+                        {
+                            await _dbContext.ReferralInterventionComponents.AddAsync(new ReferralInterventionComponent
+                            {
+                                Id = Guid.NewGuid(),
+                                ReferralInterventionId = refInvId,
+                                ComponentTypeId = typeId,
+                                Value = comp.Value.Trim()
+                            });
+                        }
+                    }
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
             return null;
         }
 

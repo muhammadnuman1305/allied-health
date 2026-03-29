@@ -9,8 +9,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect old signup paths to user login
-  if (pathname === '/signup' || pathname.startsWith('/auth/signup')) {
+  // Redirect old signup paths and admin-login to unified login
+  if (
+    pathname === '/signup' ||
+    pathname.startsWith('/auth/signup') ||
+    pathname === '/admin-login'
+  ) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 

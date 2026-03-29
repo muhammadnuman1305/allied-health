@@ -1,4 +1,4 @@
-import { Referral, ReferralFormData, ReferralSummary, ReferralAPIResponse } from "./_model";
+import { Referral, ReferralFormData, ReferralSummary, ReferralAPIResponse, GetReferralDetailsAPIResponse } from "./_model";
 import api from "../../axios";
 import { getUser } from "@/lib/auth-utils";
 
@@ -44,7 +44,10 @@ interface AddUpdateReferralDTO {
   Diagnosis: string;
   Goals: string;
   Description?: string | null;
-  Interventions: string[];
+  Interventions: Array<{
+    Id: string;
+    Components: Array<{ ComponentType: string; Value: string }>;
+  }>;
 }
 
 const transformToBackendDTO = (formData: ReferralFormData, therapistId: string): AddUpdateReferralDTO => {
@@ -78,7 +81,13 @@ const transformToBackendDTO = (formData: ReferralFormData, therapistId: string):
     Diagnosis: formData.diagnosis || "",
     Goals: formData.goals || "",
     Description: formData.clinicalInstructions || null,
-    Interventions: formData.interventions || [],
+    Interventions: (formData.interventions || []).map((id) => ({
+      Id: id,
+      Components: (formData.interventionComponents?.[id] ?? []).map((c) => ({
+        ComponentType: c.componentType,
+        Value: c.value,
+      })),
+    })),
   };
 };
 
@@ -127,6 +136,46 @@ const transformReferral = (apiReferral: ReferralAPIResponse): Referral => {
   };
 };
 
+// Transform detail API response (includes interventions + components)
+const transformReferralDetails = (item: GetReferralDetailsAPIResponse): Referral => {
+  const priorityStr = priorityToString(item.priority);
+  const interventionComponents: Record<string, import("./_model").SelectedComponentInput[]> = {};
+  const interventionIds = (item.interventions || []).map((inv) => {
+    interventionComponents[inv.id] = inv.components.map((c) => ({
+      componentType: c.componentType,
+      value: c.value,
+    }));
+    return inv.id;
+  });
+
+  return {
+    id: item.id,
+    type: "outgoing", // detail endpoint doesn't return type; default to outgoing
+    patientId: item.patientId.toString(),
+    patientName: "",
+    referralDate: item.referralDate ?? "",
+    priority: priorityStr,
+    priorityNumber: item.priority,
+    priorityDisplay: priorityToDisplayText(priorityStr),
+    originDeptId: item.originDeptId,
+    originDeptName: "",
+    originDepartment: item.originDeptId,
+    destinationDeptId: item.destinationDeptId,
+    destinationDeptName: "",
+    destinationDepartment: item.destinationDeptId,
+    therapistId: "",
+    therapistName: "",
+    diagnosis: item.diagnosis ?? undefined,
+    goals: item.goals ?? undefined,
+    clinicalInstructions: item.description ?? undefined,
+    lastUpdated: "",
+    updatedAt: "",
+    hidden: false,
+    interventions: interventionIds,
+    interventionComponents,
+  };
+};
+
 export const getAll$ = async (type?: "incoming" | "outgoing"): Promise<{ data: Referral[] }> => {
   let url = BASE_URL;
   
@@ -140,8 +189,8 @@ export const getAll$ = async (type?: "incoming" | "outgoing"): Promise<{ data: R
 };
 
 export const getById$ = async (id: string): Promise<{ data: Referral }> => {
-  const response = await api.get<ReferralAPIResponse>(`${BASE_URL}/${id}`);
-  return { data: transformReferral(response.data) };
+  const response = await api.get<GetReferralDetailsAPIResponse>(`${BASE_URL}/${id}`);
+  return { data: transformReferralDetails(response.data) };
 };
 
 export const getSummary$ = async (): Promise<{ data: ReferralSummary }> => {

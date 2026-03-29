@@ -1,4 +1,4 @@
-import { Intervention, InterventionFormData, InterventionSummary } from "./_model";
+import { ComponentTypeOption, Intervention, InterventionFormData, InterventionSummary } from "./_model";
 import api from "../../axios";
 
 // Get all interventions
@@ -47,6 +47,12 @@ export const getSummary$ = async () => {
 export const getSpecialtyOptions$ = async () => {
 	 const response = await api.get("/api/intervention/specialties");
 	 return { data: response.data };
+};
+
+// Get component-type options
+export const getComponentTypes$ = async () => {
+  const response = await api.get("/api/intervention/component-types");
+  return { data: response.data as ComponentTypeOption[] };
 };
 
 
