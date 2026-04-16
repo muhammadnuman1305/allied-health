@@ -5,7 +5,6 @@ export interface Task {
   patientId: string;
   patientName: string;
   patientMrn?: string; // Optional, may not come from backend
-  taskType?: string; // Optional, may not come from backend
   title: string;
   clinicalInstructions?: string; // Optional, mapped from description
   priority: "Critical" | "High" | "Medium" | "Low";
@@ -292,7 +291,7 @@ export const statusNumberToString = (
 };
 
 // Helper to convert priority string to number (for backwards compatibility)
-export const priorityStringToNumber = (priority: "High" | "Medium" | "Low" | "Urgent"): number => {
+export const priorityStringToNumber = (priority: "Critical" | "High" | "Medium" | "Low" | "Urgent"): number => {
   switch (priority) {
     case "Low":
       return 1;
@@ -300,6 +299,7 @@ export const priorityStringToNumber = (priority: "High" | "Medium" | "Low" | "Ur
       return 2;
     case "High":
       return 3;
+    case "Critical":
     case "Urgent":
       return 4;
     default:
