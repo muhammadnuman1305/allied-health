@@ -359,6 +359,9 @@ namespace AlliedHealth.Domain.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<DateOnly?>("LastReviewDate")
+                        .HasColumnType("date");
+
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uuid");
 
@@ -497,6 +500,9 @@ namespace AlliedHealth.Domain.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CompletedRepetitions")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
@@ -528,6 +534,9 @@ namespace AlliedHealth.Domain.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<DateOnly?>("LastReviewDate")
+                        .HasColumnType("date");
+
                     b.Property<Guid?>("ModifiedBy")
                         .HasColumnType("uuid");
 
@@ -545,11 +554,21 @@ namespace AlliedHealth.Domain.Migrations
                     b.Property<Guid?>("ReferralId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("RequiredRepetitions")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("integer");
+
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TaskType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Title")
                         .IsRequired()
