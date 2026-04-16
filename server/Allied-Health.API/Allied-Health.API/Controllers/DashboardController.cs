@@ -18,7 +18,6 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("")]
-    [EnableQuery]
     public async Task<IActionResult> GetDashboardDetails()
     {
         var response = await _dashboardService.GetDashboardDetails();

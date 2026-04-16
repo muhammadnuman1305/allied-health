@@ -26,19 +26,28 @@ namespace AlliedHealth.Service.Implementation
         {
             var results = new List<AutoAssignResultDTO>();
 
-            // Pre-load all AHAs with their specialties
-            var ahas = await _dbContext.Users
-                .Where(u => u.Role == (int)UserRoles.Assistant && !u.Hidden)
-                .Select(u => new
+            // Pre-load all AHAs with their specialties via join
+            var ahaRows = await (from u in _dbContext.Users
+                                 where u.Role == (int)UserRoles.Assistant && !u.Hidden
+                                 join us in _dbContext.UserSpecialties on u.Id equals us.UserId into usGroup
+                                 from us in usGroup.DefaultIfEmpty()
+                                 select new
+                                 {
+                                     u.Id,
+                                     Name = u.FirstName + " " + u.LastName,
+                                     SpecialtyId = (Guid?)us.SpecialtyId
+                                 }).ToListAsync();
+
+            var ahas = ahaRows
+                .GroupBy(r => new { r.Id, r.Name })
+                .Select(g => new
                 {
-                    u.Id,
-                    Name = u.FirstName + " " + u.LastName,
-                    SpecialtyIds = _dbContext.UserSpecialties
-                        .Where(us => us.UserId == u.Id)
-                        .Select(us => us.SpecialtyId)
-                        .ToList()
-                })
-                .ToListAsync();
+                    g.Key.Id,
+                    g.Key.Name,
+                    SpecialtyIds = g.Where(r => r.SpecialtyId.HasValue)
+                                    .Select(r => r.SpecialtyId!.Value)
+                                    .ToList()
+                }).ToList();
 
             // Count existing task slots per AHA on the start date
             var ahaSlotCounts = await _dbContext.TaskInterventions

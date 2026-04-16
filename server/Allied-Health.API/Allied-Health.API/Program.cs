@@ -133,11 +133,32 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
+// Global exception handler — always returns JSON with the real error message
+app.UseExceptionHandler(errApp =>
+{
+    errApp.Run(async ctx =>
+    {
+        ctx.Response.StatusCode = 500;
+        ctx.Response.ContentType = "application/json";
+        var err = ctx.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        if (err != null)
+        {
+            Console.Error.WriteLine($"[UNHANDLED] {err.Error}");
+            await ctx.Response.WriteAsJsonAsync(new
+            {
+                error   = err.Error.Message,
+                detail  = err.Error.InnerException?.Message,
+                type    = err.Error.GetType().Name
+            });
+        }
+    });
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-} 
+}
 else
 {
     app.UseHttpsRedirection();
