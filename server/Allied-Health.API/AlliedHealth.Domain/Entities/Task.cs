@@ -13,6 +13,11 @@ namespace AlliedHealth.Domain.Entities
         public string? Description { get; set; }
         public string? Goals { get; set; }
         public int Priority { get; set; }
+        public int Severity { get; set; } = 1; // ETaskSeverity: 1=Low, 2=Medium, 3=High, 4=Critical
+        public int RequiredRepetitions { get; set; } = 0;
+        public int CompletedRepetitions { get; set; } = 0;
+        public DateOnly? LastReviewDate { get; set; }
+        public string? TaskType { get; set; }
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
         public int Status { get; set; }

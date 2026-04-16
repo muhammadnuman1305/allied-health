@@ -8,7 +8,7 @@ export interface Task {
   taskType?: string; // Optional, may not come from backend
   title: string;
   clinicalInstructions?: string; // Optional, mapped from description
-  priority: "High" | "Medium" | "Low";
+  priority: "Critical" | "High" | "Medium" | "Low";
   dueDate?: string; // ISO date string - kept for backward compatibility
   dueTime?: string; // HH:mm format - kept for backward compatibility
   startDate?: string; // ISO date string (DateOnly from backend)
@@ -21,7 +21,7 @@ export interface Task {
   assignedToStaffName?: string;
   subTasks?: SubTask[];
   status: "Not Assigned" | "Assigned" | "In Progress" | "Completed" | "Overdue";
-  
+
   // Optional referral linkage
   linkedReferral?: boolean;
   referralFromDepartment?: string;
@@ -41,10 +41,19 @@ export interface Task {
   goals?: string;
   lastUpdated?: string; // DateTime from backend
   hidden?: boolean;
-  
+
   createdAt?: string;
   updatedAt?: string; // Alias for lastUpdated
   createdBy?: string;
+  createdByName?: string;
+  createdById?: string;
+
+  // New fields
+  severity?: number; // ETaskSeverity: 1=Low, 2=Medium, 3=High, 4=Critical
+  requiredRepetitions?: number;
+  completedRepetitions?: number;
+  lastReviewDate?: string; // DateOnly YYYY-MM-DD
+  taskType?: string;
 }
 
 // Backend GetTaskDTO interface
@@ -52,10 +61,15 @@ export interface GetTaskDTO {
   id: string;
   title: string;
   patientId: number;
-  patientName?: number | string; // Backend says int but likely string, may not always be present
+  patientName?: number | string;
   departmentId: string;
-  departmentName?: string; // May not always be present
-  priority: number; // 1=Low, 2=Medium, 3=High, 4=Urgent
+  departmentName?: string;
+  priority: number; // 1=Low, 2=Medium, 3=High
+  severity?: number; // 1=Low, 2=Medium, 3=High, 4=Critical
+  requiredRepetitions?: number;
+  completedRepetitions?: number;
+  lastReviewDate?: string; // DateOnly YYYY-MM-DD
+  taskType?: string;
   startDate?: string; // DateOnly format: YYYY-MM-DD
   endDate?: string; // DateOnly format: YYYY-MM-DD
   assignedTo?: string;
@@ -65,6 +79,8 @@ export interface GetTaskDTO {
   lastUpdated?: string; // DateTime
   hidden: boolean;
   status?: number; // ETaskStatus enum: 1=Assigned, 2=InProgress, 3=Completed, 4=Overdue
+  createdByName?: string;
+  createdById?: string;
   interventions?: Array<{
     id: string;
     ahaId: string;
@@ -95,7 +111,10 @@ export interface TaskFormData {
   diagnosis?: string;
   goals?: string;
   clinicalInstructions: string;
-  priority: "High" | "Medium" | "Low";
+  priority: "Critical" | "High" | "Medium" | "Low";
+  severity?: number; // 1=Low, 2=Medium, 3=High, 4=Critical
+  requiredRepetitions?: number;
+  lastReviewDate?: string; // DateOnly YYYY-MM-DD
   dueDate: string;
   dueTime: string;
   startDate?: string; // For backend DTO
@@ -122,6 +141,10 @@ export interface AddUpdateTaskDTO {
   departmentId: string;
   title: string;
   priority: number;
+  severity: number;
+  requiredRepetitions: number;
+  lastReviewDate?: string | null; // DateOnly YYYY-MM-DD
+  taskType?: string | null;
   startDate: string; // DateOnly format: YYYY-MM-DD
   endDate: string; // DateOnly format: YYYY-MM-DD
   description?: string | null;
@@ -129,6 +152,21 @@ export interface AddUpdateTaskDTO {
   goals?: string | null;
   interventions: TaskInterventionDTO[];
   refId?: string | null; // Optional referral ID if task is created from a referral
+}
+
+export interface AutoAssignRequestDTO {
+  interventionIds: string[];
+  startDate: string; // DateOnly YYYY-MM-DD
+  endDate: string;   // DateOnly YYYY-MM-DD
+}
+
+export interface AutoAssignResultDTO {
+  interventionId: string;
+  interventionName: string;
+  suggestedAhaId?: string;
+  suggestedAhaName?: string;
+  currentDaySlots: number;
+  canAssign: boolean;
 }
 
 export interface TaskInterventionDTO {
@@ -217,7 +255,7 @@ export const getStatusBadgeVariant = (status: string) => {
 };
 
 // Helper to convert priority number to string
-export const priorityNumberToString = (priority: number): "High" | "Medium" | "Low" => {
+export const priorityNumberToString = (priority: number): "Critical" | "High" | "Medium" | "Low" => {
   switch (priority) {
     case 1:
       return "Low";
@@ -226,7 +264,7 @@ export const priorityNumberToString = (priority: number): "High" | "Medium" | "L
     case 3:
       return "High";
     case 4:
-      return "High"; // Urgent mapped to High
+      return "Critical";
     default:
       return "Medium";
   }
@@ -266,6 +304,33 @@ export const priorityStringToNumber = (priority: "High" | "Medium" | "Low" | "Ur
       return 4;
     default:
       return 2; // Default to Medium
+  }
+};
+
+// Severity helpers
+export const SEVERITY_OPTIONS = [
+  { value: 1, label: "Low" },
+  { value: 2, label: "Medium" },
+  { value: 3, label: "High" },
+  { value: 4, label: "Critical" },
+] as const;
+
+export const severityNumberToString = (severity: number | undefined): string => {
+  switch (severity) {
+    case 1: return "Low";
+    case 2: return "Medium";
+    case 3: return "High";
+    case 4: return "Critical";
+    default: return "Low";
+  }
+};
+
+export const getSeverityBadgeVariant = (severity: number | undefined) => {
+  switch (severity) {
+    case 4: return "destructive";
+    case 3: return "destructive";
+    case 2: return "default";
+    default: return "secondary";
   }
 };
 

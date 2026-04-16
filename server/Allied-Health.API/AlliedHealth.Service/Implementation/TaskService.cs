@@ -37,6 +37,11 @@ namespace AlliedHealth.Service.Implementation
                                 DepartmentId = t.DepartmentId,
                                 DepartmentName = t.Department.Name,
                                 Priority = t.Priority,
+                                Severity = t.Severity,
+                                RequiredRepetitions = t.RequiredRepetitions,
+                                CompletedRepetitions = t.CompletedRepetitions,
+                                LastReviewDate = t.LastReviewDate,
+                                TaskType = t.TaskType,
                                 StartDate = t.StartDate,
                                 Status = (int)(t.StartDate > now
                                          ? ETaskStatus.Assigned
@@ -46,6 +51,13 @@ namespace AlliedHealth.Service.Implementation
                                 EndDate = t.EndDate,
                                 LastUpdated = t.ModifiedDate,
                                 Hidden = t.Hidden,
+                                CreatedById = t.CreatedBy,
+                                CreatedByName = t.CreatedBy != null
+                                    ? _dbContext.Users
+                                        .Where(u => u.Id == t.CreatedBy)
+                                        .Select(u => u.FirstName + " " + u.LastName)
+                                        .FirstOrDefault()
+                                    : null,
                             }).AsQueryable();
 
             return tasks;
@@ -89,11 +101,23 @@ namespace AlliedHealth.Service.Implementation
                             PatientId = x.PatientId,
                             DepartmentId = x.DepartmentId,
                             Priority = x.Priority,
+                            Severity = x.Severity,
+                            RequiredRepetitions = x.RequiredRepetitions,
+                            CompletedRepetitions = x.CompletedRepetitions,
+                            LastReviewDate = x.LastReviewDate,
+                            TaskType = x.TaskType,
                             Diagnosis = x.Diagnosis,
                             Goals = x.Goals,
                             StartDate = x.StartDate,
                             EndDate = x.EndDate,
                             Description = x.Description,
+                            CreatedById = x.CreatedBy,
+                            CreatedByName = x.CreatedBy != null
+                                ? _dbContext.Users
+                                    .Where(u => u.Id == x.CreatedBy)
+                                    .Select(u => u.FirstName + " " + u.LastName)
+                                    .FirstOrDefault()
+                                : null,
                             Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
                             {
                                 Id = t.InterventionId,
@@ -135,6 +159,11 @@ namespace AlliedHealth.Service.Implementation
                 DepartmentId = request.DepartmentId,
                 Title = request.Title,
                 Priority = request.Priority,
+                Severity = request.Severity,
+                RequiredRepetitions = request.RequiredRepetitions,
+                CompletedRepetitions = 0,
+                LastReviewDate = request.LastReviewDate,
+                TaskType = request.TaskType,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
                 Diagnosis = request.Diagnosis,
@@ -235,6 +264,10 @@ namespace AlliedHealth.Service.Implementation
             // ── Step 2: Update task scalars
             task.Title = request.Title;
             task.Priority = request.Priority;
+            task.Severity = request.Severity;
+            task.RequiredRepetitions = request.RequiredRepetitions;
+            task.LastReviewDate = request.LastReviewDate;
+            task.TaskType = request.TaskType;
             task.StartDate = request.StartDate;
             task.EndDate = request.EndDate;
             task.Diagnosis = request.Diagnosis;

@@ -56,6 +56,8 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
   getSummary$,
@@ -76,6 +78,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AdminTasksPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [summary, setSummary] = useState<TaskSummary>({
     totalTasks: 0,
@@ -88,7 +91,6 @@ export default function AdminTasksPage() {
     deptWiseSummary: [],
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
     "All"
@@ -130,7 +132,6 @@ export default function AdminTasksPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
 
       // Fetch both tasks and summary data in parallel
       const [tasksResponse, summaryResponse] = await Promise.all([
@@ -153,7 +154,7 @@ export default function AdminTasksPage() {
         deptWiseSummary: summaryData.deptWiseSummary || [],
       });
     } catch (err) {
-      setError("Failed to fetch data. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to fetch data. Please try again." });
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
@@ -299,6 +300,25 @@ export default function AdminTasksPage() {
       ),
     },
     {
+      key: "createdByName",
+      label: "Created By",
+      width: "w-[140px]",
+      sortable: true,
+      render: (task) => {
+        const name = (task as any).createdByName;
+        const id = (task as any).createdById;
+        if (!name) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <button
+            onClick={() => id && router.push(`/ahp/users/${id}`)}
+            className={id ? "text-primary hover:underline text-left text-sm" : "text-sm"}
+          >
+            {name}
+          </button>
+        );
+      },
+    },
+    {
       key: "updatedAt",
       label: "Last Updated",
       width: "w-[140px]",
@@ -364,7 +384,7 @@ export default function AdminTasksPage() {
       // Refetch tasks and summary to ensure data is in sync
       await fetchData();
     } catch (err) {
-      setError("Failed to update task status. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to update task status. Please try again." });
       console.error("Error updating task status:", err);
     }
   };
@@ -379,7 +399,7 @@ export default function AdminTasksPage() {
       // Refetch tasks and summary to ensure data is in sync
       await fetchData();
     } catch (err) {
-      setError("Failed to complete task. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to complete task. Please try again." });
       console.error("Error completing task:", err);
     }
 
@@ -401,7 +421,7 @@ export default function AdminTasksPage() {
       // Refetch tasks and summary to ensure data is in sync
       await fetchData();
     } catch (err) {
-      setError("Failed to delete/restore task. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete/restore task. Please try again." });
       console.error("Error deleting/restoring task:", err);
     }
 
@@ -438,44 +458,6 @@ export default function AdminTasksPage() {
     (filters.assignedToDepartment && filters.assignedToDepartment !== "all") ||
     filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Task Management</h1>
-          <p className="text-muted-foreground">
-            Create, assign, and track patient tasks
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading tasks...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Task Management</h1>
-          <p className="text-muted-foreground">
-            Create, assign, and track patient tasks
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -487,30 +469,41 @@ export default function AdminTasksPage() {
 
       {/* Statistics Cards - Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Tasks"
-          value={summary.totalTasks}
-          description="All tasks"
-          icon={ClipboardList}
-        />
-        <StatsCard
-          title="Overdue"
-          value={summary.overdueTasks}
-          description="Requires attention"
-          icon={AlertTriangle}
-        />
-        <StatsCard
-          title="Active"
-          value={summary.activeTasks}
-          description="Being worked on"
-          icon={Clock}
-        />
-        <StatsCard
-          title="Completed"
-          value={summary.completedTasks}
-          description="Successfully done"
-          icon={CheckCircle}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Tasks"
+              value={summary.totalTasks}
+              description="All tasks"
+              icon={ClipboardList}
+            />
+            <StatsCard
+              title="Overdue"
+              value={summary.overdueTasks}
+              description="Requires attention"
+              icon={AlertTriangle}
+            />
+            <StatsCard
+              title="Active"
+              value={summary.activeTasks}
+              description="Being worked on"
+              icon={Clock}
+            />
+            <StatsCard
+              title="Completed"
+              value={summary.completedTasks}
+              description="Successfully done"
+              icon={CheckCircle}
+            />
+          </>
+        )}
       </div>
 
       {/* Task Overview */}
@@ -630,6 +623,13 @@ export default function AdminTasksPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={tasks}
             columns={columns}
@@ -706,6 +706,7 @@ export default function AdminTasksPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 

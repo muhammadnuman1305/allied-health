@@ -69,6 +69,8 @@ import {
   getSummary$,
 } from "@/lib/api/admin/users/_request";
 import { User, UserSummary } from "@/lib/api/admin/users/_model";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 // Role mapping from backend numbers to display strings
 const roleMap: Record<number, string> = {
@@ -130,6 +132,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AdminUsersPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [users, setUsers] = useState<TransformedUser[]>([]);
   const [summary, setSummary] = useState<UserSummary>({
     totalUsers: 0,
@@ -138,7 +141,6 @@ export default function AdminUsersPage() {
     totalAdmins: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -173,7 +175,6 @@ export default function AdminUsersPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // Fetch both users and summary data in parallel
         const [usersResponse, summaryResponse] = await Promise.all([
@@ -185,7 +186,7 @@ export default function AdminUsersPage() {
         setUsers(transformedUsers);
         setSummary(summaryResponse.data);
       } catch (err) {
-        setError("Failed to fetch data. Please try again.");
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch data. Please try again." });
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -323,7 +324,7 @@ export default function AdminUsersPage() {
         )
       );
     } catch (err) {
-      setError("Failed to update user status. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to update user status. Please try again." });
       console.error("Error toggling user visibility:", err);
     }
 
@@ -348,40 +349,6 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage allied health users</p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading users...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage allied health users</p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -391,61 +358,72 @@ export default function AdminUsersPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">Active users</p>
-          </CardContent>
-        </Card>
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalUsers}</div>
+                <p className="text-xs text-muted-foreground">Active users</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Allied Professionals
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary.totalProfessionals}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Licensed professionals
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Allied Professionals
+                </CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {summary.totalProfessionals}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Licensed professionals
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Allied Assistants
-            </CardTitle>
-            <UserCog className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalAssistants}</div>
-            <p className="text-xs text-muted-foreground">Support staff</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Allied Assistants
+                </CardTitle>
+                <UserCog className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalAssistants}</div>
+                <p className="text-xs text-muted-foreground">Support staff</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Administrators
-            </CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalAdmins}</div>
-            <p className="text-xs text-muted-foreground">
-              System administrators
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Administrators
+                </CardTitle>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.totalAdmins}</div>
+                <p className="text-xs text-muted-foreground">
+                  System administrators
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Filter Controls */}
@@ -701,7 +679,15 @@ export default function AdminUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.map((user) => (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-8 w-full rounded-md" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : paginatedUsers.map((user) => (
                 <TableRow
                   key={user.id}
                   className={user.isHidden ? "opacity-50 bg-muted/30" : ""}
@@ -769,6 +755,7 @@ export default function AdminUsersPage() {
               ))}
             </TableBody>
           </Table>
+
 
           {/* Pagination and User Count */}
           <div className="flex items-center justify-between mt-4">

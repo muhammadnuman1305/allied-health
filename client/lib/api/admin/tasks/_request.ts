@@ -1,4 +1,4 @@
-import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, SelectedComponentInput, priorityNumberToString, priorityStringToNumber, statusNumberToString } from "./_model";
+import { Task, TaskFormData, TaskSummary, AddUpdateTaskDTO, TaskInterventionDTO, GetTaskDTO, SelectedComponentInput, priorityNumberToString, priorityStringToNumber, statusNumberToString, AutoAssignRequestDTO, AutoAssignResultDTO } from "./_model";
 import api from "../../axios";
 
 // Types for specialties and interventions
@@ -82,24 +82,31 @@ const transformTaskFromBackend = (dto: GetTaskDTO): Task => {
     id: dto.id,
     title: dto.title,
     patientId: dto.patientId.toString(),
-    patientName: dto.patientName 
+    patientName: dto.patientName
       ? (typeof dto.patientName === "string" ? dto.patientName : dto.patientName.toString())
-      : `Patient ${dto.patientId}`, // Fallback if patientName not provided
+      : `Patient ${dto.patientId}`,
     departmentId: dto.departmentId,
     departmentName: dto.departmentName || "",
-    assignedToDepartment: dto.departmentName || "", // Alias
+    assignedToDepartment: dto.departmentName || "",
     priority: priorityNumberToString(dto.priority),
+    severity: dto.severity ?? 1,
+    requiredRepetitions: dto.requiredRepetitions ?? 0,
+    completedRepetitions: dto.completedRepetitions ?? 0,
+    lastReviewDate: dto.lastReviewDate,
+    taskType: dto.taskType,
     startDate: dto.startDate,
     endDate: dto.endDate,
     assignedTo: dto.assignedTo,
     description: dto.description,
     diagnosis: dto.diagnosis || "",
     goals: dto.goals || "",
-    clinicalInstructions: dto.description || "", // Map description to clinicalInstructions
+    clinicalInstructions: dto.description || "",
     lastUpdated: dto.lastUpdated,
-    updatedAt: dto.lastUpdated, // Alias
+    updatedAt: dto.lastUpdated,
     hidden: dto.hidden,
     status: taskStatus,
+    createdByName: dto.createdByName,
+    createdById: dto.createdById,
     // Add interventions data for form use
     interventions: interventions,
     interventionAssignments: interventionAssignments,
@@ -309,13 +316,17 @@ const transformToBackendDTO = (formData: TaskFormData): AddUpdateTaskDTO => {
     departmentId: formData.assignedToDepartment,
     title: formData.title,
     priority: priorityToNumber(formData.priority),
+    severity: formData.severity ?? 1,
+    requiredRepetitions: formData.requiredRepetitions ?? 0,
+    lastReviewDate: formData.lastReviewDate || null,
+    taskType: formData.taskType || null,
     startDate: formatDate(startDate),
     endDate: formatDate(endDate),
     description: formData.clinicalInstructions || null,
     diagnosis: formData.diagnosis || null,
     goals: formData.goals || null,
     interventions: interventions,
-    refId: formData.refId || null, // Include refId if task is created from a referral
+    refId: formData.refId || null,
   };
 
   return dto;
@@ -470,6 +481,19 @@ export const getWardOptions$ = async (): Promise<{ data: WardOption[] }> => {
     return { data: response.data as WardOption[] };
   } catch (error) {
     console.error("Error fetching ward options:", error);
+    throw error;
+  }
+};
+
+// Get auto-assign suggestions for interventions
+export const getAutoAssignSuggestions$ = async (
+  request: AutoAssignRequestDTO
+): Promise<{ data: AutoAssignResultDTO[] }> => {
+  try {
+    const response = await api.post("/api/task/auto-assign", request);
+    return { data: response.data as AutoAssignResultDTO[] };
+  } catch (error) {
+    console.error("Error fetching auto-assign suggestions:", error);
     throw error;
   }
 };

@@ -56,6 +56,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Form validation schema
 const departmentFormSchema = z
@@ -105,7 +106,6 @@ export default function DepartmentDetailPage() {
   const [department, setDepartment] = useState<Department | null>(null);
   const [departmentHeads, setDepartmentHeads] = useState<DepartmentHead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isNewDepartment, setIsNewDepartment] = useState(false);
 
@@ -132,7 +132,6 @@ export default function DepartmentDetailPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // Fetch department heads first
         try {
@@ -178,13 +177,12 @@ export default function DepartmentDetailPage() {
       } catch (err: any) {
         console.error("Error fetching data:", err);
 
-        // Handle specific error messages from API
         const errorMessage =
           err.response?.data?.message ||
           err.message ||
           "Failed to fetch data. Please try again.";
 
-        setError(errorMessage);
+        toast({ variant: "destructive", title: "Error", description: errorMessage });
       } finally {
         setLoading(false);
       }
@@ -258,58 +256,6 @@ export default function DepartmentDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Loading Department...</h1>
-            <p className="text-muted-foreground">
-              Please wait while we fetch the details
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">
-              Loading department details...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || (!department && !isNewDepartment)) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Department Not Found</h1>
-            <p className="text-muted-foreground">
-              The requested department could not be found
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">
-              {error || "Department not found"}
-            </p>
-            <Button onClick={() => router.back()}>Go Back</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -339,7 +285,7 @@ export default function DepartmentDetailPage() {
       </div>
 
       {/* Quick Stats - Only show for existing departments */}
-      {!isNewDepartment && department && (
+      {!loading && !isNewDepartment && department && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatsCard
             title="Open Tasks"
@@ -368,8 +314,34 @@ export default function DepartmentDetailPage() {
         </div>
       )}
 
+      {/* Skeleton for form loading */}
+      {loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-[160px]" /></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-[160px]" /></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Main Content */}
-      <Tabs defaultValue="details" className="space-y-6">
+      {!loading && <Tabs defaultValue="details" className="space-y-6">
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           {!isNewDepartment && (
@@ -921,7 +893,7 @@ export default function DepartmentDetailPage() {
             </div>
           </TabsContent>
         )}
-      </Tabs>
+      </Tabs>}
     </div>
   );
 }

@@ -3,6 +3,7 @@ using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using AlliedHealth.Service.Implementation;
 
 namespace Allied_Health.API.Controllers;
 
@@ -12,11 +13,13 @@ public class TaskController : ControllerBase
 {
     private readonly ITaskService _taskService;
     private readonly IUtilityService _utilityService;
+    private readonly ITaskAutoAssignService _autoAssignService;
 
-    public TaskController(ITaskService taskService, IUtilityService utilityService)
+    public TaskController(ITaskService taskService, IUtilityService utilityService, ITaskAutoAssignService autoAssignService)
     {
         _taskService = taskService;
         _utilityService = utilityService;
+        _autoAssignService = autoAssignService;
     }
 
     [HttpGet("")]
@@ -125,6 +128,13 @@ public class TaskController : ControllerBase
     public async Task<IActionResult> GetTaskInterventionOptions()
     {
         var response = await _utilityService.GetInterventionOptions();
+        return Ok(response);
+    }
+
+    [HttpPost("auto-assign")]
+    public async Task<IActionResult> GetAutoAssignSuggestions([FromBody] AutoAssignRequestDTO request)
+    {
+        var response = await _autoAssignService.GetAutoAssignSuggestions(request);
         return Ok(response);
     }
 }

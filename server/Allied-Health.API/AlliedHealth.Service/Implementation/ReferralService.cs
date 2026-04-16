@@ -47,6 +47,7 @@ namespace AlliedHealth.Service.Implementation
                                                 .FirstOrDefault() ?? string.Empty,
                                 Priority = t.Priority,
                                 ReferralDate = DateOnly.FromDateTime(t.CreatedDate),
+                                LastReviewDate = t.LastReviewDate,
                                 LastUpdated = t.ModifiedDate,
                                 Hidden = t.Hidden,
                             }).AsQueryable();
@@ -92,6 +93,7 @@ namespace AlliedHealth.Service.Implementation
                             OriginDeptId = x.OriginDepartmentId,
                             DestinationDeptId = x.DestinationDepartmentId,
                             Priority = x.Priority,
+                            LastReviewDate = x.LastReviewDate,
                             Diagnosis = x.Diagnosis,
                             Goals = x.Goals,
                             //ReferralDate = x.CreatedDate,
@@ -136,6 +138,7 @@ namespace AlliedHealth.Service.Implementation
                 DestinationDepartmentId = request.DestinationDeptId,
                 ReferringTherapist = request.TherapistId,
                 Priority = request.Priority,
+                LastReviewDate = request.LastReviewDate,
                 Diagnosis = request.Diagnosis,
                 Goals = request.Goals,
                 Description = request.Description,
@@ -219,6 +222,7 @@ namespace AlliedHealth.Service.Implementation
 
             // ── Step 2: Update referral scalars
             referral.Priority = request.Priority;
+            referral.LastReviewDate = request.LastReviewDate;
             referral.Diagnosis = request.Diagnosis;
             referral.Goals = request.Goals;
             referral.Description = request.Description;

@@ -39,6 +39,7 @@ import {
   DepartmentSummary,
 } from "@/lib/api/admin/departments/_model";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,7 +65,6 @@ export default function AdminDepartmentsSetupPage() {
     incomingReferrals: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
     "All"
@@ -96,7 +96,6 @@ export default function AdminDepartmentsSetupPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // Fetch both departments and summary data in parallel
         const [departmentsResponse, summaryResponse] = await Promise.all([
@@ -115,7 +114,7 @@ export default function AdminDepartmentsSetupPage() {
           err.message ||
           "Failed to fetch data. Please try again.";
 
-        setError(errorMessage);
+        toast({ variant: "destructive", title: "Error", description: errorMessage });
       } finally {
         setLoading(false);
       }
@@ -233,11 +232,13 @@ export default function AdminDepartmentsSetupPage() {
       const response = await getAll$(statusFilter);
       setDepartments(response.data);
     } catch (err) {
-      setError(
-        actionDialog.action === "restore"
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: actionDialog.action === "restore"
           ? "Failed to restore department. Please try again."
-          : "Failed to hide department. Please try again."
-      );
+          : "Failed to hide department. Please try again.",
+      });
       console.error(
         `Error ${
           actionDialog.action === "restore" ? "restoring" : "hiding"
@@ -276,46 +277,6 @@ export default function AdminDepartmentsSetupPage() {
     filters.ward !== "all" ||
     filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Departments</h1>
-          <p className="text-muted-foreground">
-            Create and manage clinical departments that own tasks and
-            receive/send referrals
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading departments...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Departments</h1>
-          <p className="text-muted-foreground">
-            Create and manage clinical departments that own tasks and
-            receive/send referrals
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -328,30 +289,41 @@ export default function AdminDepartmentsSetupPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Departments"
-          value={summary.totalDepartments}
-          description="All departments"
-          icon={Building2}
-        />
-        <StatsCard
-          title="Active Departments"
-          value={summary.activeDepartments}
-          description="Currently operational"
-          icon={Activity}
-        />
-        <StatsCard
-          title="Open Tasks"
-          value={summary.openTasks}
-          description="Departments with pending tasks"
-          icon={Settings}
-        />
-        <StatsCard
-          title="Overdue Tasks"
-          value={summary.overdueTasks}
-          description="Requires immediate attention"
-          icon={Activity}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Departments"
+              value={summary.totalDepartments}
+              description="All departments"
+              icon={Building2}
+            />
+            <StatsCard
+              title="Active Departments"
+              value={summary.activeDepartments}
+              description="Currently operational"
+              icon={Activity}
+            />
+            <StatsCard
+              title="Open Tasks"
+              value={summary.openTasks}
+              description="Departments with pending tasks"
+              icon={Settings}
+            />
+            <StatsCard
+              title="Overdue Tasks"
+              value={summary.overdueTasks}
+              description="Requires immediate attention"
+              icon={Activity}
+            />
+          </>
+        )}
       </div>
 
       {/* Departments Table */}
@@ -394,6 +366,13 @@ export default function AdminDepartmentsSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={departments}
             columns={columns}
@@ -439,6 +418,7 @@ export default function AdminDepartmentsSetupPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 

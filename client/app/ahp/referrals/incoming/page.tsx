@@ -62,6 +62,7 @@ import {
   TRIAGE_STATUS_DESCRIPTIONS,
 } from "@/lib/api/admin/referrals/_model";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableDate } from "@/lib/utils";
 
 // Priority badge variants (using High/Medium/Low like rest of app)
@@ -117,7 +118,6 @@ export default function IncomingReferralsPage() {
   const router = useRouter();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [actionDialog, setActionDialog] = useState<{
     isOpen: boolean;
@@ -154,12 +154,11 @@ export default function IncomingReferralsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         const referralsResponse = await getAll$("incoming");
         setReferrals(referralsResponse.data);
       } catch (err) {
-        setError("Failed to fetch incoming referrals. Please try again.");
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch incoming referrals. Please try again." });
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -306,7 +305,7 @@ export default function IncomingReferralsPage() {
         description: "Referral deleted successfully.",
       });
     } catch (err) {
-      setError("Failed to delete referral. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete referral. Please try again." });
       console.error("Error deleting referral:", err);
     }
   };
@@ -329,7 +328,7 @@ export default function IncomingReferralsPage() {
         );
       }
     } catch (err) {
-      setError(`Failed to ${action} referral. Please try again.`);
+      toast({ variant: "destructive", title: "Error", description: `Failed to ${action} referral. Please try again.` });
       console.error(`Error ${action}ing referral:`, err);
     }
 
@@ -375,46 +374,6 @@ export default function IncomingReferralsPage() {
     filters.status !== "all" ||
     filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Incoming Referrals</h1>
-          <p className="text-muted-foreground">
-            Referrals awaiting triage decisions
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">
-              Loading incoming referrals...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Incoming Referrals</h1>
-          <p className="text-muted-foreground">
-            Referrals awaiting triage decisions
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -426,43 +385,54 @@ export default function IncomingReferralsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Pending Triage"
-          value={referrals.length}
-          description="Awaiting triage"
-          icon={ClipboardList}
-        />
-        <StatsCard
-          title="High Priority"
-          value={referrals.filter((r) => r.priorityDisplay === "High").length}
-          description="High priority referrals"
-          icon={AlertTriangle}
-        />
-        <StatsCard
-          title="Today"
-          value={
-            referrals.filter(
-              (r) =>
-                new Date(r.referralDate).toDateString() ===
-                new Date().toDateString()
-            ).length
-          }
-          description="Received today"
-          icon={Calendar}
-        />
-        <StatsCard
-          title="This Week"
-          value={
-            referrals.filter((r) => {
-              const referralDate = new Date(r.referralDate);
-              const weekAgo = new Date();
-              weekAgo.setDate(weekAgo.getDate() - 7);
-              return referralDate >= weekAgo;
-            }).length
-          }
-          description="Received this week"
-          icon={Clock}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Pending Triage"
+              value={referrals.length}
+              description="Awaiting triage"
+              icon={ClipboardList}
+            />
+            <StatsCard
+              title="High Priority"
+              value={referrals.filter((r) => r.priorityDisplay === "High").length}
+              description="High priority referrals"
+              icon={AlertTriangle}
+            />
+            <StatsCard
+              title="Today"
+              value={
+                referrals.filter(
+                  (r) =>
+                    new Date(r.referralDate).toDateString() ===
+                    new Date().toDateString()
+                ).length
+              }
+              description="Received today"
+              icon={Calendar}
+            />
+            <StatsCard
+              title="This Week"
+              value={
+                referrals.filter((r) => {
+                  const referralDate = new Date(r.referralDate);
+                  const weekAgo = new Date();
+                  weekAgo.setDate(weekAgo.getDate() - 7);
+                  return referralDate >= weekAgo;
+                }).length
+              }
+              description="Received this week"
+              icon={Clock}
+            />
+          </>
+        )}
       </div>
 
       {/* Referrals Table */}
@@ -489,6 +459,13 @@ export default function IncomingReferralsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={referrals}
             columns={columns}
@@ -533,6 +510,7 @@ export default function IncomingReferralsPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 

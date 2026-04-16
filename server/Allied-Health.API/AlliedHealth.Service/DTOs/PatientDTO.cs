@@ -8,6 +8,8 @@
         public string Gender { get; set; }
         public DateTime? LastUpdated { get; set; }
         public bool Hidden { get; set; }
+        public bool HasActiveTask { get; set; }
+        public bool HasActiveTaskOverTwoWeeks { get; set; }
     }
 
     public class GetPatientDetailsDTO

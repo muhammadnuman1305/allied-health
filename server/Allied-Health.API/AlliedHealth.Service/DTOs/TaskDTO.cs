@@ -9,11 +9,18 @@
         public Guid DepartmentId { get; set; }
         public string DepartmentName { get; set; }
         public int Priority { get; set; }
+        public int Severity { get; set; }
+        public int RequiredRepetitions { get; set; }
+        public int CompletedRepetitions { get; set; }
+        public DateOnly? LastReviewDate { get; set; }
+        public string? TaskType { get; set; }
         public int Status { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public DateTime? LastUpdated { get; set; }
         public bool Hidden { get; set; }
+        public string? CreatedByName { get; set; }
+        public Guid? CreatedById { get; set; }
     }
 
     public class GetTaskDetailsDTO
@@ -23,6 +30,11 @@
         public Guid DepartmentId { get; set; }
         public required string Title { get; set; }
         public int Priority { get; set; }
+        public int Severity { get; set; }
+        public int RequiredRepetitions { get; set; }
+        public int CompletedRepetitions { get; set; }
+        public DateOnly? LastReviewDate { get; set; }
+        public string? TaskType { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
         public string Diagnosis { get; set; }
@@ -30,6 +42,8 @@
         public string Description { get; set; }
         public DateTime? LastUpdated { get; set; }
         public bool Hidden { get; set; }
+        public string? CreatedByName { get; set; }
+        public Guid? CreatedById { get; set; }
 
         public List<TaskInterventionDTO> Interventions { get; set; } = new List<TaskInterventionDTO>();
     }
@@ -82,6 +96,10 @@
         public Guid DepartmentId { get; set; }
         public string Title { get; set; }
         public int Priority { get; set; }
+        public int Severity { get; set; } = 1;
+        public int RequiredRepetitions { get; set; } = 0;
+        public DateOnly? LastReviewDate { get; set; }
+        public string? TaskType { get; set; }
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
         public string Diagnosis { get; set; }
@@ -89,6 +107,23 @@
         public string? Description { get; set; }
 
         public List<TaskInterventionDTO> Interventions { get; set; }
+    }
+
+    public class AutoAssignRequestDTO
+    {
+        public List<Guid> InterventionIds { get; set; } = new();
+        public DateOnly StartDate { get; set; }
+        public DateOnly EndDate { get; set; }
+    }
+
+    public class AutoAssignResultDTO
+    {
+        public Guid InterventionId { get; set; }
+        public string InterventionName { get; set; }
+        public Guid? SuggestedAhaId { get; set; }
+        public string? SuggestedAhaName { get; set; }
+        public int CurrentDaySlots { get; set; }
+        public bool CanAssign { get; set; }
     }
 
     public class TaskInterventionDTO

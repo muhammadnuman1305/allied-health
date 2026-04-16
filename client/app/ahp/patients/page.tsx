@@ -44,6 +44,8 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
   toggleActive$,
@@ -70,6 +72,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AdminPatientsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [summary, setSummary] = useState<PatientSummary>({
     totalPatients: 0,
@@ -78,11 +81,9 @@ export default function AdminPatientsPage() {
     completedTasks: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [hiddenFilter, setHiddenFilter] = useState<"All" | "Hidden" | "Active">(
-    "All"
-  );
+  const [hiddenFilter, setHiddenFilter] = useState<"All" | "Hidden" | "Active">("All");
+  const [stayFilter, setStayFilter] = useState<"All" | "HasActiveTask" | "OverTwoWeeks">("All");
   const [actionDialog, setActionDialog] = useState<{
     isOpen: boolean;
     patientId: string;
@@ -108,18 +109,19 @@ export default function AdminPatientsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
-        // Fetch both patients and summary data in parallel
+        const effectiveFilter: "All" | "Hidden" | "Active" | "OverTwoWeeks" | "HasActiveTask" =
+          stayFilter !== "All" ? stayFilter : hiddenFilter;
+
         const [patientsResponse, summaryResponse] = await Promise.all([
-          getAll$(hiddenFilter),
+          getAll$(effectiveFilter),
           getSummary$(),
         ]);
 
         setPatients(patientsResponse.data);
         setSummary(summaryResponse.data);
       } catch (err) {
-        setError("Failed to fetch data. Please try again.");
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch data. Please try again." });
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -127,7 +129,7 @@ export default function AdminPatientsPage() {
     };
 
     fetchData();
-  }, [hiddenFilter]);
+  }, [hiddenFilter, stayFilter]);
 
   // Define table columns
   const columns: Column<Patient>[] = [
@@ -229,15 +231,18 @@ export default function AdminPatientsPage() {
     try {
       await toggleActive$(patientId);
 
-      // Refresh the patient list
-      const response = await getAll$(hiddenFilter);
+      const effectiveFilter: "All" | "Hidden" | "Active" | "OverTwoWeeks" | "HasActiveTask" =
+        stayFilter !== "All" ? stayFilter : hiddenFilter;
+      const response = await getAll$(effectiveFilter);
       setPatients(response.data);
     } catch (err) {
-      setError(
-        actionDialog.action === "restore"
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: actionDialog.action === "restore"
           ? "Failed to restore patient. Please try again."
-          : "Failed to hide patient. Please try again."
-      );
+          : "Failed to hide patient. Please try again.",
+      });
       console.error(
         `Error ${
           actionDialog.action === "restore" ? "restoring" : "hiding"
@@ -269,44 +274,6 @@ export default function AdminPatientsPage() {
   // Check if filters are active
   const hasActiveFilters = filters.mrn || filters.name || filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Patient Management</h1>
-          <p className="text-muted-foreground">
-            Manage patient referrals and interventions
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading patients...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Patient Management</h1>
-          <p className="text-muted-foreground">
-            Manage patient referrals and interventions
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -318,30 +285,41 @@ export default function AdminPatientsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Patients"
-          value={summary.totalPatients}
-          description="Registered patients"
-          icon={Users}
-        />
-        <StatsCard
-          title="New Patients"
-          value={summary.newPatients}
-          description="Added today"
-          icon={Calendar}
-        />
-        <StatsCard
-          title="Active Tasks"
-          value={summary.activeTasks}
-          description="In progress"
-          icon={ClipboardList}
-        />
-        <StatsCard
-          title="Completed Tasks"
-          value={summary.completedTasks}
-          description="Successfully completed"
-          icon={CheckCircle}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Patients"
+              value={summary.totalPatients}
+              description="Registered patients"
+              icon={Users}
+            />
+            <StatsCard
+              title="New Patients"
+              value={summary.newPatients}
+              description="Added today"
+              icon={Calendar}
+            />
+            <StatsCard
+              title="Active Tasks"
+              value={summary.activeTasks}
+              description="In progress"
+              icon={ClipboardList}
+            />
+            <StatsCard
+              title="Completed Tasks"
+              value={summary.completedTasks}
+              description="Successfully completed"
+              icon={CheckCircle}
+            />
+          </>
+        )}
       </div>
 
       {/* Patients Table */}
@@ -358,14 +336,32 @@ export default function AdminPatientsPage() {
                   Clear Filters
                 </Button>
               )}
+              {/* Task/stay filter */}
+              <Select
+                value={stayFilter}
+                onValueChange={(value) =>
+                  setStayFilter(value as "All" | "HasActiveTask" | "OverTwoWeeks")
+                }
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by task" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Patients</SelectItem>
+                  <SelectItem value="HasActiveTask">Has Active Task</SelectItem>
+                  <SelectItem value="OverTwoWeeks">Stay &gt; 2 Weeks</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Visibility filter */}
               <Select
                 value={hiddenFilter}
                 onValueChange={(value) =>
                   setHiddenFilter(value as "All" | "Hidden" | "Active")
                 }
               >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Filter by status" />
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All</SelectItem>
@@ -384,6 +380,13 @@ export default function AdminPatientsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={patients}
             columns={columns}
@@ -436,6 +439,7 @@ export default function AdminPatientsPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 

@@ -24,8 +24,9 @@ namespace AlliedHealth.Service.Implementation
 
         public IQueryable<GetPatientDTO> GetAll()
         {
+            var twoWeeksAgo = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-14));
+
             var patientsList = _dbContext.Patients
-                            //.Where(t => t.Id != _userContext.UserId)
                             .Select(t => new GetPatientDTO
                             {
                                 Id = t.Id,
@@ -33,7 +34,14 @@ namespace AlliedHealth.Service.Implementation
                                 Age = DateTime.Now.Year - t.DateOfBirth.Year,
                                 Gender = t.Gender == 0 ? "Male" : t.Gender == 1 ? "Female" : "Other",
                                 LastUpdated = t.LastModifiedDate,
-                                Hidden = t.Hidden
+                                Hidden = t.Hidden,
+                                HasActiveTask = t.Tasks.Any(task =>
+                                    !task.Hidden &&
+                                    task.TaskInterventions.Any(ti => ti.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen)),
+                                HasActiveTaskOverTwoWeeks = t.Tasks.Any(task =>
+                                    !task.Hidden &&
+                                    task.StartDate <= twoWeeksAgo &&
+                                    task.TaskInterventions.Any(ti => ti.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen))
                             }).AsQueryable();
 
             return patientsList;

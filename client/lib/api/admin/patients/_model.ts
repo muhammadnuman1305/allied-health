@@ -18,6 +18,8 @@ export interface Patient {
   lastUpdated: string; // ISO timestamp
   createdAt: string;
   updatedAt: string;
+  hasActiveTask?: boolean; // Patient has at least one active task
+  hasActiveTaskOverTwoWeeks?: boolean; // Patient has an active task running for >2 weeks
 }
 
 export interface PatientFormData {

@@ -38,6 +38,8 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
   getSummary$,
@@ -53,13 +55,13 @@ const ITEMS_PER_PAGE = 10;
 
 export default function AdminSpecialtiesSetupPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [summary, setSummary] = useState<SpecialtySummary>({
     totalSpecialties: 0,
     activeSpecialties: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
     "All"
@@ -88,7 +90,6 @@ export default function AdminSpecialtiesSetupPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
         const [listRes, summaryRes] = await Promise.all([
           getAll$(statusFilter),
           getSummary$(),
@@ -96,11 +97,7 @@ export default function AdminSpecialtiesSetupPage() {
         setSpecialties(listRes.data);
         setSummary(summaryRes.data);
       } catch (err: any) {
-        setError(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Failed to fetch specialties."
-        );
+        toast({ variant: "destructive", title: "Error", description: err?.response?.data?.message || err?.message || "Failed to fetch specialties." });
       } finally {
         setLoading(false);
       }
@@ -144,44 +141,6 @@ export default function AdminSpecialtiesSetupPage() {
   const hasActiveFilters = Boolean(
     filters.name || (filters as any).description || filters.sortField
   );
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Specialties</h1>
-          <p className="text-muted-foreground">
-            Create and manage clinical specialties
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading specialties...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Specialties</h1>
-          <p className="text-muted-foreground">
-            Create and manage clinical specialties
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const handleAction = (action: string, id: string) => {
     const sp = specialties.find((s) => s.id === id);
@@ -241,18 +200,27 @@ export default function AdminSpecialtiesSetupPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatsCard
-          title="Total Specialties"
-          value={summary.totalSpecialties}
-          description="All specialties"
-          icon={Building2}
-        />
-        <StatsCard
-          title="Active Specialties"
-          value={summary.activeSpecialties}
-          description="Currently active"
-          icon={Activity}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Specialties"
+              value={summary.totalSpecialties}
+              description="All specialties"
+              icon={Building2}
+            />
+            <StatsCard
+              title="Active Specialties"
+              value={summary.activeSpecialties}
+              description="Currently active"
+              icon={Activity}
+            />
+          </>
+        )}
       </div>
 
       <Card>
@@ -290,6 +258,13 @@ export default function AdminSpecialtiesSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={specialties}
             columns={columns}
@@ -328,6 +303,7 @@ export default function AdminSpecialtiesSetupPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 

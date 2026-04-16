@@ -31,6 +31,7 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { getById$ } from "@/lib/api/admin/wards/_request";
 import { Ward, getWardLocationDisplayName } from "@/lib/api/admin/wards/_model";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import WardFormContent from "./ward-form-content";
 
 export default function WardDetailPage() {
@@ -40,7 +41,6 @@ export default function WardDetailPage() {
 
   const [ward, setWard] = useState<Ward | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Ref to prevent duplicate API calls in React Strict Mode
   const hasFetchedWardRef = useRef<string | null>(null);
@@ -61,11 +61,10 @@ export default function WardDetailPage() {
     const fetchWard = async () => {
       try {
         setLoading(true);
-        setError(null);
         const response = await getById$(wardId);
         setWard(response.data);
       } catch (err) {
-        setError("Failed to fetch ward details. Please try again.");
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch ward details. Please try again." });
         console.error("Error fetching ward:", err);
       } finally {
         setLoading(false);
@@ -74,56 +73,6 @@ export default function WardDetailPage() {
 
     fetchWard();
   }, [wardId]);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Loading Ward...</h1>
-            <p className="text-muted-foreground">
-              Please wait while we fetch the details
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading ward details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || (!ward && wardId !== "0")) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Ward Not Found</h1>
-            <p className="text-muted-foreground">
-              The requested ward could not be found
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error || "Ward not found"}</p>
-            <Button onClick={() => router.back()}>Go Back</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -158,7 +107,7 @@ export default function WardDetailPage() {
       </div>
 
       {/* Quick Stats - Only show for existing wards */}
-      {wardId !== "0" && ward && (
+      {!loading && wardId !== "0" && ward && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatsCard
             title="Current Patients"
@@ -189,8 +138,32 @@ export default function WardDetailPage() {
         </div>
       )}
 
+      {/* Skeleton for form loading */}
+      {loading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-[160px]" /></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-[160px]" /></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Main Content */}
-      {wardId === "0" ? (
+      {!loading && (wardId === "0" ? (
         // New ward - show form directly without tabs
         <WardFormContent wardId={wardId} isEdit={false} />
       ) : (
@@ -328,7 +301,7 @@ export default function WardDetailPage() {
             </div>
           </TabsContent>
         </Tabs>
-      )}
+      ))}
     </div>
   );
 }

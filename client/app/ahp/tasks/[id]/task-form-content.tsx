@@ -41,6 +41,7 @@ import {
   getWardOptions$,
   getPatientOptions$,
   getReferralTaskDetails$,
+  getAutoAssignSuggestions$,
   TaskSpecialty,
   TaskIntervention,
   AHAOption,
@@ -53,8 +54,10 @@ import {
   TaskFormData,
   SubTask,
   TASK_TYPES,
+  SEVERITY_OPTIONS,
   SelectedComponentInput,
   priorityNumberToString,
+  AutoAssignResultDTO,
 } from "@/lib/api/admin/tasks/_model";
 
 export default function TaskFormContent() {
@@ -84,6 +87,7 @@ export default function TaskFormContent() {
   const hasFetchedTask = useRef(false);
   const hasSetPatient = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [autoAssigning, setAutoAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -113,10 +117,13 @@ export default function TaskFormContent() {
     goals: "",
     clinicalInstructions: "",
     priority: "Medium",
+    severity: 1,
+    requiredRepetitions: 0,
+    lastReviewDate: "",
     dueDate: "",
     dueTime: "00:00",
     assignedToDepartment: "",
-    subTasks: [{ id: "1", name: "", assignedToStaff: "" }], // Default one sub-task
+    subTasks: [{ id: "1", name: "", assignedToStaff: "" }],
     status: "Not Assigned",
   });
 
@@ -519,6 +526,9 @@ export default function TaskFormContent() {
             clinicalInstructions:
               task.clinicalInstructions || task.description || "",
             priority: task.priority,
+            severity: (task as any).severity ?? 1,
+            requiredRepetitions: (task as any).requiredRepetitions ?? 0,
+            lastReviewDate: (task as any).lastReviewDate || "",
             dueDate: task.dueDate || task.endDate || "",
             dueTime: task.dueTime || "00:00",
             assignedToDepartment:
@@ -613,16 +623,17 @@ export default function TaskFormContent() {
       .filter((word) => word.length > 0).length;
   };
 
+  // Intervention max 2 weeks (14 days) helper
+  const isInterventionOverTwoWeeks = (startD: string, endD: string): boolean => {
+    if (!startD || !endD) return false;
+    const diff = (new Date(endD).getTime() - new Date(startD).getTime()) / (1000 * 60 * 60 * 24);
+    return diff > 14;
+  };
+
   // Check if form is valid (silent validation for button disabling)
   const isFormValid = (): boolean => {
     if (!formData.patientId) return false;
     if (!formData.title.trim()) return false;
-    if (!formData.diagnosis?.trim()) return false;
-    if (countWords(formData.diagnosis || "") < 20) return false;
-    if (!formData.goals?.trim()) return false;
-    if (countWords(formData.goals || "") < 20) return false;
-    if (!formData.clinicalInstructions.trim()) return false;
-    if (countWords(formData.clinicalInstructions) < 20) return false;
     if (!formData.assignedToDepartment) return false;
     if (!startDate) return false;
     if (!endDate) return false;
@@ -630,35 +641,25 @@ export default function TaskFormContent() {
       return false;
     if (selectedInterventions.length === 0) return false;
 
-    // Check if all selected interventions have AHA, start, end, and ward
     for (const interventionId of selectedInterventions) {
       if (!interventionAssignments[interventionId]) return false;
       const schedule = interventionSchedules[interventionId];
       if (!schedule || !schedule.startDate || !schedule.endDate) return false;
       if (!interventionWardAssignments[interventionId]) return false;
-
-      // Validate date ranges
-      if (new Date(schedule.startDate) > new Date(schedule.endDate))
-        return false;
-      if (startDate && new Date(schedule.startDate) < new Date(startDate))
-        return false;
-      if (endDate && new Date(schedule.endDate) > new Date(endDate))
-        return false;
+      if (new Date(schedule.startDate) > new Date(schedule.endDate)) return false;
+      if (startDate && new Date(schedule.startDate) < new Date(startDate)) return false;
+      if (endDate && new Date(schedule.endDate) > new Date(endDate)) return false;
+      if (isInterventionOverTwoWeeks(schedule.startDate, schedule.endDate)) return false;
     }
 
-    // Ensure no overlaps between interventions
-    const ranges = selectedInterventions.map((k) => {
-      return {
-        key: k,
-        start: new Date(interventionSchedules[k].startDate),
-        end: new Date(interventionSchedules[k].endDate),
-      };
-    });
+    const ranges = selectedInterventions.map((k) => ({
+      key: k,
+      start: new Date(interventionSchedules[k].startDate),
+      end: new Date(interventionSchedules[k].endDate),
+    }));
     for (let i = 0; i < ranges.length; i++) {
       for (let j = i + 1; j < ranges.length; j++) {
-        const a = ranges[i];
-        const b = ranges[j];
-        if (a.start <= b.end && b.start <= a.end) return false;
+        if (ranges[i].start <= ranges[j].end && ranges[j].start <= ranges[i].end) return false;
       }
     }
 
@@ -673,41 +674,6 @@ export default function TaskFormContent() {
     }
     if (!formData.title.trim()) {
       setError("Title is required");
-      return false;
-    }
-    if (!formData.diagnosis?.trim()) {
-      setError("Diagnosis is required");
-      return false;
-    }
-    const diagnosisWordCount = countWords(formData.diagnosis || "");
-    if (diagnosisWordCount < 20) {
-      setError(
-        `Diagnosis must contain at least 20 words (currently ${diagnosisWordCount} words)`
-      );
-      return false;
-    }
-    if (!formData.goals?.trim()) {
-      setError("Goals are required");
-      return false;
-    }
-    const goalsWordCount = countWords(formData.goals || "");
-    if (goalsWordCount < 20) {
-      setError(
-        `Goals must contain at least 20 words (currently ${goalsWordCount} words)`
-      );
-      return false;
-    }
-    if (!formData.clinicalInstructions.trim()) {
-      setError("Clinical Instructions are required");
-      return false;
-    }
-    const clinicalInstructionsWordCount = countWords(
-      formData.clinicalInstructions
-    );
-    if (clinicalInstructionsWordCount < 20) {
-      setError(
-        `Clinical Instructions must contain at least 20 words (currently ${clinicalInstructionsWordCount} words)`
-      );
       return false;
     }
     if (!formData.assignedToDepartment) {
@@ -730,7 +696,6 @@ export default function TaskFormContent() {
       setError("At least one intervention must be selected");
       return false;
     }
-    // Check if all selected interventions have AHA assignments
     const unassignedInterventions = selectedInterventions.filter(
       (interventionId) => !interventionAssignments[interventionId]
     );
@@ -740,14 +705,11 @@ export default function TaskFormContent() {
         return intervention?.name || id;
       });
       setError(
-        `All selected interventions must be assigned to an AHA: ${unassignedNames.join(
-          ", "
-        )}`
+        `All selected interventions must be assigned to an AHA: ${unassignedNames.join(", ")}`
       );
       return false;
     }
 
-    // Validate per-intervention schedules and wards
     for (const interventionId of selectedInterventions) {
       const schedule = interventionSchedules[interventionId];
       const intervention = interventions.find((i) => i.id === interventionId);
@@ -761,26 +723,23 @@ export default function TaskFormContent() {
         return false;
       }
       if (new Date(schedule.startDate) > new Date(schedule.endDate)) {
-        setError(
-          `End date cannot be earlier than start date for: ${interventionName}`
-        );
+        setError(`End date cannot be earlier than start date for: ${interventionName}`);
         return false;
       }
       if (startDate && new Date(schedule.startDate) < new Date(startDate)) {
-        setError(
-          `Start date for ${interventionName} must be on/after the task start date`
-        );
+        setError(`Start date for ${interventionName} must be on/after the task start date`);
         return false;
       }
       if (endDate && new Date(schedule.endDate) > new Date(endDate)) {
-        setError(
-          `End date for ${interventionName} must be on/before the task end date`
-        );
+        setError(`End date for ${interventionName} must be on/before the task end date`);
+        return false;
+      }
+      if (isInterventionOverTwoWeeks(schedule.startDate, schedule.endDate)) {
+        setError(`Intervention "${interventionName}" cannot exceed 2 weeks (14 days)`);
         return false;
       }
     }
 
-    // Ensure no overlaps between interventions
     const ranges = selectedInterventions.map((k) => {
       const intervention = interventions.find((i) => i.id === k);
       return {
@@ -794,16 +753,47 @@ export default function TaskFormContent() {
       for (let j = i + 1; j < ranges.length; j++) {
         const a = ranges[i];
         const b = ranges[j];
-        // Overlap if a.start <= b.end and b.start <= a.end (inclusive)
         if (a.start <= b.end && b.start <= a.end) {
-          setError(
-            `Interventions "${a.name}" and "${b.name}" have overlapping dates. Adjust their ranges.`
-          );
+          setError(`Interventions "${a.name}" and "${b.name}" have overlapping dates. Adjust their ranges.`);
           return false;
         }
       }
     }
     return true;
+  };
+
+  // Auto-assign handler
+  const handleAutoAssign = async () => {
+    if (selectedInterventions.length === 0 || !startDate || !endDate) {
+      setError("Select interventions and task dates before auto-assigning.");
+      return;
+    }
+    try {
+      setAutoAssigning(true);
+      setError(null);
+      const response = await getAutoAssignSuggestions$({
+        interventionIds: selectedInterventions,
+        startDate,
+        endDate,
+      });
+      const suggestions: AutoAssignResultDTO[] = response.data;
+      const newAssignments = { ...interventionAssignments };
+      let anyAssigned = false;
+      suggestions.forEach((s) => {
+        if (s.canAssign && s.suggestedAhaId) {
+          newAssignments[s.interventionId] = s.suggestedAhaId;
+          anyAssigned = true;
+        }
+      });
+      setInterventionAssignments(newAssignments);
+      if (!anyAssigned) {
+        setError("No available AHAs found for the selected interventions on the given dates.");
+      }
+    } catch {
+      setError("Auto-assign failed. Please try again.");
+    } finally {
+      setAutoAssigning(false);
+    }
   };
 
   // Handle form submission
@@ -1084,6 +1074,14 @@ export default function TaskFormContent() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Critical">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="destructive">Critical</Badge>
+                        <span className="text-xs text-muted-foreground">
+                          - Life-threatening, immediate action
+                        </span>
+                      </div>
+                    </SelectItem>
                     <SelectItem value="High">
                       <div className="flex items-center gap-2">
                         <Badge variant="destructive">High</Badge>
@@ -1112,10 +1110,57 @@ export default function TaskFormContent() {
                 </Select>
               </div>
 
+              {/* Required Repetitions */}
+              <div className="space-y-2">
+                <Label htmlFor="requiredRepetitions" className="cursor-text">
+                  Required Repetitions
+                </Label>
+                <Input
+                  id="requiredRepetitions"
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={formData.requiredRepetitions ?? 0}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      requiredRepetitions: Number(e.target.value),
+                    }))
+                  }
+                />
+                {!isNewTask && (
+                  <p className="text-xs text-muted-foreground">
+                    Completed: {(formData as any).completedRepetitions ?? 0} / {formData.requiredRepetitions ?? 0}
+                  </p>
+                )}
+              </div>
+
+              {/* Last Review Date */}
+              <div className="space-y-2">
+                <Label htmlFor="lastReviewDate" className="cursor-text">
+                  Last Review Date
+                </Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="lastReviewDate"
+                    type="date"
+                    className="pl-10"
+                    value={formData.lastReviewDate || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        lastReviewDate: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
               {/* Diagnosis */}
               <div className="space-y-2">
                 <Label htmlFor="diagnosis" className="cursor-text">
-                  Diagnosis <span className="text-destructive">*</span>
+                  Diagnosis
                 </Label>
                 <Textarea
                   id="diagnosis"
@@ -1124,17 +1169,12 @@ export default function TaskFormContent() {
                   onChange={(e) => handleChange("diagnosis", e.target.value)}
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Provide the diagnosis or medical condition relevant to this
-                  task. Minimum 20 words required (
-                  {countWords(formData.diagnosis || "")} words).
-                </p>
               </div>
 
               {/* Goals */}
               <div className="space-y-2">
                 <Label htmlFor="goals" className="cursor-text">
-                  Goals <span className="text-destructive">*</span>
+                  Goals
                 </Label>
                 <Textarea
                   id="goals"
@@ -1143,10 +1183,6 @@ export default function TaskFormContent() {
                   onChange={(e) => handleChange("goals", e.target.value)}
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Describe the goals or objectives for this task. Minimum 20
-                  words required ({countWords(formData.goals || "")} words).
-                </p>
               </div>
 
               {/* Start Date */}
@@ -1194,8 +1230,7 @@ export default function TaskFormContent() {
               {/* Clinical Instructions (full width) */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="clinicalInstructions" className="cursor-text">
-                  Clinical Instructions / Description{" "}
-                  <span className="text-destructive">*</span>
+                  Clinical Instructions / Description
                 </Label>
                 <Textarea
                   id="clinicalInstructions"
@@ -1206,11 +1241,6 @@ export default function TaskFormContent() {
                   }
                   rows={5}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Provide clear, detailed instructions for the assigned staff.
-                  Minimum 20 words required (
-                  {countWords(formData.clinicalInstructions)} words).
-                </p>
               </div>
             </div>
           </CardContent>
@@ -1382,7 +1412,18 @@ export default function TaskFormContent() {
               {/* AHA Assignment for Selected Interventions */}
               {selectedInterventions.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-medium">Assign AHAs to Interventions</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Assign AHAs to Interventions</h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={autoAssigning || !startDate || !endDate}
+                      onClick={handleAutoAssign}
+                    >
+                      {autoAssigning ? "Auto-assigning..." : "Auto-Assign"}
+                    </Button>
+                  </div>
                   <div className="space-y-4">
                     {Array.from(new Set(selectedInterventions)).map(
                       (interventionId, index) => {
@@ -1813,7 +1854,7 @@ export default function TaskFormContent() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Each selected intervention must have an AHA, start date, end
-                    date, and ward assigned.
+                    date, and ward assigned. Maximum duration per intervention: 2 weeks (14 days).
                   </p>
                 </div>
               )}

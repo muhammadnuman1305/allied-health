@@ -14,6 +14,7 @@
         public string TherapistName { get; set; }
         public int Priority { get; set; }
         public DateOnly? ReferralDate { get; set; }
+        public DateOnly? LastReviewDate { get; set; }
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string Description { get; set; }
@@ -29,6 +30,7 @@
         public Guid DestinationDeptId { get; set; }
         public int Priority { get; set; }
         public DateOnly? ReferralDate { get; set; }
+        public DateOnly? LastReviewDate { get; set; }
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string Description { get; set; }
@@ -78,6 +80,7 @@
         public Guid DestinationDeptId { get; set; }
         public Guid TherapistId { get; set; }
         public int Priority { get; set; }
+        public DateOnly? LastReviewDate { get; set; }
         public string Diagnosis { get; set; }
         public string Goals { get; set; }
         public string? Description { get; set; }

@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { getDashboardDetails$ } from "@/lib/api/admin/dashboard/_request";
 import { DashboardDetails } from "@/lib/api/admin/dashboard/_model";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 // Enums
 enum ETaskStatus {
@@ -47,20 +49,19 @@ enum ETaskInterventionOutcomes {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardDetails | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
       const response = await getDashboardDetails$();
       console.log("Dashboard data received:", response.data);
       setData(response.data);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-      setError("Failed to fetch dashboard data. Please try again.");
+      toast({ variant: "destructive", title: "Error", description: "Failed to fetch dashboard data. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -69,24 +70,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-        <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full"></div>
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-        <p className="text-destructive">{error || "No data available"}</p>
-        <Button onClick={() => fetchData()}>Retry</Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8 pb-8">
@@ -100,33 +83,50 @@ export default function AdminDashboardPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Patients"
-          value={data.totalPatients}
-          description="All registered patients"
-          icon={Users}
-        />
-        <StatsCard
-          title="Total Departments"
-          value={data.totalDepartments}
-          description="All departments"
-          icon={Building2}
-        />
-        <StatsCard
-          title="Total Specialties"
-          value={data.totalSpecialties}
-          description="All specialties"
-          icon={GraduationCap}
-        />
-        <StatsCard
-          title="Total Users"
-          value={data.totalUsers}
-          description="All system users"
-          icon={UserCircle}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Patients"
+              value={data?.totalPatients ?? 0}
+              description="All registered patients"
+              icon={Users}
+            />
+            <StatsCard
+              title="Total Departments"
+              value={data?.totalDepartments ?? 0}
+              description="All departments"
+              icon={Building2}
+            />
+            <StatsCard
+              title="Total Specialties"
+              value={data?.totalSpecialties ?? 0}
+              description="All specialties"
+              icon={GraduationCap}
+            />
+            <StatsCard
+              title="Total Users"
+              value={data?.totalUsers ?? 0}
+              description="All system users"
+              icon={UserCircle}
+            />
+          </>
+        )}
       </div>
 
       {/* Overview Cards */}
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-[340px] rounded-lg" />
+          <Skeleton className="h-[340px] rounded-lg" />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tasks Overview */}
         <Card className="border-border shadow-sm">
@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold tracking-tight">
-                  {data.assignedTasks}
+                  {data?.assignedTasks ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Assigned
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold text-primary tracking-tight">
-                  {data.inProgressTasks}
+                  {data?.inProgressTasks ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   In Progress
@@ -165,7 +165,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold text-[hsl(142,76%,36%)] tracking-tight">
-                  {data.completedTasks}
+                  {data?.completedTasks ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Completed
@@ -173,7 +173,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold text-destructive tracking-tight">
-                  {data.overdueTasks}
+                  {data?.overdueTasks ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Overdue
@@ -196,7 +196,7 @@ export default function AdminDashboardPage() {
                     variant="destructive"
                     className="font-semibold px-2.5 py-0.5"
                   >
-                    {data.highPriorityTasks}
+                    {data?.highPriorityTasks ?? 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between rounded-md transition-colors">
@@ -208,7 +208,7 @@ export default function AdminDashboardPage() {
                     variant="secondary"
                     className="font-semibold px-2.5 py-0.5"
                   >
-                    {data.mediumPriorityTasks}
+                    {data?.mediumPriorityTasks ?? 0}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between rounded-md transition-colors">
@@ -220,7 +220,7 @@ export default function AdminDashboardPage() {
                     variant="outline"
                     className="font-semibold px-2.5 py-0.5"
                   >
-                    {data.lowPriorityTasks}
+                    {data?.lowPriorityTasks ?? 0}
                   </Badge>
                 </div>
               </div>
@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold tracking-tight">
-                  {data.pendingReferrals}
+                  {data?.pendingReferrals ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Pending
@@ -257,7 +257,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold text-[hsl(142,76%,36%)] tracking-tight">
-                  {data.acceptedReferrals}
+                  {data?.acceptedReferrals ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Accepted
@@ -265,7 +265,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold text-destructive tracking-tight">
-                  {data.rejectedReferrals}
+                  {data?.rejectedReferrals ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Rejected
@@ -273,7 +273,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="text-2xl font-bold tracking-tight">
-                  {data.totalReferrals}
+                  {data?.totalReferrals ?? 0}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Total
@@ -295,7 +295,7 @@ export default function AdminDashboardPage() {
                     <span className="text-sm font-medium">Incoming</span>
                   </div>
                   <span className="text-lg font-bold">
-                    {data.incomingReferrals}
+                    {data?.incomingReferrals ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-lg border border-border bg-card transition-colors">
@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
                     <span className="text-sm font-medium">Outgoing</span>
                   </div>
                   <span className="text-lg font-bold">
-                    {data.outgoingReferrals}
+                    {data?.outgoingReferrals ?? 0}
                   </span>
                 </div>
               </div>
@@ -314,8 +314,12 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Intervention Outcomes */}
+      {loading ? (
+        <Skeleton className="h-[200px] rounded-lg" />
+      ) : (
       <Card className="border-border shadow-sm">
         <CardHeader className="pb-4 border-b border-border">
           <CardTitle className="text-lg font-semibold">
@@ -329,7 +333,7 @@ export default function AdminDashboardPage() {
                 <UserCheck className="h-5 w-5 text-primary" />
               </div>
               <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data.seenOutcomes}
+                {data?.seenOutcomes ?? 0}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Seen (S)
@@ -340,7 +344,7 @@ export default function AdminDashboardPage() {
                 <PlayCircle className="h-5 w-5 text-primary" />
               </div>
               <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data.attemptedOutcomes}
+                {data?.attemptedOutcomes ?? 0}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Attempted (A)
@@ -351,7 +355,7 @@ export default function AdminDashboardPage() {
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
               <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data.declinedOutcomes}
+                {data?.declinedOutcomes ?? 0}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Declined (D)
@@ -362,7 +366,7 @@ export default function AdminDashboardPage() {
                 <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data.unseenOutcomes}
+                {data?.unseenOutcomes ?? 0}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Unseen (U)
@@ -373,7 +377,7 @@ export default function AdminDashboardPage() {
                 <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data.handoverOutcomes}
+                {data?.handoverOutcomes ?? 0}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Handover (X)
@@ -382,6 +386,7 @@ export default function AdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

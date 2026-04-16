@@ -27,22 +27,31 @@ const convertGenderToNumber = (gender: any): number => {
   return 0; // Default to Male
 };
 
-export const getAll$ = async (hiddenFilter?: "All" | "Hidden" | "Active"): Promise<{ data: Patient[] }> => {
+export const getAll$ = async (
+  hiddenFilter?: "All" | "Hidden" | "Active" | "OverTwoWeeks" | "HasActiveTask"
+): Promise<{ data: Patient[] }> => {
+  // Only use OData for the hidden flag — computed task flags are filtered client-side
   let url = BASE_URL;
-  
-  // Add OData filter for hidden status
-  if (hiddenFilter && hiddenFilter !== "All") {
-    const filterValue = hiddenFilter === "Hidden" ? "true" : "false";
-    url = `${BASE_URL}?$filter=hidden eq ${filterValue}`;
+  if (hiddenFilter === "Hidden") {
+    url = `${BASE_URL}?$filter=hidden eq true`;
+  } else if (hiddenFilter === "Active") {
+    url = `${BASE_URL}?$filter=hidden eq false or hidden eq null`;
   }
-  
+  // "OverTwoWeeks" and "HasActiveTask" — fetch all, filter below
+
   const response = await api.get<Patient[]>(url);
-  // Convert backend data to ensure IDs are strings and gender is number
-  const data = response.data.map(patient => ({
+  let data = response.data.map(patient => ({
     ...patient,
     id: toStringId(patient.id),
     gender: convertGenderToNumber(patient.gender)
   }));
+
+  if (hiddenFilter === "HasActiveTask") {
+    data = data.filter(p => p.hasActiveTask);
+  } else if (hiddenFilter === "OverTwoWeeks") {
+    data = data.filter(p => p.hasActiveTaskOverTwoWeeks);
+  }
+
   return { data };
 };
 

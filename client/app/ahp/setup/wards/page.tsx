@@ -55,11 +55,14 @@ import {
   getWardLocationDisplayName,
 } from "@/lib/api/admin/wards/_model";
 import { formatLastUpdated } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ITEMS_PER_PAGE = 10;
 
 export default function AdminWardsSetupPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [wards, setWards] = useState<Ward[]>([]);
   const [summary, setSummary] = useState<WardSummary>({
     totalWards: 0,
@@ -70,7 +73,6 @@ export default function AdminWardsSetupPage() {
     totalOverdueTasks: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<"All" | "Active" | "Hidden">(
     "All"
@@ -101,7 +103,6 @@ export default function AdminWardsSetupPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
 
         // Fetch both wards and summary data in parallel
         const [wardsResponse, summaryResponse] = await Promise.all([
@@ -112,7 +113,7 @@ export default function AdminWardsSetupPage() {
         setWards(wardsResponse.data);
         setSummary(summaryResponse.data);
       } catch (err) {
-        setError("Failed to fetch data. Please try again.");
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch data. Please try again." });
         console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
@@ -257,11 +258,13 @@ export default function AdminWardsSetupPage() {
       const summaryResponse = await getSummary$();
       setSummary(summaryResponse.data);
     } catch (err) {
-      setError(
-        actionDialog.action === "restore"
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: actionDialog.action === "restore"
           ? "Failed to restore ward. Please try again."
-          : "Failed to delete ward. Please try again."
-      );
+          : "Failed to delete ward. Please try again.",
+      });
       console.error(
         `Error ${
           actionDialog.action === "restore" ? "restoring" : "deleting"
@@ -301,46 +304,6 @@ export default function AdminWardsSetupPage() {
     filters.location !== "all" ||
     filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Wards</h1>
-          <p className="text-muted-foreground">
-            Manage hospital locations where patients reside; multiple
-            departments can cover a ward
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading wards...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Wards</h1>
-          <p className="text-muted-foreground">
-            Manage hospital locations where patients reside; multiple
-            departments can cover a ward
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -353,32 +316,43 @@ export default function AdminWardsSetupPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Wards"
-          value={summary.totalWards}
-          description="All wards"
-          icon={Bed}
-        />
-        <StatsCard
-          title="Active Wards"
-          value={summary.activeWards}
-          description="Currently operational"
-          icon={Activity}
-        />
-        <StatsCard
-          title="Total Beds"
-          value={summary.totalBeds}
-          description="Available capacity"
-          icon={Users}
-        />
-        <StatsCard
-          title="Occupied Beds"
-          value={summary.occupiedBeds}
-          description={`${Math.round(
-            (summary.occupiedBeds / summary.totalBeds) * 100
-          )}% occupancy`}
-          icon={Users}
-        />
+        {loading ? (
+          <>
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+            <Skeleton className="h-[120px] rounded-lg" />
+          </>
+        ) : (
+          <>
+            <StatsCard
+              title="Total Wards"
+              value={summary.totalWards}
+              description="All wards"
+              icon={Bed}
+            />
+            <StatsCard
+              title="Active Wards"
+              value={summary.activeWards}
+              description="Currently operational"
+              icon={Activity}
+            />
+            <StatsCard
+              title="Total Beds"
+              value={summary.totalBeds}
+              description="Available capacity"
+              icon={Users}
+            />
+            <StatsCard
+              title="Occupied Beds"
+              value={summary.occupiedBeds}
+              description={`${Math.round(
+                (summary.occupiedBeds / summary.totalBeds) * 100
+              )}% occupancy`}
+              icon={Users}
+            />
+          </>
+        )}
       </div>
 
       {/* Wards Table */}
@@ -421,6 +395,13 @@ export default function AdminWardsSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <DataTable
             data={wards}
             columns={columns}
@@ -469,6 +450,7 @@ export default function AdminWardsSetupPage() {
               </DropdownMenu>
             )}
           />
+          )}
         </CardContent>
       </Card>
 
