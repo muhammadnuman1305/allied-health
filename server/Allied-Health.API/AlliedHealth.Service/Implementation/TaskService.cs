@@ -27,111 +27,126 @@ namespace AlliedHealth.Service.Implementation
         {
             var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
-            var tasks = _dbContext.Tasks
-                            .Select(t => new GetTaskDTO
-                            {
-                                Id = t.Id,
-                                Title = t.Title,
-                                PatientId  =t.PatientId,
-                                PatientName = t.Patient.FullName,
-                                DepartmentId = t.DepartmentId,
-                                DepartmentName = t.Department.Name,
-                                Priority = t.Priority,
-                                Severity = t.Severity,
-                                RequiredRepetitions = t.RequiredRepetitions,
-                                CompletedRepetitions = t.CompletedRepetitions,
-                                LastReviewDate = t.LastReviewDate,
-                                TaskType = t.TaskType,
-                                StartDate = t.StartDate,
-                                Status = (int)(t.StartDate > now
-                                         ? ETaskStatus.Assigned
-                                         : (t.TaskInterventions.Any(x => x.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen)
-                                                ? (t.EndDate < now ? ETaskStatus.Overdue : ETaskStatus.InProgress)
-                                                : ETaskStatus.Completed)),
-                                EndDate = t.EndDate,
-                                LastUpdated = t.ModifiedDate,
-                                Hidden = t.Hidden,
-                                CreatedById = t.CreatedBy,
-                                CreatedByName = t.CreatedBy != null
-                                    ? _dbContext.Users
-                                        .Where(u => u.Id == t.CreatedBy)
-                                        .Select(u => u.FirstName + " " + u.LastName)
-                                        .FirstOrDefault()
-                                    : null,
-                            }).AsQueryable();
+            var tasks = (from t in _dbContext.Tasks
+                         join u in _dbContext.Users on t.CreatedBy equals (Guid?)u.Id into creatorGroup
+                         from creator in creatorGroup.DefaultIfEmpty()
+                         select new GetTaskDTO
+                         {
+                             Id = t.Id,
+                             Title = t.Title,
+                             PatientId = t.PatientId,
+                             PatientName = t.Patient.FullName,
+                             DepartmentId = t.DepartmentId,
+                             DepartmentName = t.Department.Name,
+                             Priority = t.Priority,
+                             Severity = t.Severity,
+                             RequiredRepetitions = t.RequiredRepetitions,
+                             CompletedRepetitions = t.CompletedRepetitions,
+                             LastReviewDate = t.LastReviewDate,
+                             TaskType = t.TaskType,
+                             StartDate = t.StartDate,
+                             Status = (int)(t.StartDate > now
+                                      ? ETaskStatus.Assigned
+                                      : (t.TaskInterventions.Any(x => x.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen)
+                                             ? (t.EndDate < now ? ETaskStatus.Overdue : ETaskStatus.InProgress)
+                                             : ETaskStatus.Completed)),
+                             EndDate = t.EndDate,
+                             LastUpdated = t.ModifiedDate,
+                             Hidden = t.Hidden,
+                             CreatedById = t.CreatedBy,
+                             CreatedByName = creator != null ? creator.FirstName + " " + creator.LastName : null,
+                         }).AsQueryable();
 
             return tasks;
         }
 
         public async Task<GetTaskSummaryDTO> GetSummary()
         {
-            var summary = await _dbContext.Tasks
-                             .Where(u => u.Hidden != true)
-                             .GroupBy(u => 1)
-                             .Select(g => new GetTaskSummaryDTO
-                             {
-                                 TotalTasks = g.Count(),
-                                 OverdueTasks = g.Count(x => x.Status == (int)ETaskStatus.Overdue),
-                                 ActiveTasks = g.Count(x => x.Status == (int)ETaskStatus.InProgress),
-                                 CompletedTasks = g.Count(x => x.Status == (int)ETaskStatus.Completed),
+            var now = DateOnly.FromDateTime(DateTime.UtcNow);
+            var visibleTasks = _dbContext.Tasks.Where(t => t.Hidden != true);
 
-                                 HighPriority = g.Count(x => x.Priority == (int)ETaskPriorities.High),
-                                 MidPriority = g.Count(x => x.Priority == (int)ETaskPriorities.Medium),
-                                 LowPriority = g.Count(x => x.Priority == (int)ETaskPriorities.Low),
+            var counts = await visibleTasks
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    TotalTasks    = g.Count(),
+                    HighPriority  = g.Count(x => x.Priority == (int)ETaskPriorities.High),
+                    MidPriority   = g.Count(x => x.Priority == (int)ETaskPriorities.Medium),
+                    LowPriority   = g.Count(x => x.Priority == (int)ETaskPriorities.Low),
+                })
+                .FirstOrDefaultAsync();
 
-                                 DeptWiseSummary = g.GroupBy(x => x.Department.Name)
-                                                    .Select(d => new DeptTaskSummary
-                                                    {
-                                                        Name = d.Key,
-                                                        Count = d.Count()
-                                                    }).ToList()
-                             }).FirstOrDefaultAsync();
+            // Compute status counts in memory to avoid untranslatable expression
+            var taskDates = await visibleTasks
+                .Select(t => new
+                {
+                    t.StartDate,
+                    t.EndDate,
+                    HasUnseen = t.TaskInterventions.Any(ti => ti.OutcomeStatus == (int)ETaskInterventionOutcomes.Unseen),
+                })
+                .ToListAsync();
 
-            return summary ?? new GetTaskSummaryDTO();
+            var overdue    = taskDates.Count(t => t.StartDate <= now && t.EndDate < now && t.HasUnseen);
+            var inProgress = taskDates.Count(t => t.StartDate <= now && t.EndDate >= now && t.HasUnseen);
+            var completed  = taskDates.Count(t => !t.HasUnseen);
+
+            var deptWise = await visibleTasks
+                .GroupBy(t => t.Department.Name)
+                .Select(d => new DeptTaskSummary { Name = d.Key, Count = d.Count() })
+                .ToListAsync();
+
+            return new GetTaskSummaryDTO
+            {
+                TotalTasks       = counts?.TotalTasks ?? 0,
+                OverdueTasks     = overdue,
+                ActiveTasks      = inProgress,
+                CompletedTasks   = completed,
+                HighPriority     = counts?.HighPriority ?? 0,
+                MidPriority      = counts?.MidPriority ?? 0,
+                LowPriority      = counts?.LowPriority ?? 0,
+                DeptWiseSummary  = deptWise,
+            };
         }
 
         public async Task<GetTaskDetailsDTO> GetTask(Guid id)
         {
-            var task = await _dbContext.Tasks
-                        .Where(x => x.Id == id)
-                        .Select(x => new GetTaskDetailsDTO
-                        {
-                            Id = x.Id,
-                            Title = x.Title,
-                            PatientId = x.PatientId,
-                            DepartmentId = x.DepartmentId,
-                            Priority = x.Priority,
-                            Severity = x.Severity,
-                            RequiredRepetitions = x.RequiredRepetitions,
-                            CompletedRepetitions = x.CompletedRepetitions,
-                            LastReviewDate = x.LastReviewDate,
-                            TaskType = x.TaskType,
-                            Diagnosis = x.Diagnosis,
-                            Goals = x.Goals,
-                            StartDate = x.StartDate,
-                            EndDate = x.EndDate,
-                            Description = x.Description,
-                            CreatedById = x.CreatedBy,
-                            CreatedByName = x.CreatedBy != null
-                                ? _dbContext.Users
-                                    .Where(u => u.Id == x.CreatedBy)
-                                    .Select(u => u.FirstName + " " + u.LastName)
-                                    .FirstOrDefault()
-                                : null,
-                            Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
-                            {
-                                Id = t.InterventionId,
-                                AhaId = t.AhaUserId,
-                                WardId = t.WardId,
-                                Start = t.StartDate,
-                                End = t.EndDate,
-                                Components = t.SelectedComponents.Select(c => new SelectedComponentDTO
-                                {
-                                    ComponentType = c.ComponentType.Name,
-                                    Value = c.Value
-                                }).ToList()
-                            }).ToList()
-                        }).FirstOrDefaultAsync();
+            var task = await (from x in _dbContext.Tasks
+                              join u in _dbContext.Users on x.CreatedBy equals (Guid?)u.Id into creatorGroup
+                              from creator in creatorGroup.DefaultIfEmpty()
+                              where x.Id == id
+                              select new GetTaskDetailsDTO
+                              {
+                                  Id = x.Id,
+                                  Title = x.Title,
+                                  PatientId = x.PatientId,
+                                  DepartmentId = x.DepartmentId,
+                                  Priority = x.Priority,
+                                  Severity = x.Severity,
+                                  RequiredRepetitions = x.RequiredRepetitions,
+                                  CompletedRepetitions = x.CompletedRepetitions,
+                                  LastReviewDate = x.LastReviewDate,
+                                  TaskType = x.TaskType,
+                                  Diagnosis = x.Diagnosis,
+                                  Goals = x.Goals,
+                                  StartDate = x.StartDate,
+                                  EndDate = x.EndDate,
+                                  Description = x.Description,
+                                  CreatedById = x.CreatedBy,
+                                  CreatedByName = creator != null ? creator.FirstName + " " + creator.LastName : null,
+                                  Interventions = x.TaskInterventions.Select(t => new TaskInterventionDTO
+                                  {
+                                      Id = t.InterventionId,
+                                      AhaId = t.AhaUserId,
+                                      WardId = t.WardId,
+                                      Start = t.StartDate,
+                                      End = t.EndDate,
+                                      Components = t.SelectedComponents.Select(c => new SelectedComponentDTO
+                                      {
+                                          ComponentType = c.ComponentType.Name,
+                                          Value = c.Value
+                                      }).ToList()
+                                  }).ToList()
+                              }).FirstOrDefaultAsync();
 
             return task;
         }
