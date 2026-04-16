@@ -1,6 +1,7 @@
 using AlliedHealth.Domain;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
 using AlliedHealth.Service.Implementation;
@@ -18,7 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Register EF DbContext with connection
 var connection = builder.Configuration.GetConnectionString("PostgreConnection");
 builder.Services.AddDbContext<AlliedHealthDbContext>(opt =>
-    opt.UseNpgsql(connection, npgsql => npgsql.EnableRetryOnFailure()));
+    opt.UseNpgsql(connection, npgsql => npgsql.EnableRetryOnFailure())
+       .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPrincipal>(provider =>
