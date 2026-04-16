@@ -131,6 +131,18 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AlliedHealthDbContext>();
     db.Database.Migrate();
+
+    // Idempotent column additions — safe to run on every startup.
+    // These are needed because Supabase's connection pooler can prevent
+    // EF Core migrations from applying DDL changes reliably.
+    await db.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE ""Task"" ADD COLUMN IF NOT EXISTS ""Severity""              INTEGER     NOT NULL DEFAULT 1;
+        ALTER TABLE ""Task"" ADD COLUMN IF NOT EXISTS ""RequiredRepetitions""   INTEGER     NOT NULL DEFAULT 0;
+        ALTER TABLE ""Task"" ADD COLUMN IF NOT EXISTS ""CompletedRepetitions""  INTEGER     NOT NULL DEFAULT 0;
+        ALTER TABLE ""Task"" ADD COLUMN IF NOT EXISTS ""LastReviewDate""        DATE;
+        ALTER TABLE ""Task"" ADD COLUMN IF NOT EXISTS ""TaskType""              VARCHAR(100);
+        ALTER TABLE ""Referral"" ADD COLUMN IF NOT EXISTS ""LastReviewDate""    DATE;
+    ");
 }
 
 // Global exception handler — always returns JSON with the real error message
