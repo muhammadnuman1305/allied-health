@@ -85,6 +85,7 @@ export interface Referral {
   limbWeakness?: string; // Stroke
   communicationChallenges?: string; // Stroke
   weightBearingTolerance?: string; // Orthopaedic
+  lastReviewDate?: string; // DateOnly YYYY-MM-DD
   lastUpdated: string;
   updatedAt: string; // Alias for lastUpdated
   hidden: boolean;
@@ -108,10 +109,11 @@ export interface ReferralFormData {
   triagedBy?: string;
   triagedAt?: string;
   redirectToDepartment?: string;
-  // New fields for backend DTO
+  // Clinical fields for backend DTO
   diagnosis: string;
   goals: string;
   clinicalInstructions?: string;
+  lastReviewDate?: string;
   // Original fields
   notes?: string;
   outcomeNotes?: string;

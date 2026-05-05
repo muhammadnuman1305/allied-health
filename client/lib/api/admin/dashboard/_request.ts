@@ -1,48 +1,57 @@
-import { DashboardDetails } from "./_model";
+import { DashboardDetails, GetDashboardDetailsDTO } from "./_model";
 import api from "../../axios";
 
 const BASE_URL = "/api/dashboard";
+
+/** Read a numeric field whether the API sent camelCase or PascalCase (C#) keys. */
+const pickNumber = (
+  raw: Record<string, unknown>,
+  camel: keyof DashboardDetails,
+  pascal: keyof GetDashboardDetailsDTO
+): number => {
+  const v = raw[camel as string] ?? raw[pascal as string];
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const mapToDashboardDetails = (payload: unknown): DashboardDetails => {
+  const raw =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+
+  return {
+    totalPatients: pickNumber(raw, "totalPatients", "TotalPatients"),
+    totalDepartments: pickNumber(raw, "totalDepartments", "TotalDepartments"),
+    totalSpecialties: pickNumber(raw, "totalSpecialties", "TotalSpecialties"),
+    totalUsers: pickNumber(raw, "totalUsers", "TotalUsers"),
+    assignedTasks: pickNumber(raw, "assignedTasks", "AssignedTasks"),
+    inProgressTasks: pickNumber(raw, "inProgressTasks", "InProgressTasks"),
+    completedTasks: pickNumber(raw, "completedTasks", "CompletedTasks"),
+    overdueTasks: pickNumber(raw, "overdueTasks", "OverdueTasks"),
+    highPriorityTasks: pickNumber(raw, "highPriorityTasks", "HighPriorityTasks"),
+    mediumPriorityTasks: pickNumber(raw, "mediumPriorityTasks", "MediumPriorityTasks"),
+    lowPriorityTasks: pickNumber(raw, "lowPriorityTasks", "LowPriorityTasks"),
+    pendingReferrals: pickNumber(raw, "pendingReferrals", "PendingReferrals"),
+    acceptedReferrals: pickNumber(raw, "acceptedReferrals", "AcceptedReferrals"),
+    rejectedReferrals: pickNumber(raw, "rejectedReferrals", "RejectedReferrals"),
+    totalReferrals: pickNumber(raw, "totalReferrals", "TotalReferrals"),
+    incomingReferrals: pickNumber(raw, "incomingReferrals", "IncomingReferrals"),
+    outgoingReferrals: pickNumber(raw, "outgoingReferrals", "OutgoingReferrals"),
+    seenOutcomes: pickNumber(raw, "seenOutcomes", "SeenOutcomes"),
+    attemptedOutcomes: pickNumber(raw, "attemptedOutcomes", "AttemptedOutcomes"),
+    declinedOutcomes: pickNumber(raw, "declinedOutcomes", "DeclinedOutcomes"),
+    unseenOutcomes: pickNumber(raw, "unseenOutcomes", "UnseenOutcomes"),
+    handoverOutcomes: pickNumber(raw, "handoverOutcomes", "HandoverOutcomes"),
+  };
+};
 
 // Fetch dashboard details
 export const getDashboardDetails$ = async (): Promise<{
   data: DashboardDetails;
 }> => {
-  try {
-    // API returns camelCase JSON directly
-    const response = await api.get<DashboardDetails>(BASE_URL);
-    console.log("Raw API response:", response.data);
-    
-    // Ensure all values are numbers (handle potential string conversions)
-    const data: DashboardDetails = {
-      totalPatients: Number(response.data.totalPatients) || 0,
-      totalDepartments: Number(response.data.totalDepartments) || 0,
-      totalSpecialties: Number(response.data.totalSpecialties) || 0,
-      totalUsers: Number(response.data.totalUsers) || 0,
-      assignedTasks: Number(response.data.assignedTasks) || 0,
-      inProgressTasks: Number(response.data.inProgressTasks) || 0,
-      completedTasks: Number(response.data.completedTasks) || 0,
-      overdueTasks: Number(response.data.overdueTasks) || 0,
-      highPriorityTasks: Number(response.data.highPriorityTasks) || 0,
-      mediumPriorityTasks: Number(response.data.mediumPriorityTasks) || 0,
-      lowPriorityTasks: Number(response.data.lowPriorityTasks) || 0,
-      pendingReferrals: Number(response.data.pendingReferrals) || 0,
-      acceptedReferrals: Number(response.data.acceptedReferrals) || 0,
-      rejectedReferrals: Number(response.data.rejectedReferrals) || 0,
-      totalReferrals: Number(response.data.totalReferrals) || 0,
-      incomingReferrals: Number(response.data.incomingReferrals) || 0,
-      outgoingReferrals: Number(response.data.outgoingReferrals) || 0,
-      seenOutcomes: Number(response.data.seenOutcomes) || 0,
-      attemptedOutcomes: Number(response.data.attemptedOutcomes) || 0,
-      declinedOutcomes: Number(response.data.declinedOutcomes) || 0,
-      unseenOutcomes: Number(response.data.unseenOutcomes) || 0,
-      handoverOutcomes: Number(response.data.handoverOutcomes) || 0,
-    };
-    
-    console.log("Processed dashboard data:", data);
-    return { data };
-  } catch (error) {
-    console.error("Error fetching dashboard details:", error);
-    throw error;
-  }
+  const response = await api.get(BASE_URL);
+  const data = mapToDashboardDetails(response.data);
+  return { data };
 };
 

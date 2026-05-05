@@ -90,6 +90,12 @@ export interface GetTaskDTO {
   }>;
 }
 
+export interface TaskViewLog {
+  ahaUserId: string;
+  ahaName: string;
+  viewedAt: string; // ISO datetime
+}
+
 /** A single component value selected by a clinician for a task intervention */
 export interface SelectedComponentInput {
   componentType: string; // e.g. "Technique"
@@ -188,6 +194,7 @@ export interface TaskSummary {
   overdueTasks: number;
   activeTasks: number;
   completedTasks: number;
+  criticalPriority: number;
   highPriority: number;
   midPriority: number;
   lowPriority: number;
@@ -224,6 +231,8 @@ export const FEEDBACK_TYPES = [
 // Priority badge variants
 export const getPriorityBadgeVariant = (priority: string) => {
   switch (priority) {
+    case "Critical":
+      return "destructive";
     case "High":
       return "destructive";
     case "Medium":

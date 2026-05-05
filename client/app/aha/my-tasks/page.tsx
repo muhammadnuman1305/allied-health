@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTaskDetailsById$, getMyTasks$ } from "@/lib/api/aha/_request";
+import { logView$ } from "@/lib/api/admin/tasks/_request";
 import type { AHATaskDetails } from "@/lib/api/aha/_model";
 import api from "@/lib/api/axios";
 
@@ -509,6 +510,7 @@ export default function MyTasksPage() {
                             setSelectedTask(task);
                             const response = await getTaskDetailsById$(task.id);
                             setTaskDetails(response.data);
+                            logView$(task.id); // fire-and-forget
                           } catch (err) {
                             console.error("Error fetching task details:", err);
                             toast.error(

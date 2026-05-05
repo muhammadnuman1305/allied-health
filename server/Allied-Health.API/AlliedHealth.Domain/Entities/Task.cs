@@ -34,5 +34,6 @@ namespace AlliedHealth.Domain.Entities
         public Patient Patient { get; set; } = default!;
         public Department Department { get; set; } = default!;
         public ICollection<TaskIntervention> TaskInterventions { get; set; } = new List<TaskIntervention>();
+        public ICollection<TaskViewLog> ViewLogs { get; set; } = new List<TaskViewLog>();
     }
 }

@@ -37,13 +37,6 @@ import {
 } from "@/lib/api/admin/tasks/_request";
 import { toast } from "@/hooks/use-toast";
 
-// Helper function to count words in a string
-const countWords = (text: string): number => {
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-};
 
 // Form validation schema for referral data
 const createReferralFormSchema = () =>
@@ -72,28 +65,11 @@ const createReferralFormSchema = () =>
     triagedBy: z.string().optional(),
     triagedAt: z.string().optional(),
     redirectToDepartment: z.string().optional(),
-    // New fields replacing notes - now required with minimum word count
-    diagnosis: z
-      .string()
-      .min(1, "Diagnosis is required")
-      .refine(
-        (val) => countWords(val || "") >= 20,
-        "Diagnosis must contain at least 20 words"
-      ),
-    goals: z
-      .string()
-      .min(1, "Goals are required")
-      .refine(
-        (val) => countWords(val || "") >= 20,
-        "Goals must contain at least 20 words"
-      ),
-    clinicalInstructions: z
-      .string()
-      .min(1, "Clinical Instructions are required")
-      .refine(
-        (val) => countWords(val || "") >= 20,
-        "Clinical Instructions must contain at least 20 words"
-      ),
+    // Clinical fields
+    diagnosis: z.string().min(1, "Diagnosis is required"),
+    goals: z.string().min(1, "Goals are required"),
+    clinicalInstructions: z.string().optional(),
+    lastReviewDate: z.string().optional(),
     // Original fields (kept for backward compatibility)
     outcomeNotes: z.string().optional(),
     completedDate: z.string().optional(),
@@ -162,10 +138,11 @@ export default function ReferralFormContent({
       triagedBy: "",
       triagedAt: "",
       redirectToDepartment: "",
-      // New fields replacing notes
+      // Clinical fields
       diagnosis: "",
       goals: "",
       clinicalInstructions: "",
+      lastReviewDate: "",
       // Original fields
       outcomeNotes: "",
       completedDate: "",
@@ -180,9 +157,6 @@ export default function ReferralFormContent({
   const watchedInterventions = watch("interventions");
   const watchedOriginDepartment = watch("originDepartment");
   const watchedDestinationDepartment = watch("destinationDepartment");
-  const watchedDiagnosis = watch("diagnosis");
-  const watchedGoals = watch("goals");
-  const watchedClinicalInstructions = watch("clinicalInstructions");
 
   // Load patients list
   useEffect(() => {
@@ -312,13 +286,14 @@ export default function ReferralFormContent({
             "redirectToDepartment",
             referralData.redirectToDepartment || ""
           );
-          // New fields (check if they exist, otherwise use legacy notes field)
+          // Clinical fields
           setValue("diagnosis", referralData.diagnosis || "");
           setValue("goals", referralData.goals || "");
           setValue(
             "clinicalInstructions",
             referralData.clinicalInstructions || referralData.notes || ""
           );
+          setValue("lastReviewDate", (referralData as any).lastReviewDate || "");
           // Original fields
           setValue("outcomeNotes", referralData.outcomeNotes || "");
           setValue("completedDate", referralData.completedDate || "");
@@ -399,10 +374,11 @@ export default function ReferralFormContent({
         triagedBy: data.triagedBy,
         triagedAt: data.triagedAt,
         redirectToDepartment: data.redirectToDepartment,
-        // New fields for backend DTO (sent separately, not combined into notes)
+        // Clinical fields for backend DTO
         diagnosis: data.diagnosis,
         goals: data.goals,
         clinicalInstructions: data.clinicalInstructions,
+        lastReviewDate: data.lastReviewDate || undefined,
         // Original fields
         outcomeNotes: data.outcomeNotes,
         completedDate: data.completedDate,
@@ -681,49 +657,57 @@ export default function ReferralFormContent({
                 )}
               </div>
 
-              {/* Diagnosis */}
-              <div className="space-y-2">
-                <Label htmlFor="diagnosis">
-                  Diagnosis <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="diagnosis"
-                  {...register("diagnosis")}
-                  placeholder="Enter patient diagnosis"
-                  rows={3}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provide the diagnosis or medical condition relevant to this
-                  referral. Minimum 20 words required (
-                  {countWords(watchedDiagnosis || "")} words).
-                </p>
-                {errors.diagnosis && (
-                  <p className="text-sm text-destructive">
-                    {errors.diagnosis.message}
+              {/* Diagnosis & Goals — same row on md+ */}
+              <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="diagnosis">
+                    Diagnosis <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="diagnosis"
+                    {...register("diagnosis")}
+                    placeholder="Enter patient diagnosis"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Provide the diagnosis or medical condition relevant to this referral.
                   </p>
-                )}
+                  {errors.diagnosis && (
+                    <p className="text-sm text-destructive">
+                      {errors.diagnosis.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="goals">
+                    Goals <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="goals"
+                    {...register("goals")}
+                    placeholder="Enter treatment goals"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Describe the goals or objectives for this referral.
+                  </p>
+                  {errors.goals && (
+                    <p className="text-sm text-destructive">
+                      {errors.goals.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Goals */}
-              <div className="space-y-2">
-                <Label htmlFor="goals">
-                  Goals <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="goals"
-                  {...register("goals")}
-                  placeholder="Enter treatment goals"
-                  rows={3}
+              {/* Last Review Date */}
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Label htmlFor="lastReviewDate">Last Review Date</Label>
+                <Input
+                  id="lastReviewDate"
+                  type="date"
+                  className="max-w-md"
+                  {...register("lastReviewDate")}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Describe the goals or objectives for this referral. Minimum 20
-                  words required ({countWords(watchedGoals || "")} words).
-                </p>
-                {errors.goals && (
-                  <p className="text-sm text-destructive">
-                    {errors.goals.message}
-                  </p>
-                )}
               </div>
 
               {/* Clinical Instructions / Description */}
@@ -739,9 +723,7 @@ export default function ReferralFormContent({
                   rows={3}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Provide clear, detailed instructions. Minimum 20 words
-                  required ({countWords(watchedClinicalInstructions || "")}{" "}
-                  words).
+                  Provide clear, detailed clinical instructions.
                 </p>
                 {errors.clinicalInstructions && (
                   <p className="text-sm text-destructive">

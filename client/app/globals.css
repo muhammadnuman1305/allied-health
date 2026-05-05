@@ -42,7 +42,8 @@
   }
 
   .dark {
-    --background: 0 0% 0%;
+    /* Slightly lifted from pure black so content areas read as charcoal, not OLED black */
+    --background: 240 6% 7%;
     --foreground: 0 0% 98%;
     
     --card: 0 0% 9%;

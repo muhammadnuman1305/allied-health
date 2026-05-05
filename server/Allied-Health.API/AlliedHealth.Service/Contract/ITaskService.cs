@@ -5,11 +5,12 @@ namespace AlliedHealth.Service.Contract
     public interface ITaskService
     {
         IQueryable<GetTaskDTO> GetAll();
-        Task<GetTaskSummaryDTO> GetSummary();
-        Task<GetTaskDetailsDTO> GetTask(Guid id);
-        Task<string?> CreateTask(AddUpdateTaskDTO request);
-        Task<string?> UpdateTask(AddUpdateTaskDTO request);
-        Task<string?> ToggleHide(Guid id);
-        Task<(GetReferralTaskDetailsDTO?, string?)> GetReferralTaskDetails(Guid refId);
+        System.Threading.Tasks.Task<GetTaskSummaryDTO> GetSummary();
+        System.Threading.Tasks.Task<GetTaskDetailsDTO> GetTask(Guid id);
+        System.Threading.Tasks.Task<string?> CreateTask(AddUpdateTaskDTO request);
+        System.Threading.Tasks.Task<string?> UpdateTask(AddUpdateTaskDTO request);
+        System.Threading.Tasks.Task<string?> ToggleHide(Guid id);
+        System.Threading.Tasks.Task<(GetReferralTaskDetailsDTO?, string?)> GetReferralTaskDetails(Guid refId);
+        System.Threading.Tasks.Task LogView(Guid taskId, Guid ahaUserId);
     }
 }

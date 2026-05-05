@@ -50,6 +50,7 @@ import {
   PatientOption,
   GetReferralTaskDetailsDTO,
 } from "@/lib/api/admin/tasks/_request";
+import type { TaskViewLog } from "@/lib/api/admin/tasks/_model";
 import {
   TaskFormData,
   SubTask,
@@ -58,6 +59,8 @@ import {
   SelectedComponentInput,
   priorityNumberToString,
   AutoAssignResultDTO,
+  severityNumberToString,
+  getSeverityBadgeVariant,
 } from "@/lib/api/admin/tasks/_model";
 
 export default function TaskFormContent() {
@@ -108,6 +111,8 @@ export default function TaskFormContent() {
   const [isDepartmentDisabled, setIsDepartmentDisabled] = useState(false);
   const [isPatientDisabled, setIsPatientDisabled] = useState(false);
 
+  const [viewLogs, setViewLogs] = useState<TaskViewLog[]>([]);
+
   // Form data
   const [formData, setFormData] = useState<TaskFormData>({
     patientId: "",
@@ -119,7 +124,6 @@ export default function TaskFormContent() {
     priority: "Medium",
     severity: 1,
     requiredRepetitions: 0,
-    lastReviewDate: "",
     dueDate: "",
     dueTime: "00:00",
     assignedToDepartment: "",
@@ -528,7 +532,6 @@ export default function TaskFormContent() {
             priority: task.priority,
             severity: (task as any).severity ?? 1,
             requiredRepetitions: (task as any).requiredRepetitions ?? 0,
-            lastReviewDate: (task as any).lastReviewDate || "",
             dueDate: task.dueDate || task.endDate || "",
             dueTime: task.dueTime || "00:00",
             assignedToDepartment:
@@ -538,6 +541,11 @@ export default function TaskFormContent() {
             ],
             status: task.status,
           });
+
+          // Load view logs from task details response
+          if ((task as any).viewLogs) {
+            setViewLogs((task as any).viewLogs as TaskViewLog[]);
+          }
 
           // Initialize date range from existing startDate/endDate or dueDate
           setStartDate(task.startDate || task.dueDate || "");
@@ -1110,6 +1118,34 @@ export default function TaskFormContent() {
                 </Select>
               </div>
 
+              {/* Severity */}
+              <div className="space-y-2">
+                <Label htmlFor="severity" className="cursor-text">
+                  Severity <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={String(formData.severity ?? 1)}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, severity: Number(value) }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEVERITY_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={String(opt.value)}>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getSeverityBadgeVariant(opt.value)}>
+                            {opt.label}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Required Repetitions */}
               <div className="space-y-2">
                 <Label htmlFor="requiredRepetitions" className="cursor-text">
@@ -1129,60 +1165,42 @@ export default function TaskFormContent() {
                   }
                 />
                 {!isNewTask && (
-                  <p className="text-xs text-muted-foreground">
-                    Completed: {(formData as any).completedRepetitions ?? 0} / {formData.requiredRepetitions ?? 0}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1 px-3 py-2 rounded-md bg-muted/50 border text-sm">
+                    <span className="text-muted-foreground">Completed:</span>
+                    <span className="font-semibold">{(formData as any).completedRepetitions ?? 0}</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="font-semibold">{formData.requiredRepetitions ?? 0}</span>
+                    <span className="text-muted-foreground ml-1">repetitions</span>
+                  </div>
                 )}
               </div>
 
-              {/* Last Review Date */}
-              <div className="space-y-2">
-                <Label htmlFor="lastReviewDate" className="cursor-text">
-                  Last Review Date
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="lastReviewDate"
-                    type="date"
-                    className="pl-10"
-                    value={formData.lastReviewDate || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        lastReviewDate: e.target.value,
-                      }))
-                    }
+              {/* Diagnosis & Goals — same row on md+ */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="diagnosis" className="cursor-text">
+                    Diagnosis
+                  </Label>
+                  <Textarea
+                    id="diagnosis"
+                    placeholder="Enter patient diagnosis or medical condition..."
+                    value={formData.diagnosis || ""}
+                    onChange={(e) => handleChange("diagnosis", e.target.value)}
+                    rows={3}
                   />
                 </div>
-              </div>
-
-              {/* Diagnosis */}
-              <div className="space-y-2">
-                <Label htmlFor="diagnosis" className="cursor-text">
-                  Diagnosis
-                </Label>
-                <Textarea
-                  id="diagnosis"
-                  placeholder="Enter patient diagnosis or medical condition..."
-                  value={formData.diagnosis || ""}
-                  onChange={(e) => handleChange("diagnosis", e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              {/* Goals */}
-              <div className="space-y-2">
-                <Label htmlFor="goals" className="cursor-text">
-                  Goals
-                </Label>
-                <Textarea
-                  id="goals"
-                  placeholder="Enter treatment goals or objectives..."
-                  value={formData.goals || ""}
-                  onChange={(e) => handleChange("goals", e.target.value)}
-                  rows={3}
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="goals" className="cursor-text">
+                    Goals
+                  </Label>
+                  <Textarea
+                    id="goals"
+                    placeholder="Enter treatment goals or objectives..."
+                    value={formData.goals || ""}
+                    onChange={(e) => handleChange("goals", e.target.value)}
+                    rows={3}
+                  />
+                </div>
               </div>
 
               {/* Start Date */}
@@ -1861,6 +1879,41 @@ export default function TaskFormContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* View Log Timeline — visible only when editing existing task */}
+        {!isNewTask && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                View History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {viewLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No views recorded yet.</p>
+              ) : (
+                <ol className="relative border-l border-border ml-3 space-y-4">
+                  {viewLogs.map((log, i) => (
+                    <li key={i} className="ml-4">
+                      <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-background bg-primary" />
+                      <p className="text-sm font-medium">{log.ahaName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(log.viewedAt).toLocaleString("en-AU", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">

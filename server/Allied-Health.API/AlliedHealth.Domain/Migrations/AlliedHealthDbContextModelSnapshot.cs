@@ -660,6 +660,30 @@ namespace AlliedHealth.Domain.Migrations
                     b.ToTable("TaskInterventionComponent", (string)null);
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskViewLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AhaUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AhaUserId");
+
+                    b.HasIndex("TaskId", "ViewedAt");
+
+                    b.ToTable("TaskViewLog", (string)null);
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1037,6 +1061,25 @@ namespace AlliedHealth.Domain.Migrations
                     b.Navigation("TaskIntervention");
                 });
 
+            modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskViewLog", b =>
+                {
+                    b.HasOne("AlliedHealth.Domain.Entities.Task", "Task")
+                        .WithMany("ViewLogs")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AlliedHealth.Domain.Entities.User", "AhaUser")
+                        .WithMany()
+                        .HasForeignKey("AhaUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AhaUser");
+
+                    b.Navigation("Task");
+                });
+
             modelBuilder.Entity("AlliedHealth.Domain.Entities.User", b =>
                 {
                     b.HasOne("AlliedHealth.Domain.Entities.Department", "Department")
@@ -1150,6 +1193,8 @@ namespace AlliedHealth.Domain.Migrations
             modelBuilder.Entity("AlliedHealth.Domain.Entities.Task", b =>
                 {
                     b.Navigation("TaskInterventions");
+
+                    b.Navigation("ViewLogs");
                 });
 
             modelBuilder.Entity("AlliedHealth.Domain.Entities.TaskIntervention", b =>

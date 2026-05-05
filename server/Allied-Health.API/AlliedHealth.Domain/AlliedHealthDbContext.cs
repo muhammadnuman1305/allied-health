@@ -28,6 +28,7 @@ namespace AlliedHealth.Domain
         public DbSet<ComponentType> ComponentTypes => Set<ComponentType>();
         public DbSet<InterventionComponent> InterventionComponents => Set<InterventionComponent>();
         public DbSet<TaskInterventionComponent> TaskInterventionComponents => Set<TaskInterventionComponent>();
+        public DbSet<TaskViewLog> TaskViewLogs => Set<TaskViewLog>();
         public DbSet<ReferralInterventionComponent> ReferralInterventionComponents => Set<ReferralInterventionComponent>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

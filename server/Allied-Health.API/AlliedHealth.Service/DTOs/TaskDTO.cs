@@ -46,6 +46,7 @@
         public Guid? CreatedById { get; set; }
 
         public List<TaskInterventionDTO> Interventions { get; set; } = new List<TaskInterventionDTO>();
+        public List<TaskViewLogDTO> ViewLogs { get; set; } = new List<TaskViewLogDTO>();
     }
 
     public class GetReferralTaskDetailsDTO
@@ -74,6 +75,7 @@
         public int CompletedTasks { get; set; }
 
         // Priority Distribution
+        public int CriticalPriority { get; set; }
         public int HighPriority { get; set; }
         public int MidPriority { get; set; }
         public int LowPriority { get; set; }
@@ -107,6 +109,13 @@
         public string? Description { get; set; }
 
         public List<TaskInterventionDTO> Interventions { get; set; }
+    }
+
+    public class TaskViewLogDTO
+    {
+        public Guid AhaUserId { get; set; }
+        public string AhaName { get; set; } = default!;
+        public DateTime ViewedAt { get; set; }
     }
 
     public class AutoAssignRequestDTO

@@ -41,6 +41,7 @@ interface AddUpdateReferralDTO {
   DestinationDeptId: string;
   TherapistId: string;
   Priority: number;
+  LastReviewDate?: string | null;
   Diagnosis: string;
   Goals: string;
   Description?: string | null;
@@ -78,6 +79,7 @@ const transformToBackendDTO = (formData: ReferralFormData, therapistId: string):
     DestinationDeptId: formData.destinationDepartment,
     TherapistId: therapistId,
     Priority: priorityToNumber(formData.priority),
+    LastReviewDate: formData.lastReviewDate || null,
     Diagnosis: formData.diagnosis || "",
     Goals: formData.goals || "",
     Description: formData.clinicalInstructions || null,

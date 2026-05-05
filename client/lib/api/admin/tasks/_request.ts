@@ -211,13 +211,14 @@ export const getSummary$ = async (): Promise<{ data: TaskSummary }> => {
       totalTasks: tasks.length,
       overdueTasks: tasks.filter(t => {
         if (t.status === "Completed") return false;
-        const endDateTime = t.endDate 
-          ? new Date(t.endDate) 
+        const endDateTime = t.endDate
+          ? new Date(t.endDate)
           : (t.dueDate && t.dueTime ? new Date(`${t.dueDate}T${t.dueTime}`) : null);
         return endDateTime && endDateTime < now;
       }).length,
       activeTasks: tasks.filter(t => t.status === "Assigned" || t.status === "In Progress").length,
       completedTasks: tasks.filter(t => t.status === "Completed").length,
+      criticalPriority: tasks.filter(t => t.priority === "Critical").length,
       highPriority: tasks.filter(t => t.priority === "High").length,
       midPriority: tasks.filter(t => t.priority === "Medium").length,
       lowPriority: tasks.filter(t => t.priority === "Low").length,
@@ -495,6 +496,15 @@ export const getAutoAssignSuggestions$ = async (
   } catch (error) {
     console.error("Error fetching auto-assign suggestions:", error);
     throw error;
+  }
+};
+
+export const logView$ = async (taskId: string): Promise<void> => {
+  try {
+    await api.post(`/api/task/${taskId}/view`);
+  } catch (error) {
+    // Fire-and-forget — don't block or surface errors to the user
+    console.error("Error logging task view:", error);
   }
 };
 

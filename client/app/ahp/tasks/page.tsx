@@ -69,6 +69,8 @@ import {
   TaskSummary,
   getPriorityBadgeVariant,
   getStatusBadgeVariant,
+  getSeverityBadgeVariant,
+  severityNumberToString,
   isTaskOverdue,
 } from "@/lib/api/admin/tasks/_model";
 
@@ -85,6 +87,7 @@ export default function AdminTasksPage() {
     overdueTasks: 0,
     activeTasks: 0,
     completedTasks: 0,
+    criticalPriority: 0,
     highPriority: 0,
     midPriority: 0,
     lowPriority: 0,
@@ -148,6 +151,7 @@ export default function AdminTasksPage() {
         overdueTasks: summaryData.overdueTasks || 0,
         activeTasks: summaryData.activeTasks || 0,
         completedTasks: summaryData.completedTasks || 0,
+        criticalPriority: summaryData.criticalPriority || 0,
         highPriority: summaryData.highPriority || 0,
         midPriority: summaryData.midPriority || 0,
         lowPriority: summaryData.lowPriority || 0,
@@ -250,6 +254,7 @@ export default function AdminTasksPage() {
       filterable: true,
       filterType: "select",
       filterOptions: [
+        { value: "Critical", label: "Critical" },
         { value: "High", label: "High" },
         { value: "Medium", label: "Medium" },
         { value: "Low", label: "Low" },
@@ -259,6 +264,21 @@ export default function AdminTasksPage() {
           {task.priority}
         </Badge>
       ),
+    },
+    {
+      key: "severity",
+      label: "Severity",
+      width: "w-[100px]",
+      sortable: true,
+      render: (task) => {
+        const sev = (task as any).severity as number | undefined;
+        if (!sev) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <Badge variant={getSeverityBadgeVariant(sev)}>
+            {severityNumberToString(sev)}
+          </Badge>
+        );
+      },
     },
     {
       key: "startDate",
@@ -519,7 +539,15 @@ export default function AdminTasksPage() {
                 <div className="h-6 w-1 bg-primary rounded-full" />
                 <h3 className="font-semibold text-sm">Priority Distribution</h3>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-destructive/10 rounded-lg p-3 text-center hover:bg-destructive/20 transition-colors">
+                  <div className="text-2xl font-bold mb-0.5 text-destructive">
+                    {summary.criticalPriority}
+                  </div>
+                  <div className="text-xs font-medium text-destructive">
+                    Critical
+                  </div>
+                </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
                   <div className="text-2xl font-bold mb-0.5">
                     {summary.highPriority}

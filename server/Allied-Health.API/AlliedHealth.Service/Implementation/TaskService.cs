@@ -69,10 +69,11 @@ namespace AlliedHealth.Service.Implementation
                 .GroupBy(_ => 1)
                 .Select(g => new
                 {
-                    TotalTasks    = g.Count(),
-                    HighPriority  = g.Count(x => x.Priority == (int)ETaskPriorities.High),
-                    MidPriority   = g.Count(x => x.Priority == (int)ETaskPriorities.Medium),
-                    LowPriority   = g.Count(x => x.Priority == (int)ETaskPriorities.Low),
+                    TotalTasks       = g.Count(),
+                    CriticalPriority = g.Count(x => x.Priority == (int)ETaskPriorities.Critical),
+                    HighPriority     = g.Count(x => x.Priority == (int)ETaskPriorities.High),
+                    MidPriority      = g.Count(x => x.Priority == (int)ETaskPriorities.Medium),
+                    LowPriority      = g.Count(x => x.Priority == (int)ETaskPriorities.Low),
                 })
                 .FirstOrDefaultAsync();
 
@@ -101,6 +102,7 @@ namespace AlliedHealth.Service.Implementation
                 OverdueTasks     = overdue,
                 ActiveTasks      = inProgress,
                 CompletedTasks   = completed,
+                CriticalPriority = counts?.CriticalPriority ?? 0,
                 HighPriority     = counts?.HighPriority ?? 0,
                 MidPriority      = counts?.MidPriority ?? 0,
                 LowPriority      = counts?.LowPriority ?? 0,
@@ -145,7 +147,15 @@ namespace AlliedHealth.Service.Implementation
                                           ComponentType = c.ComponentType.Name,
                                           Value = c.Value
                                       }).ToList()
-                                  }).ToList()
+                                  }).ToList(),
+                                  ViewLogs = x.ViewLogs
+                                      .OrderByDescending(v => v.ViewedAt)
+                                      .Select(v => new TaskViewLogDTO
+                                      {
+                                          AhaUserId = v.AhaUserId,
+                                          AhaName = v.AhaUser.FirstName + " " + v.AhaUser.LastName,
+                                          ViewedAt = v.ViewedAt
+                                      }).ToList()
                               }).FirstOrDefaultAsync();
 
             return task;
@@ -358,6 +368,24 @@ namespace AlliedHealth.Service.Implementation
             await _dbContext.SaveChangesAsync();
 
             return null;
+        }
+
+        public async System.Threading.Tasks.Task LogView(Guid taskId, Guid ahaUserId)
+        {
+            await _dbContext.TaskViewLogs.AddAsync(new TaskViewLog
+            {
+                Id = Guid.NewGuid(),
+                TaskId = taskId,
+                AhaUserId = ahaUserId,
+                ViewedAt = DateTime.UtcNow
+            });
+
+            // Update LastReviewDate on the task itself
+            var task = await _dbContext.Tasks.FindAsync(taskId);
+            if (task != null)
+                task.LastReviewDate = DateOnly.FromDateTime(DateTime.UtcNow);
+
+            await _dbContext.SaveChangesAsync();
         }
 
         public async Task<(GetReferralTaskDetailsDTO?, string?)> GetReferralTaskDetails(Guid refId)

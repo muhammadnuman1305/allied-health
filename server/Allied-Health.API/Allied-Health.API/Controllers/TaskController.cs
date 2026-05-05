@@ -1,6 +1,7 @@
 using AlliedHealth.Common.Enums;
 using AlliedHealth.Service.DTOs;
 using AlliedHealth.Service.Contract;
+using AlliedHealth.Service.Contract.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using AlliedHealth.Service.Implementation;
@@ -15,11 +16,14 @@ public class TaskController : ControllerBase
     private readonly IUtilityService _utilityService;
     private readonly ITaskAutoAssignService _autoAssignService;
 
-    public TaskController(ITaskService taskService, IUtilityService utilityService, ITaskAutoAssignService autoAssignService)
+    private readonly IUserContext _userContext;
+
+    public TaskController(ITaskService taskService, IUtilityService utilityService, ITaskAutoAssignService autoAssignService, IUserContext userContext)
     {
         _taskService = taskService;
         _utilityService = utilityService;
         _autoAssignService = autoAssignService;
+        _userContext = userContext;
     }
 
     [HttpGet("")]
@@ -37,7 +41,7 @@ public class TaskController : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet("{id}")] 
+    [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetTask(Guid id)
     {
         var response = await _taskService.GetTask(id);
@@ -66,7 +70,7 @@ public class TaskController : ControllerBase
         return Ok(response);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:guid}")]
     public async Task<IActionResult> ToggleHide(Guid id)
     {
         var response = await _taskService.ToggleHide(id);
@@ -136,5 +140,16 @@ public class TaskController : ControllerBase
     {
         var response = await _autoAssignService.GetAutoAssignSuggestions(request);
         return Ok(response);
+    }
+
+    [HttpPost("{id:guid}/view")]
+    public async Task<IActionResult> LogView(Guid id)
+    {
+        var userId = _userContext.UserId;
+        if (userId == null)
+            return Unauthorized();
+
+        await _taskService.LogView(id, userId.Value);
+        return Ok();
     }
 }

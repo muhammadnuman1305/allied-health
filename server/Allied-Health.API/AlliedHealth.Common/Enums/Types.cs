@@ -60,6 +60,7 @@ namespace AlliedHealth.Common.Enums
         Low = 1,
         Medium = 2,
         High = 3,
+        Critical = 4,
     }
 
     public enum ETaskSeverity
