@@ -15,6 +15,7 @@ import {
   ChevronsUpDown,
   Users,
   ClipboardList,
+  CalendarDays,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -66,6 +67,7 @@ export function UserSidebar({
       patients: "Patient Management",
       "all-patients": "Patient Management",
       "my-patients": "Patient Management",
+      schedule: "Schedule",
     };
     const sectionName = segments[2] || segments[1];
     if (sectionName && sectionMap[sectionName]) {
@@ -101,6 +103,13 @@ export function UserSidebar({
       items: [
         { title: "All Patients", href: "/aha/all-patients" },
         { title: "My Patients", href: "/aha/my-patients" },
+      ],
+    },
+    {
+      title: "Schedule",
+      icon: <CalendarDays className="h-4 w-4" />,
+      items: [
+        { title: "Vacation Requests", href: "/aha/schedule/vacation-requests" },
       ],
     },
   ];

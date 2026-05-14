@@ -70,4 +70,11 @@ namespace AlliedHealth.Common.Enums
         High = 3,
         Critical = 4,
     }
+
+    public enum EVacationStatus
+    {
+        Pending = 1,
+        Approved = 2,
+        Rejected = 3
+    }
 }

@@ -49,6 +49,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IAHAPatientService, AHAPatientService>();
 builder.Services.AddScoped<IAHATaskService, AHATaskService>();
 
+builder.Services.AddScoped<IVacationService, VacationService>();
 builder.Services.AddScoped<IUtilityService, UtilityService>();
 
 // Configure JWT Authentication

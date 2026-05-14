@@ -1,7 +1,7 @@
+using AlliedHealth.Common.Enums;
 using AlliedHealth.Domain;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.DTOs;
-using AlliedHealth.Common.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AlliedHealth.Service.Implementation
@@ -49,6 +49,15 @@ namespace AlliedHealth.Service.Implementation
                                     .ToList()
                 }).ToList();
 
+            // Collect AHAs on approved vacation on the start date — exclude them
+            var ahasOnVacation = await _dbContext.VacationRequests
+                .Where(v =>
+                    v.Status == (int)EVacationStatus.Approved &&
+                    v.StartDate <= request.StartDate &&
+                    v.EndDate >= request.StartDate)
+                .Select(v => v.AhaUserId)
+                .ToHashSetAsync();
+
             // Count existing task slots per AHA on the start date
             var ahaSlotCounts = await _dbContext.TaskInterventions
                 .Where(ti =>
@@ -68,9 +77,9 @@ namespace AlliedHealth.Service.Implementation
                 if (intervention == null)
                     continue;
 
-                // Filter AHAs with matching specialty and available slots
+                // Filter AHAs with matching specialty, not on vacation, and available slots
                 var eligible = ahas
-                    .Where(a => a.SpecialtyIds.Contains(intervention.SpecialtyId))
+                    .Where(a => a.SpecialtyIds.Contains(intervention.SpecialtyId) && !ahasOnVacation.Contains(a.Id))
                     .Select(a => new
                     {
                         a.Id,
