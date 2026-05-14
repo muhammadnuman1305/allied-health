@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Leaf,
   LogOut,
   ChevronDown,
   ChevronRight,
@@ -142,8 +142,15 @@ export function UserSidebar({
           href="/aha/dashboard"
           className="flex items-center gap-3 min-w-0"
         >
-          <div className="flex h-7.5 w-7.5 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
-            <Leaf className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-md bg-background">
+            <Image
+              src="/allied-health-logo.png"
+              alt="Allied Health logo"
+              width={32}
+              height={32}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">

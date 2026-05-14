@@ -104,14 +104,14 @@ export default function LoginPage() {
         iconColor: "text-primary",
         forgotLink: "text-link hover:text-link-active hover:underline",
         button: "bg-primary hover:bg-primary-active text-primary-foreground",
-        activeTab: "bg-background text-primary",
+        activeTab: "bg-primary text-primary-foreground",
       }
     : {
         iconBg: "bg-accent",
         iconColor: "text-primary",
         forgotLink: "text-link hover:text-link-active hover:underline",
         button: "bg-primary hover:bg-primary-active text-primary-foreground",
-        activeTab: "bg-background text-primary",
+        activeTab: "bg-primary text-primary-foreground",
       };
 
   return (
@@ -123,14 +123,14 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md space-y-5">
         {/* Tab switcher */}
-        <div className="flex bg-background rounded-lg p-1.5 gap-1.5 border border-border">
+        <div className="flex bg-muted rounded-lg p-1.5 gap-1.5 border border-border">
           <button
             type="button"
             onClick={() => setActiveTab("assistant")}
-            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${
               activeTab === "assistant"
                 ? theme.activeTab
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:bg-background hover:text-foreground"
             }`}
           >
             Assistant
@@ -138,10 +138,10 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setActiveTab("professional")}
-            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors duration-200 ${
               activeTab === "professional"
                 ? theme.activeTab
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:bg-background hover:text-foreground"
             }`}
           >
             Professional
