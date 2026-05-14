@@ -40,10 +40,36 @@ namespace AlliedHealth.Service.Implementation
                    };
         }
 
+        public async Task<List<GetVacationRequestDTO>> CheckOverlap(Guid ahaUserId, DateOnly startDate, DateOnly endDate)
+        {
+            return await (from v in _dbContext.VacationRequests
+                          join reviewer in _dbContext.Users on v.ReviewedById equals (Guid?)reviewer.Id into reviewerGroup
+                          from reviewer in reviewerGroup.DefaultIfEmpty()
+                          where v.AhaUserId == ahaUserId
+                             && v.Status != (int)EVacationStatus.Rejected
+                             && v.StartDate <= endDate
+                             && v.EndDate >= startDate
+                          select new GetVacationRequestDTO
+                          {
+                              Id = v.Id,
+                              AhaUserId = v.AhaUserId,
+                              AhaName = v.AhaUser.FirstName + " " + v.AhaUser.LastName,
+                              StartDate = v.StartDate,
+                              EndDate = v.EndDate,
+                              Reason = v.Reason,
+                              Status = v.Status,
+                              SubmittedDate = v.SubmittedDate,
+                              ReviewedById = v.ReviewedById,
+                              ReviewedByName = reviewer != null ? reviewer.FirstName + " " + reviewer.LastName : null,
+                              ReviewedDate = v.ReviewedDate,
+                              RejectionReason = v.RejectionReason
+                          }).ToListAsync();
+        }
+
         public async Task<string?> CreateRequest(Guid ahaUserId, CreateVacationRequestDTO request)
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
-            var maxDate = today.AddMonths(1);
+            var maxDate = new DateOnly(today.Year, 12, 31);
 
             if (request.StartDate < today || request.EndDate > maxDate || request.StartDate > request.EndDate)
                 return EMessages.VacationDateInvalid;

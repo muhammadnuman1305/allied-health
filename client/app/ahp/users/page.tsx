@@ -70,6 +70,7 @@ import {
 } from "@/lib/api/admin/users/_request";
 import { User, UserSummary } from "@/lib/api/admin/users/_model";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatsCard } from "@/components/ui/stats-card";
 import { useToast } from "@/hooks/use-toast";
 
 // Role mapping from backend numbers to display strings
@@ -352,78 +353,40 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">User Management</h1>
+        <h1 className="text-3xl font-normal">User Management</h1>
         <p className="text-muted-foreground">Manage allied health users</p>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalUsers}</div>
-                <p className="text-xs text-muted-foreground">Active users</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Allied Professionals
-                </CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {summary.totalProfessionals}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Licensed professionals
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Allied Assistants
-                </CardTitle>
-                <UserCog className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalAssistants}</div>
-                <p className="text-xs text-muted-foreground">Support staff</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Administrators
-                </CardTitle>
-                <Settings className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{summary.totalAdmins}</div>
-                <p className="text-xs text-muted-foreground">
-                  System administrators
-                </p>
-              </CardContent>
-            </Card>
-          </>
-        )}
+        <StatsCard
+          title="Total Users"
+          value={summary.totalUsers}
+          description="Active users"
+          icon={Users}
+          loading={loading}
+        />
+        <StatsCard
+          title="Allied Professionals"
+          value={summary.totalProfessionals}
+          description="Licensed professionals"
+          icon={UserCheck}
+          loading={loading}
+        />
+        <StatsCard
+          title="Allied Assistants"
+          value={summary.totalAssistants}
+          description="Support staff"
+          icon={UserCog}
+          loading={loading}
+        />
+        <StatsCard
+          title="Administrators"
+          value={summary.totalAdmins}
+          description="System administrators"
+          icon={Settings}
+          loading={loading}
+        />
       </div>
 
       {/* Filter Controls */}
@@ -682,8 +645,20 @@ export default function AdminUsersPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
-                      <Skeleton className="h-8 w-full rounded-md" />
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-28 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-8 w-8 rounded-sm" />
                     </TableCell>
                   </TableRow>
                 ))
@@ -732,7 +707,7 @@ export default function AdminUsersPage() {
                           }
                           className={
                             user.isHidden
-                              ? "text-green-600"
+                              ? "text-success"
                               : "text-destructive"
                           }
                         >
@@ -878,7 +853,7 @@ export default function AdminUsersPage() {
               onClick={handleConfirmedAction}
               className={
                 deleteDialog.isHidden
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >

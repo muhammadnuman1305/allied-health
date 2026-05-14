@@ -159,10 +159,17 @@ export interface AddUpdateTaskDTO {
   refId?: string | null; // Optional referral ID if task is created from a referral
 }
 
+export interface AutoAssignInterventionItem {
+  id: string;
+  startDate?: string; // DateOnly YYYY-MM-DD — intervention-specific dates if already set
+  endDate?: string;
+}
+
 export interface AutoAssignRequestDTO {
-  interventionIds: string[];
-  startDate: string; // DateOnly YYYY-MM-DD
-  endDate: string;   // DateOnly YYYY-MM-DD
+  interventions: AutoAssignInterventionItem[];
+  taskStartDate: string; // DateOnly YYYY-MM-DD — task-level fallback
+  taskEndDate: string;
+  departmentId?: string;
 }
 
 export interface AutoAssignResultDTO {
@@ -170,6 +177,8 @@ export interface AutoAssignResultDTO {
   interventionName: string;
   suggestedAhaId?: string;
   suggestedAhaName?: string;
+  suggestedWardId?: string;
+  suggestedWardName?: string;
   currentDaySlots: number;
   canAssign: boolean;
 }

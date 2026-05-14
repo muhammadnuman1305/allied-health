@@ -84,7 +84,7 @@ export default function WardDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-3xl font-normal">
                 {wardId === "0" ? "Create New Ward" : ward?.name || ""}
               </h1>
               {wardId !== "0" && ward && (
@@ -189,7 +189,7 @@ export default function WardDetailPage() {
           <TabsContent value="patients" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Ward Patients</h3>
+                <h3 className="text-lg font-medium">Ward Patients</h3>
                 <p className="text-muted-foreground">
                   Manage patients currently in this ward
                 </p>
@@ -204,7 +204,7 @@ export default function WardDetailPage() {
               <CardContent className="p-6">
                 <div className="text-center py-8">
                   <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+                  <h3 className="text-lg font-medium mb-2">
                     Patient Management Coming Soon
                   </h3>
                   <p className="text-muted-foreground">
@@ -220,7 +220,7 @@ export default function WardDetailPage() {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Tasks in Ward</h3>
+                <h3 className="text-lg font-medium">Tasks in Ward</h3>
                 <p className="text-muted-foreground">
                   Manage tasks assigned to this ward
                 </p>
@@ -235,7 +235,7 @@ export default function WardDetailPage() {
               <CardContent className="p-6">
                 <div className="text-center py-8">
                   <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+                  <h3 className="text-lg font-medium mb-2">
                     Task Management Coming Soon
                   </h3>
                   <p className="text-muted-foreground">
@@ -250,7 +250,7 @@ export default function WardDetailPage() {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold">Ward Settings</h3>
+              <h3 className="text-lg font-medium">Ward Settings</h3>
               <p className="text-muted-foreground">
                 Manage ward configuration and coverage
               </p>

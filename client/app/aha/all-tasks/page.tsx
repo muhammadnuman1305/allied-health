@@ -35,25 +35,25 @@ type Task = AHATask;
 const statusConfig = {
   "Not Assigned": {
     label: "Not Assigned",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+    color: "bg-muted text-muted-foreground",
   },
   Assigned: {
     label: "Assigned",
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-info/10 text-info",
   },
   "In Progress": {
     label: "In Progress",
     color:
-      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+      "bg-signature-peach/50 text-foreground",
   },
   Completed: {
     label: "Completed",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      "bg-success/10 text-success",
   },
   Overdue: {
     label: "Overdue",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -61,16 +61,16 @@ const priorityConfig = {
   Low: {
     label: "Low",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      "bg-success/10 text-success",
   },
   Medium: {
     label: "Medium",
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      "bg-signature-yellow/30 text-foreground",
   },
   High: {
     label: "High",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -290,28 +290,11 @@ export default function AllTasksPage() {
     filters.priority ||
     filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">All Tasks</h1>
-          <p className="text-muted-foreground">View all tasks in the system</p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading tasks...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">All Tasks</h1>
+          <h1 className="text-3xl font-normal">All Tasks</h1>
           <p className="text-muted-foreground">View all tasks in the system</p>
         </div>
         <div className="flex items-center justify-center py-10">
@@ -328,7 +311,7 @@ export default function AllTasksPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">All Tasks</h1>
+        <h1 className="text-3xl font-normal">All Tasks</h1>
         <p className="text-muted-foreground mt-1">
           View all tasks in the system
         </p>
@@ -340,27 +323,32 @@ export default function AllTasksPage() {
           title="Total Tasks"
           value={taskCounts.total}
           icon={FileText}
+          loading={loading}
         />
         <StatsCard
           title="My Tasks"
           value={taskCounts.myTasks}
           description="With my interventions"
           icon={User}
+          loading={loading}
         />
         <StatsCard
           title="Assigned"
           value={taskCounts.assigned}
           icon={AlertCircle}
+          loading={loading}
         />
         <StatsCard
           title="In Progress"
           value={taskCounts.inProgress}
           icon={Clock}
+          loading={loading}
         />
         <StatsCard
           title="Completed"
           value={taskCounts.completed}
           icon={CheckCircle}
+          loading={loading}
         />
       </div>
 
@@ -417,7 +405,7 @@ export default function AllTasksPage() {
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:h-5 [&>button]:w-5 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button]:top-[1.625rem]">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-xl font-semibold leading-tight">
+            <DialogTitle className="text-xl font-medium leading-tight">
               Task Details
             </DialogTitle>
           </DialogHeader>

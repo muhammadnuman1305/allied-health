@@ -26,7 +26,7 @@ namespace AlliedHealth.Service.Implementation
         {
             var results = new List<AutoAssignResultDTO>();
 
-            // Pre-load all AHAs with their specialties via join
+            // Pre-load all AHAs with their specialties
             var ahaRows = await (from u in _dbContext.Users
                                  where u.Role == (int)UserRoles.Assistant && !u.Hidden
                                  join us in _dbContext.UserSpecialties on u.Id equals us.UserId into usGroup
@@ -49,37 +49,78 @@ namespace AlliedHealth.Service.Implementation
                                     .ToList()
                 }).ToList();
 
-            // Collect AHAs on approved vacation on the start date — exclude them
-            var ahasOnVacation = await _dbContext.VacationRequests
-                .Where(v =>
-                    v.Status == (int)EVacationStatus.Approved &&
-                    v.StartDate <= request.StartDate &&
-                    v.EndDate >= request.StartDate)
-                .Select(v => v.AhaUserId)
-                .ToHashSetAsync();
+            // Pre-load all approved AHA vacations — checked per-intervention below
+            var allVacations = await _dbContext.VacationRequests
+                .Where(v => v.Status == (int)EVacationStatus.Approved)
+                .Select(v => new { v.AhaUserId, v.StartDate, v.EndDate })
+                .ToListAsync();
 
-            // Count existing task slots per AHA on the start date
-            var ahaSlotCounts = await _dbContext.TaskInterventions
-                .Where(ti =>
-                    ti.StartDate <= request.StartDate &&
-                    ti.EndDate >= request.StartDate)
-                .GroupBy(ti => ti.AhaUserId)
-                .Select(g => new { AhaId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.AhaId, x => x.Count);
+            var vacationsByAha = allVacations
+                .GroupBy(v => v.AhaUserId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            foreach (var interventionId in request.InterventionIds)
+            // Pre-load all existing task-intervention date ranges for slot counting
+            var allTaskInterventions = await _dbContext.TaskInterventions
+                .Select(ti => new { ti.AhaUserId, ti.WardId, ti.StartDate, ti.EndDate })
+                .ToListAsync();
+
+            // Load wards covering the task's department, pick least-busy over the task range
+            (Guid Id, string Name)? suggestedWard = null;
+            if (request.DepartmentId.HasValue)
             {
+                var wardRows = await _dbContext.Wards
+                    .Where(w => !w.Hidden &&
+                                w.DepartmentCoverages.Any(c => c.DepartmentId == request.DepartmentId.Value))
+                    .Select(w => new { w.Id, w.Name })
+                    .ToListAsync();
+
+                if (wardRows.Count > 0)
+                {
+                    var wardIds = wardRows.Select(w => w.Id).ToHashSet();
+                    var wardSlotCounts = allTaskInterventions
+                        .Where(ti =>
+                            wardIds.Contains(ti.WardId) &&
+                            ti.StartDate <= request.TaskEndDate &&
+                            ti.EndDate >= request.TaskStartDate)
+                        .GroupBy(ti => ti.WardId)
+                        .ToDictionary(g => g.Key, g => g.Count());
+
+                    var best = wardRows
+                        .Select(w => new { w.Id, w.Name, Slots = wardSlotCounts.TryGetValue(w.Id, out var s) ? s : 0 })
+                        .OrderBy(w => w.Slots)
+                        .First();
+
+                    suggestedWard = (best.Id, best.Name);
+                }
+            }
+
+            foreach (var item in request.Interventions)
+            {
+                // Use intervention-specific dates if provided; fall back to task dates for slot counts only
+                var hasSpecificDates = item.StartDate.HasValue && item.EndDate.HasValue;
+                var invStart = item.StartDate ?? request.TaskStartDate;
+                var invEnd   = item.EndDate   ?? request.TaskEndDate;
+
                 var intervention = await _dbContext.Interventions
-                    .Where(i => i.Id == interventionId)
+                    .Where(i => i.Id == item.Id)
                     .Select(i => new { i.Id, i.Name, i.SpecialtyId })
                     .FirstOrDefaultAsync();
 
                 if (intervention == null)
                     continue;
 
-                // Filter AHAs with matching specialty, not on vacation, and available slots
+                // Slot counts always apply; vacation exclusion only applies when specific dates are known
+                var ahaSlotCounts = allTaskInterventions
+                    .Where(ti => ti.StartDate <= invEnd && ti.EndDate >= invStart)
+                    .GroupBy(ti => ti.AhaUserId)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
                 var eligible = ahas
-                    .Where(a => a.SpecialtyIds.Contains(intervention.SpecialtyId) && !ahasOnVacation.Contains(a.Id))
+                    .Where(a =>
+                        a.SpecialtyIds.Contains(intervention.SpecialtyId) &&
+                        (!hasSpecificDates ||
+                         !vacationsByAha.TryGetValue(a.Id, out var vacs) ||
+                         !vacs.Any(v => v.StartDate <= invEnd && v.EndDate >= invStart)))
                     .Select(a => new
                     {
                         a.Id,
@@ -87,7 +128,7 @@ namespace AlliedHealth.Service.Implementation
                         Slots = ahaSlotCounts.TryGetValue(a.Id, out var count) ? count : 0
                     })
                     .Where(a => a.Slots < MaxDailySlotsPerAha)
-                    .OrderBy(a => a.Slots) // least busy first
+                    .OrderBy(a => a.Slots)
                     .FirstOrDefault();
 
                 results.Add(new AutoAssignResultDTO
@@ -96,6 +137,8 @@ namespace AlliedHealth.Service.Implementation
                     InterventionName = intervention.Name,
                     SuggestedAhaId = eligible?.Id,
                     SuggestedAhaName = eligible?.Name,
+                    SuggestedWardId = suggestedWard?.Id,
+                    SuggestedWardName = suggestedWard?.Name,
                     CurrentDaySlots = eligible?.Slots ?? 0,
                     CanAssign = eligible != null
                 });

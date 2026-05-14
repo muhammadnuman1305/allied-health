@@ -25,11 +25,18 @@ namespace AlliedHealth.Service.DTOs
         public List<Guid> Departments { get; set; } = new List<Guid>();
     }
 
+    public class AhaVacationPeriod
+    {
+        public DateOnly StartDate { get; set; }
+        public DateOnly EndDate { get; set; }
+    }
+
     public class GetAHAOptionsDTO
     {
         public Guid Id { get; set; }
         public required string Name { get; set; }
         public List<Guid> Specialties { get; set; } = new List<Guid>();
+        public List<AhaVacationPeriod> Vacations { get; set; } = new List<AhaVacationPeriod>();
     }
 
     public class GetSpecialityOptionsDTO

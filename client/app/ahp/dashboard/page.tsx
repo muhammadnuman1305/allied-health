@@ -71,11 +71,16 @@ export default function AdminDashboardPage() {
     fetchData();
   }, [fetchData]);
 
+  const renderMetricValue = (
+    value: number | undefined,
+    className = "h-7 w-10"
+  ) => (loading ? <Skeleton className={className} /> : value ?? 0);
+
   return (
     <div className="space-y-8 pb-8">
       {/* Header */}
       <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-normal tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground text-sm">
           Overview of your healthcare system
         </p>
@@ -83,56 +88,43 @@ export default function AdminDashboardPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Patients"
-              value={data?.totalPatients ?? 0}
-              description="All registered patients"
-              icon={Users}
-            />
-            <StatsCard
-              title="Total Departments"
-              value={data?.totalDepartments ?? 0}
-              description="All departments"
-              icon={Building2}
-            />
-            <StatsCard
-              title="Total Specialties"
-              value={data?.totalSpecialties ?? 0}
-              description="All specialties"
-              icon={GraduationCap}
-            />
-            <StatsCard
-              title="Total Users"
-              value={data?.totalUsers ?? 0}
-              description="All system users"
-              icon={UserCircle}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Patients"
+          value={data?.totalPatients ?? 0}
+          description="All registered patients"
+          icon={Users}
+          loading={loading}
+        />
+        <StatsCard
+          title="Total Departments"
+          value={data?.totalDepartments ?? 0}
+          description="All departments"
+          icon={Building2}
+          loading={loading}
+        />
+        <StatsCard
+          title="Total Specialties"
+          value={data?.totalSpecialties ?? 0}
+          description="All specialties"
+          icon={GraduationCap}
+          loading={loading}
+        />
+        <StatsCard
+          title="Total Users"
+          value={data?.totalUsers ?? 0}
+          description="All system users"
+          icon={UserCircle}
+          loading={loading}
+        />
       </div>
 
       {/* Overview Cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-[340px] rounded-lg" />
-          <Skeleton className="h-[340px] rounded-lg" />
-        </div>
-      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tasks Overview */}
-        <Card className="border-border shadow-sm">
+        <Card className="border-border">
           <CardHeader className="pb-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Tasks</CardTitle>
+              <CardTitle className="text-lg font-medium">Tasks</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -148,32 +140,32 @@ export default function AdminDashboardPage() {
             {/* Task Status Grid */}
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold tracking-tight">
-                  {data?.assignedTasks ?? 0}
+                <div className="text-2xl font-medium tracking-tight">
+                  {renderMetricValue(data?.assignedTasks)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Assigned
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold text-primary tracking-tight">
-                  {data?.inProgressTasks ?? 0}
+                <div className="text-2xl font-medium text-primary tracking-tight">
+                  {renderMetricValue(data?.inProgressTasks)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   In Progress
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold text-[hsl(142,76%,36%)] tracking-tight">
-                  {data?.completedTasks ?? 0}
+                <div className="text-2xl font-medium text-success tracking-tight">
+                  {renderMetricValue(data?.completedTasks)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Completed
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold text-destructive tracking-tight">
-                  {data?.overdueTasks ?? 0}
+                <div className="text-2xl font-medium text-destructive tracking-tight">
+                  {renderMetricValue(data?.overdueTasks)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Overdue
@@ -183,7 +175,7 @@ export default function AdminDashboardPage() {
 
             {/* Priority Breakdown */}
             <div className="space-y-3 pt-5 border-t border-border">
-              <div className="text-sm font-semibold text-foreground">
+              <div className="text-sm font-medium text-foreground">
                 Priority Breakdown
               </div>
               <div className="space-y-3">
@@ -194,21 +186,21 @@ export default function AdminDashboardPage() {
                   </div>
                   <Badge
                     variant="destructive"
-                    className="font-semibold px-2.5 py-0.5"
+                    className="font-medium px-2.5 py-0.5"
                   >
-                    {data?.highPriorityTasks ?? 0}
+                    {renderMetricValue(data?.highPriorityTasks, "h-4 w-6")}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between rounded-md transition-colors">
                   <div className="flex items-center gap-2.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[hsl(142,76%,36%)]" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-signature-mustard" />
                     <span className="text-sm font-medium">Medium Priority</span>
                   </div>
                   <Badge
                     variant="secondary"
-                    className="font-semibold px-2.5 py-0.5"
+                    className="font-medium px-2.5 py-0.5"
                   >
-                    {data?.mediumPriorityTasks ?? 0}
+                    {renderMetricValue(data?.mediumPriorityTasks, "h-4 w-6")}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between rounded-md transition-colors">
@@ -218,9 +210,9 @@ export default function AdminDashboardPage() {
                   </div>
                   <Badge
                     variant="outline"
-                    className="font-semibold px-2.5 py-0.5"
+                    className="font-medium px-2.5 py-0.5"
                   >
-                    {data?.lowPriorityTasks ?? 0}
+                    {renderMetricValue(data?.lowPriorityTasks, "h-4 w-6")}
                   </Badge>
                 </div>
               </div>
@@ -229,10 +221,10 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Referrals Overview */}
-        <Card className="border-border shadow-sm">
+        <Card className="border-border">
           <CardHeader className="pb-4 border-b border-border">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Referrals</CardTitle>
+              <CardTitle className="text-lg font-medium">Referrals</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
@@ -248,32 +240,32 @@ export default function AdminDashboardPage() {
             {/* Referral Outcomes Grid */}
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold tracking-tight">
-                  {data?.pendingReferrals ?? 0}
+                <div className="text-2xl font-medium tracking-tight">
+                  {renderMetricValue(data?.pendingReferrals)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Pending
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold text-[hsl(142,76%,36%)] tracking-tight">
-                  {data?.acceptedReferrals ?? 0}
+                <div className="text-2xl font-medium text-success tracking-tight">
+                  {renderMetricValue(data?.acceptedReferrals)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Accepted
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold text-destructive tracking-tight">
-                  {data?.rejectedReferrals ?? 0}
+                <div className="text-2xl font-medium text-destructive tracking-tight">
+                  {renderMetricValue(data?.rejectedReferrals)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Rejected
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="text-2xl font-bold tracking-tight">
-                  {data?.totalReferrals ?? 0}
+                <div className="text-2xl font-medium tracking-tight">
+                  {renderMetricValue(data?.totalReferrals)}
                 </div>
                 <div className="text-xs text-muted-foreground font-medium">
                   Total
@@ -283,7 +275,7 @@ export default function AdminDashboardPage() {
 
             {/* Incoming and Outgoing Referrals */}
             <div className="pt-5 border-t border-border space-y-3">
-              <div className="text-sm font-semibold text-foreground">
+              <div className="text-sm font-medium text-foreground">
                 Referral Types
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -294,8 +286,8 @@ export default function AdminDashboardPage() {
                     </div>
                     <span className="text-sm font-medium">Incoming</span>
                   </div>
-                  <span className="text-lg font-bold">
-                    {data?.incomingReferrals ?? 0}
+                  <span className="text-lg font-medium">
+                    {renderMetricValue(data?.incomingReferrals, "h-6 w-8")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3.5 rounded-lg border border-border bg-card transition-colors">
@@ -305,8 +297,8 @@ export default function AdminDashboardPage() {
                     </div>
                     <span className="text-sm font-medium">Outgoing</span>
                   </div>
-                  <span className="text-lg font-bold">
-                    {data?.outgoingReferrals ?? 0}
+                  <span className="text-lg font-medium">
+                    {renderMetricValue(data?.outgoingReferrals, "h-6 w-8")}
                   </span>
                 </div>
               </div>
@@ -314,70 +306,66 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
       </div>
-      )}
 
       {/* Intervention Outcomes */}
-      {loading ? (
-        <Skeleton className="h-[200px] rounded-lg" />
-      ) : (
-      <Card className="border-border shadow-sm">
+      <Card className="border-border">
         <CardHeader className="pb-4 border-b border-border">
-          <CardTitle className="text-lg font-semibold">
+          <CardTitle className="text-lg font-medium">
             Task Intervention Outcomes
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-all hover:shadow-sm">
+            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
               <div className="p-2.5 rounded-full bg-primary/10 mb-3">
                 <UserCheck className="h-5 w-5 text-primary" />
               </div>
-              <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data?.seenOutcomes ?? 0}
+              <div className="text-2xl font-medium mb-1.5 tracking-tight">
+                {renderMetricValue(data?.seenOutcomes)}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Seen (S)
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-all hover:shadow-sm">
+            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
               <div className="p-2.5 rounded-full bg-primary/10 mb-3">
                 <PlayCircle className="h-5 w-5 text-primary" />
               </div>
-              <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data?.attemptedOutcomes ?? 0}
+              <div className="text-2xl font-medium mb-1.5 tracking-tight">
+                {renderMetricValue(data?.attemptedOutcomes)}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Attempted (A)
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-all hover:shadow-sm">
+            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
               <div className="p-2.5 rounded-full bg-destructive/10 mb-3">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
-              <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data?.declinedOutcomes ?? 0}
+              <div className="text-2xl font-medium mb-1.5 tracking-tight">
+                {renderMetricValue(data?.declinedOutcomes)}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Declined (D)
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-all hover:shadow-sm">
+            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
               <div className="p-2.5 rounded-full bg-muted mb-3">
                 <Clock className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data?.unseenOutcomes ?? 0}
+              <div className="text-2xl font-medium mb-1.5 tracking-tight">
+                {renderMetricValue(data?.unseenOutcomes)}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Unseen (U)
               </div>
             </div>
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-all hover:shadow-sm">
+            <div className="flex flex-col items-center justify-center p-5 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
               <div className="p-2.5 rounded-full bg-muted mb-3">
                 <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="text-2xl font-bold mb-1.5 tracking-tight">
-                {data?.handoverOutcomes ?? 0}
+              <div className="text-2xl font-medium mb-1.5 tracking-tight">
+                {renderMetricValue(data?.handoverOutcomes)}
               </div>
               <div className="text-xs text-center text-muted-foreground font-medium">
                 Handover (X)
@@ -386,7 +374,6 @@ export default function AdminDashboardPage() {
           </div>
         </CardContent>
       </Card>
-      )}
     </div>
   );
 }

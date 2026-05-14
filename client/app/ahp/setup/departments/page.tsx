@@ -39,7 +39,6 @@ import {
   DepartmentSummary,
 } from "@/lib/api/admin/departments/_model";
 import { toast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -280,7 +279,7 @@ export default function AdminDepartmentsSetupPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Departments</h1>
+        <h1 className="text-3xl font-normal">Departments</h1>
         <p className="text-muted-foreground">
           Create and manage clinical departments that own tasks and receive/send
           referrals
@@ -289,41 +288,34 @@ export default function AdminDepartmentsSetupPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Departments"
-              value={summary.totalDepartments}
-              description="All departments"
-              icon={Building2}
-            />
-            <StatsCard
-              title="Active Departments"
-              value={summary.activeDepartments}
-              description="Currently operational"
-              icon={Activity}
-            />
-            <StatsCard
-              title="Open Tasks"
-              value={summary.openTasks}
-              description="Departments with pending tasks"
-              icon={Settings}
-            />
-            <StatsCard
-              title="Overdue Tasks"
-              value={summary.overdueTasks}
-              description="Requires immediate attention"
-              icon={Activity}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Departments"
+          value={summary.totalDepartments}
+          description="All departments"
+          icon={Building2}
+          loading={loading}
+        />
+        <StatsCard
+          title="Active Departments"
+          value={summary.activeDepartments}
+          description="Currently operational"
+          icon={Activity}
+          loading={loading}
+        />
+        <StatsCard
+          title="Open Tasks"
+          value={summary.openTasks}
+          description="Departments with pending tasks"
+          icon={Settings}
+          loading={loading}
+        />
+        <StatsCard
+          title="Overdue Tasks"
+          value={summary.overdueTasks}
+          description="Requires immediate attention"
+          icon={Activity}
+          loading={loading}
+        />
       </div>
 
       {/* Departments Table */}
@@ -366,13 +358,6 @@ export default function AdminDepartmentsSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={departments}
             columns={columns}
@@ -406,7 +391,7 @@ export default function AdminDepartmentsSetupPage() {
                       handleDepartmentAction("toggle", department.id)
                     }
                     className={
-                      department.hidden ? "text-green-600" : "text-destructive"
+                      department.hidden ? "text-success" : "text-destructive"
                     }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -418,7 +403,6 @@ export default function AdminDepartmentsSetupPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -456,7 +440,7 @@ export default function AdminDepartmentsSetupPage() {
               onClick={handleConfirmedAction}
               className={
                 actionDialog.action === "restore"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >

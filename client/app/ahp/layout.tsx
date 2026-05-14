@@ -58,7 +58,7 @@ export default function AdminLayout({
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function AdminLayout({
           onToggleSidebar={toggleSidebar}
           isSidebarCollapsed={isSidebarCollapsed}
         />
-        <main className="flex-1 p-8">{children}</main>
+        <main className="flex-1 p-8 bg-background">{children}</main>
       </div>
     </div>
   );

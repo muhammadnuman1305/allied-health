@@ -266,7 +266,7 @@ export default function DepartmentDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-3xl font-normal">
                 {isNewDepartment ? "New Department" : department?.name || ""}
               </h1>
               {!isNewDepartment && department && (
@@ -694,7 +694,7 @@ export default function DepartmentDetailPage() {
           <TabsContent value="staff" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Department Staff</h3>
+                <h3 className="text-lg font-medium">Department Staff</h3>
                 <p className="text-muted-foreground">
                   Manage AHPs and AHAs assigned to this department
                 </p>
@@ -740,7 +740,7 @@ export default function DepartmentDetailPage() {
           <TabsContent value="tasks" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Department Tasks</h3>
+                <h3 className="text-lg font-medium">Department Tasks</h3>
                 <p className="text-muted-foreground">
                   Read-only snapshot of tasks assigned to this department
                 </p>
@@ -755,7 +755,7 @@ export default function DepartmentDetailPage() {
               <CardContent className="p-6">
                 <div className="text-center py-8">
                   <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+                  <h3 className="text-lg font-medium mb-2">
                     Kanban View Coming Soon
                   </h3>
                   <p className="text-muted-foreground">
@@ -773,7 +773,7 @@ export default function DepartmentDetailPage() {
           <TabsContent value="referrals" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Department Referrals</h3>
+                <h3 className="text-lg font-medium">Department Referrals</h3>
                 <p className="text-muted-foreground">
                   Manage incoming and outgoing referrals for this department
                 </p>
@@ -807,7 +807,7 @@ export default function DepartmentDetailPage() {
                   <CardContent className="p-6">
                     <div className="text-center py-8">
                       <ArrowDown className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">
+                      <h3 className="text-lg font-medium mb-2">
                         Incoming Referrals
                       </h3>
                       <p className="text-muted-foreground">
@@ -824,7 +824,7 @@ export default function DepartmentDetailPage() {
                   <CardContent className="p-6">
                     <div className="text-center py-8">
                       <ArrowUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">
+                      <h3 className="text-lg font-medium mb-2">
                         Outgoing Referrals
                       </h3>
                       <p className="text-muted-foreground">
@@ -842,7 +842,7 @@ export default function DepartmentDetailPage() {
         {!isNewDepartment && (
           <TabsContent value="settings" className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold">Department Settings</h3>
+              <h3 className="text-lg font-medium">Department Settings</h3>
               <p className="text-muted-foreground">
                 Manage department configuration and coverage
               </p>

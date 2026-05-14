@@ -32,6 +32,25 @@ namespace AlliedHealth.Service.Implementation
                                     Specialties = x.UserSpecialties.Select(x => x.SpecialtyId).ToList()
                                 }).ToListAsync();
 
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var vacations = await _dbContext.VacationRequests
+                .Where(v => v.Status == (int)EVacationStatus.Approved && v.EndDate >= today)
+                .Select(v => new { v.AhaUserId, v.StartDate, v.EndDate })
+                .ToListAsync();
+
+            var vacationMap = vacations
+                .GroupBy(v => v.AhaUserId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(v => new AhaVacationPeriod { StartDate = v.StartDate, EndDate = v.EndDate }).ToList()
+                );
+
+            foreach (var aha in ahaList)
+            {
+                if (vacationMap.TryGetValue(aha.Id, out var periods))
+                    aha.Vacations = periods;
+            }
+
             return ahaList;
         }
 

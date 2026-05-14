@@ -56,7 +56,6 @@ import {
 } from "@/lib/api/admin/wards/_model";
 import { formatLastUpdated } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -307,7 +306,7 @@ export default function AdminWardsSetupPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Wards</h1>
+        <h1 className="text-3xl font-normal">Wards</h1>
         <p className="text-muted-foreground">
           Manage hospital locations where patients reside; multiple departments
           can cover a ward
@@ -316,43 +315,36 @@ export default function AdminWardsSetupPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Wards"
-              value={summary.totalWards}
-              description="All wards"
-              icon={Bed}
-            />
-            <StatsCard
-              title="Active Wards"
-              value={summary.activeWards}
-              description="Currently operational"
-              icon={Activity}
-            />
-            <StatsCard
-              title="Total Beds"
-              value={summary.totalBeds}
-              description="Available capacity"
-              icon={Users}
-            />
-            <StatsCard
-              title="Occupied Beds"
-              value={summary.occupiedBeds}
-              description={`${Math.round(
-                (summary.occupiedBeds / summary.totalBeds) * 100
-              )}% occupancy`}
-              icon={Users}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Wards"
+          value={summary.totalWards}
+          description="All wards"
+          icon={Bed}
+          loading={loading}
+        />
+        <StatsCard
+          title="Active Wards"
+          value={summary.activeWards}
+          description="Currently operational"
+          icon={Activity}
+          loading={loading}
+        />
+        <StatsCard
+          title="Total Beds"
+          value={summary.totalBeds}
+          description="Available capacity"
+          icon={Users}
+          loading={loading}
+        />
+        <StatsCard
+          title="Occupied Beds"
+          value={summary.occupiedBeds}
+          description={`${Math.round(
+            (summary.occupiedBeds / summary.totalBeds) * 100
+          )}% occupancy`}
+          icon={Users}
+          loading={loading}
+        />
       </div>
 
       {/* Wards Table */}
@@ -395,13 +387,6 @@ export default function AdminWardsSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={wards}
             columns={columns}
@@ -431,7 +416,7 @@ export default function AdminWardsSetupPage() {
                   <DropdownMenuItem
                     onClick={() => handleWardAction("toggle", ward.id)}
                     className={
-                      ward.hidden ? "text-green-600" : "text-destructive"
+                      ward.hidden ? "text-success" : "text-destructive"
                     }
                   >
                     {ward.hidden ? (
@@ -450,7 +435,6 @@ export default function AdminWardsSetupPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -487,7 +471,7 @@ export default function AdminWardsSetupPage() {
               onClick={handleConfirmedAction}
               className={
                 actionDialog.action === "restore"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >

@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -115,8 +116,20 @@ export default function SpecialtyFormContent({
 
   if (initialLoading) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Specialty Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-sm" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }

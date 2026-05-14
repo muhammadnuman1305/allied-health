@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -315,9 +316,39 @@ export default function PatientFormContent({
   // Show loading state while fetching patient data
   if (isLoadingPatient) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Loading patient data...</span>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-8 w-8 rounded-sm" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-9 w-28 rounded-sm" />
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Patient Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-sm" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-32 rounded-sm" />
+          <Skeleton className="h-9 w-20 rounded-sm" />
+        </div>
       </div>
     );
   }
@@ -334,7 +365,7 @@ export default function PatientFormContent({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-normal">
             {isNewPatient ? "Add New Patient" : "Edit Patient"}
           </h1>
           <p className="text-muted-foreground">

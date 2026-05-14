@@ -62,7 +62,6 @@ import {
   TRIAGE_STATUS_DESCRIPTIONS,
 } from "@/lib/api/admin/referrals/_model";
 import { toast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableDate } from "@/lib/utils";
 
 // Priority badge variants (using High/Medium/Low like rest of app)
@@ -377,7 +376,7 @@ export default function IncomingReferralsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Incoming Referrals</h1>
+        <h1 className="text-3xl font-normal">Incoming Referrals</h1>
         <p className="text-muted-foreground">
           Referrals awaiting triage decisions
         </p>
@@ -385,54 +384,47 @@ export default function IncomingReferralsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Pending Triage"
-              value={referrals.length}
-              description="Awaiting triage"
-              icon={ClipboardList}
-            />
-            <StatsCard
-              title="High Priority"
-              value={referrals.filter((r) => r.priorityDisplay === "High").length}
-              description="High priority referrals"
-              icon={AlertTriangle}
-            />
-            <StatsCard
-              title="Today"
-              value={
-                referrals.filter(
-                  (r) =>
-                    new Date(r.referralDate).toDateString() ===
-                    new Date().toDateString()
-                ).length
-              }
-              description="Received today"
-              icon={Calendar}
-            />
-            <StatsCard
-              title="This Week"
-              value={
-                referrals.filter((r) => {
-                  const referralDate = new Date(r.referralDate);
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return referralDate >= weekAgo;
-                }).length
-              }
-              description="Received this week"
-              icon={Clock}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Pending Triage"
+          value={referrals.length}
+          description="Awaiting triage"
+          icon={ClipboardList}
+          loading={loading}
+        />
+        <StatsCard
+          title="High Priority"
+          value={referrals.filter((r) => r.priorityDisplay === "High").length}
+          description="High priority referrals"
+          icon={AlertTriangle}
+          loading={loading}
+        />
+        <StatsCard
+          title="Today"
+          value={
+            referrals.filter(
+              (r) =>
+                new Date(r.referralDate).toDateString() ===
+                new Date().toDateString()
+            ).length
+          }
+          description="Received today"
+          icon={Calendar}
+          loading={loading}
+        />
+        <StatsCard
+          title="This Week"
+          value={
+            referrals.filter((r) => {
+              const referralDate = new Date(r.referralDate);
+              const weekAgo = new Date();
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              return referralDate >= weekAgo;
+            }).length
+          }
+          description="Received this week"
+          icon={Clock}
+          loading={loading}
+        />
       </div>
 
       {/* Referrals Table */}
@@ -459,13 +451,6 @@ export default function IncomingReferralsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={referrals}
             columns={columns}
@@ -485,7 +470,7 @@ export default function IncomingReferralsPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     onClick={() => handleReferralAction("accept", referral.id)}
-                    className="text-green-600"
+                    className="text-success"
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Accept Referral
@@ -510,7 +495,6 @@ export default function IncomingReferralsPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -551,10 +535,10 @@ export default function IncomingReferralsPage() {
               onClick={handleConfirmedAction}
               className={
                 actionDialog.action === "accept"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : actionDialog.action === "reject"
                   ? "bg-destructive hover:bg-destructive/90"
-                  : "bg-blue-600 hover:bg-blue-700"
+                  : "bg-info hover:bg-info/90"
               }
             >
               {actionDialog.action === "accept"

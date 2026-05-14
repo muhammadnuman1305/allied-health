@@ -56,7 +56,6 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
@@ -481,7 +480,7 @@ export default function AdminTasksPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Task Management</h1>
+        <h1 className="text-3xl font-normal">Task Management</h1>
         <p className="text-muted-foreground">
           Create, assign, and track patient tasks
         </p>
@@ -489,41 +488,34 @@ export default function AdminTasksPage() {
 
       {/* Statistics Cards - Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Tasks"
-              value={summary.totalTasks}
-              description="All tasks"
-              icon={ClipboardList}
-            />
-            <StatsCard
-              title="Overdue"
-              value={summary.overdueTasks}
-              description="Requires attention"
-              icon={AlertTriangle}
-            />
-            <StatsCard
-              title="Active"
-              value={summary.activeTasks}
-              description="Being worked on"
-              icon={Clock}
-            />
-            <StatsCard
-              title="Completed"
-              value={summary.completedTasks}
-              description="Successfully done"
-              icon={CheckCircle}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Tasks"
+          value={summary.totalTasks}
+          description="All tasks"
+          icon={ClipboardList}
+          loading={loading}
+        />
+        <StatsCard
+          title="Overdue"
+          value={summary.overdueTasks}
+          description="Requires attention"
+          icon={AlertTriangle}
+          loading={loading}
+        />
+        <StatsCard
+          title="Active"
+          value={summary.activeTasks}
+          description="Being worked on"
+          icon={Clock}
+          loading={loading}
+        />
+        <StatsCard
+          title="Completed"
+          value={summary.completedTasks}
+          description="Successfully done"
+          icon={CheckCircle}
+          loading={loading}
+        />
       </div>
 
       {/* Task Overview */}
@@ -537,11 +529,11 @@ export default function AdminTasksPage() {
             <div className="space-y-3 pb-4 lg:pb-0 lg:pr-5">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-1 bg-primary rounded-full" />
-                <h3 className="font-semibold text-sm">Priority Distribution</h3>
+                <h3 className="font-medium text-sm">Priority Distribution</h3>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 <div className="bg-destructive/10 rounded-lg p-3 text-center hover:bg-destructive/20 transition-colors">
-                  <div className="text-2xl font-bold mb-0.5 text-destructive">
+                  <div className="text-2xl font-medium mb-0.5 text-destructive">
                     {summary.criticalPriority}
                   </div>
                   <div className="text-xs font-medium text-destructive">
@@ -549,7 +541,7 @@ export default function AdminTasksPage() {
                   </div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
-                  <div className="text-2xl font-bold mb-0.5">
+                  <div className="text-2xl font-medium mb-0.5">
                     {summary.highPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
@@ -557,7 +549,7 @@ export default function AdminTasksPage() {
                   </div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
-                  <div className="text-2xl font-bold mb-0.5">
+                  <div className="text-2xl font-medium mb-0.5">
                     {summary.midPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
@@ -565,7 +557,7 @@ export default function AdminTasksPage() {
                   </div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3 text-center hover:bg-muted transition-colors">
-                  <div className="text-2xl font-bold mb-0.5">
+                  <div className="text-2xl font-medium mb-0.5">
                     {summary.lowPriority}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground">
@@ -579,7 +571,7 @@ export default function AdminTasksPage() {
             <div className="space-y-3 pt-4 lg:pt-0 lg:pl-5">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-1 bg-primary rounded-full" />
-                <h3 className="font-semibold text-sm">
+                <h3 className="font-medium text-sm">
                   Department Distribution
                 </h3>
               </div>
@@ -598,7 +590,7 @@ export default function AdminTasksPage() {
                         <span className="text-sm truncate pr-2">
                           {dept.name || "Unassigned"}
                         </span>
-                        <span className="text-base font-bold flex-shrink-0">
+                        <span className="text-base font-medium flex-shrink-0">
                           {dept.count}
                         </span>
                       </div>
@@ -651,13 +643,6 @@ export default function AdminTasksPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={tasks}
             columns={columns}
@@ -696,7 +681,7 @@ export default function AdminTasksPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleTaskAction("start", task.id)}
-                          className="text-blue-600"
+                          className="text-info"
                         >
                           <PlayCircle className="mr-2 h-4 w-4" />
                           Start Task
@@ -709,7 +694,7 @@ export default function AdminTasksPage() {
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => handleTaskAction("complete", task.id)}
-                        className="text-green-600"
+                        className="text-success"
                       >
                         <CheckCircle className="mr-2 h-4 w-4" />
                         Complete Task
@@ -720,7 +705,7 @@ export default function AdminTasksPage() {
                   <DropdownMenuItem
                     onClick={() => handleTaskAction("delete", task.id)}
                     className={
-                      task.hidden ? "text-green-600" : "text-destructive"
+                      task.hidden ? "text-success" : "text-destructive"
                     }
                   >
                     {task.hidden ? (
@@ -734,7 +719,6 @@ export default function AdminTasksPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -769,7 +753,7 @@ export default function AdminTasksPage() {
               onClick={handleDeleteTask}
               className={
                 deleteDialog.isHidden
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >
@@ -835,7 +819,7 @@ export default function AdminTasksPage() {
             <Button
               onClick={handleCompleteTask}
               disabled={!completeDialog.outcomeNotes.trim()}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-success hover:bg-success/90"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               Complete Task

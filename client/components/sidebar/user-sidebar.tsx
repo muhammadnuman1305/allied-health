@@ -53,21 +53,25 @@ export function UserSidebar({
   const router = useRouter();
   const { user } = useAuth();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    Dashboard: true,
+    "Schedule Management": true,
   });
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   useEffect(() => {
+    if (pathname === "/aha/dashboard/calendar") {
+      setOpenSections((prev) => ({ ...prev, "Schedule Management": true }));
+      return;
+    }
+
     const segments = pathname.split("/");
     const sectionMap: Record<string, string> = {
-      dashboard: "Dashboard",
       tasks: "Task Management",
       "all-tasks": "Task Management",
       "my-tasks": "Task Management",
       patients: "Patient Management",
       "all-patients": "Patient Management",
       "my-patients": "Patient Management",
-      schedule: "Schedule",
+      schedule: "Schedule Management",
     };
     const sectionName = segments[2] || segments[1];
     if (sectionName && sectionMap[sectionName]) {
@@ -82,11 +86,16 @@ export function UserSidebar({
 
   const userSections = [
     {
-      title: "Dashboard",
+      title: "Overview",
       icon: <LayoutDashboard className="h-4 w-4" />,
+      href: "/aha/dashboard",
+    },
+    {
+      title: "Schedule Management",
+      icon: <CalendarDays className="h-4 w-4" />,
       items: [
-        { title: "Overview", href: "/aha/dashboard" },
         { title: "Calendar", href: "/aha/dashboard/calendar" },
+        { title: "Vacation Requests", href: "/aha/schedule/vacation-requests" },
       ],
     },
     {
@@ -103,13 +112,6 @@ export function UserSidebar({
       items: [
         { title: "All Patients", href: "/aha/all-patients" },
         { title: "My Patients", href: "/aha/my-patients" },
-      ],
-    },
-    {
-      title: "Schedule",
-      icon: <CalendarDays className="h-4 w-4" />,
-      items: [
-        { title: "Vacation Requests", href: "/aha/schedule/vacation-requests" },
       ],
     },
   ];
@@ -135,17 +137,17 @@ export function UserSidebar({
       {...props}
     >
       {/* Header */}
-      <div className="flex h-16 flex-shrink-0 items-center border-b px-4">
+      <div className="flex h-14 flex-shrink-0 items-center border-b px-3.5">
         <Link
           href="/aha/dashboard"
           className="flex items-center gap-3 min-w-0"
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-7.5 w-7.5 flex-shrink-0 items-center justify-center rounded-lg bg-primary">
             <Leaf className="h-4 w-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
             <div className="min-w-0">
-              <p className="text-sm font-semibold leading-none truncate">Allied Assistant</p>
+              <p className="text-sm font-medium leading-none truncate">Allied Assistant</p>
               <p className="text-xs text-muted-foreground mt-0.5">Workspace</p>
             </div>
           )}
@@ -156,18 +158,37 @@ export function UserSidebar({
       <nav className="flex-1 overflow-y-auto py-4 px-3" style={{ minHeight: 0 }}>
         <div className="space-y-2">
           {userSections.map((section) => {
+            const items = section.items ?? [];
             const isOpen = !!openSections[section.title];
-            const hasActiveItem = section.items.some(
-              (item) =>
-                pathname === item.href ||
-                (pathname.startsWith(item.href + "/") &&
-                  item.href !== "/aha/dashboard")
-            );
+            const isStandalone = !!section.href;
+            const hasActiveItem = isStandalone
+              ? pathname === section.href
+              : items.some(
+                  (item) =>
+                    pathname === item.href ||
+                    (pathname.startsWith(item.href + "/") &&
+                      item.href !== "/aha/dashboard")
+                );
 
             return (
               <div key={section.title}>
-                {/* Collapsed: icon button with right-side dropdown */}
-                {isCollapsed ? (
+                {isStandalone ? (
+                  <Link
+                    href={section.href}
+                    className={cn(
+                      "flex w-full items-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                      isCollapsed ? "justify-center" : "gap-3",
+                      hasActiveItem
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                    title={section.title}
+                    aria-current={hasActiveItem ? "page" : undefined}
+                  >
+                    <span className="flex-shrink-0">{section.icon}</span>
+                    {!isCollapsed && <span>{section.title}</span>}
+                  </Link>
+                ) : isCollapsed ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
@@ -175,7 +196,7 @@ export function UserSidebar({
                           "flex w-full items-center justify-center rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                           hasActiveItem
                             ? "text-foreground"
-                            : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
                         )}
                         title={section.title}
                       >
@@ -185,7 +206,7 @@ export function UserSidebar({
                     <DropdownMenuContent side="right" align="start" className="w-44 ml-1">
                       <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{section.title}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      {section.items.map((item) => {
+                      {items.map((item) => {
                         const isActive =
                           pathname === item.href ||
                           (pathname.startsWith(item.href + "/") &&
@@ -217,7 +238,7 @@ export function UserSidebar({
                           ? "text-foreground"
                           : isOpen
                           ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -233,7 +254,7 @@ export function UserSidebar({
                     {/* Sub-items */}
                     {isOpen && (
                       <div className="ml-5 mt-1 mb-1 border-l border-border pl-3 space-y-0.5">
-                        {section.items.map((item) => {
+                        {items.map((item) => {
                           const isActive =
                             pathname === item.href ||
                             (pathname.startsWith(item.href + "/") &&
@@ -246,7 +267,7 @@ export function UserSidebar({
                                 "block rounded-md px-3 py-2 text-sm transition-colors",
                                 isActive
                                   ? "bg-primary/10 text-primary font-medium"
-                                  : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
                               )}
                               aria-current={isActive ? "page" : undefined}
                             >
@@ -273,12 +294,12 @@ export function UserSidebar({
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors",
+                  "flex w-full items-center gap-2 rounded-md px-2 py-2 hover:bg-muted transition-colors",
                   isCollapsed ? "justify-center" : ""
                 )}
               >
                 <div className="h-8 w-8 flex-shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-semibold text-primary">{userInitials}</span>
+                  <span className="text-xs font-medium text-primary">{userInitials}</span>
                 </div>
                 {!isCollapsed && user && (
                   <>
@@ -314,7 +335,7 @@ export function UserSidebar({
 
           <AlertDialogContent className="max-w-lg">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-lg font-semibold">
+              <AlertDialogTitle className="text-lg font-medium">
                 Confirm Logout
               </AlertDialogTitle>
               <AlertDialogDescription>

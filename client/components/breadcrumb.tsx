@@ -131,7 +131,7 @@ export function Breadcrumb() {
                 "flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors",
                 item.isLast
                   ? "text-foreground font-medium pointer-events-none"
-                  : "text-muted-foreground hover:text-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
               aria-current={item.isLast ? "page" : undefined}
             >

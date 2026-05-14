@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,6 +11,16 @@ namespace AlliedHealth.Domain.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterColumn<string>(
+                name: "TaskType",
+                table: "Task",
+                type: "text",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "character varying(100)",
+                oldMaxLength: 100,
+                oldNullable: true);
+
             migrationBuilder.CreateTable(
                 name: "VacationRequest",
                 columns: table => new
@@ -52,17 +62,23 @@ namespace AlliedHealth.Domain.Migrations
                 name: "IX_VacationRequest_ReviewedById",
                 table: "VacationRequest",
                 column: "ReviewedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VacationRequest_Status",
-                table: "VacationRequest",
-                column: "Status");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(name: "VacationRequest");
+            migrationBuilder.DropTable(
+                name: "VacationRequest");
+
+            migrationBuilder.AlterColumn<string>(
+                name: "TaskType",
+                table: "Task",
+                type: "character varying(100)",
+                maxLength: 100,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "text",
+                oldNullable: true);
         }
     }
 }

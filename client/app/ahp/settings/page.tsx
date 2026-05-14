@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">System Settings</h1>
+      <h1 className="text-3xl font-normal">System Settings</h1>
       
       <Tabs defaultValue="general">
         <TabsList className="grid w-full grid-cols-4">

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -139,12 +140,53 @@ export default function PatientDetailContent({
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading patient data...</p>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-8 w-8 rounded-sm" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-80" />
           </div>
         </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-9 w-28 rounded-sm" />
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-md border border-border p-3"
+              >
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-md" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -180,7 +222,7 @@ export default function PatientDetailContent({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">View Patient</h1>
+          <h1 className="text-3xl font-normal">View Patient</h1>
           <p className="text-muted-foreground">
             View patient information, medical history, tasks, referrals, and
             related details
@@ -345,7 +387,7 @@ export default function PatientDetailContent({
                       <p className="text-sm font-medium text-muted-foreground">
                         Active Tasks
                       </p>
-                      <p className="text-2xl font-bold mt-1">
+                      <p className="text-2xl font-medium mt-1">
                         {patient.activeTasks}
                       </p>
                     </div>
@@ -360,7 +402,7 @@ export default function PatientDetailContent({
                       <p className="text-sm font-medium text-muted-foreground">
                         Total Tasks
                       </p>
-                      <p className="text-2xl font-bold mt-1">
+                      <p className="text-2xl font-medium mt-1">
                         {patient.totalTasks}
                       </p>
                     </div>
@@ -375,7 +417,7 @@ export default function PatientDetailContent({
                       <p className="text-sm font-medium text-muted-foreground">
                         Total Referrals
                       </p>
-                      <p className="text-2xl font-bold mt-1">
+                      <p className="text-2xl font-medium mt-1">
                         {patient.totalReferrals}
                       </p>
                     </div>

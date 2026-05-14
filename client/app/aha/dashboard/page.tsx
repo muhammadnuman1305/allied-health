@@ -79,7 +79,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Welcome back, {userName}!</h1>
+        <h1 className="text-3xl font-normal">Welcome back, {userName}!</h1>
         <p className="text-muted-foreground">
           Here's an overview of your tasks and patients
         </p>

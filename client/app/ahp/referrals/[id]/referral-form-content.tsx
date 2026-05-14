@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save, FileText, Stethoscope, Users } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -426,9 +427,87 @@ export default function ReferralFormContent({
     isLoadingInterventions
   ) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Loading...</span>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-9 rounded-sm" />
+          <div className="space-y-2">
+            <h1 className="text-3xl font-normal">
+              {isNewReferral ? "Add New Referral" : "Edit Referral"}
+            </h1>
+            <p className="text-muted-foreground">
+              {isNewReferral
+                ? "Create a new referral for a patient"
+                : "Update referral details and status"}
+            </p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Referral Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-full rounded-sm" />
+                </div>
+              ))}
+              <div className="md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-20 w-full rounded-sm" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-20 w-full rounded-sm" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full max-w-md rounded-sm" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-44" />
+                <Skeleton className="h-20 w-full rounded-sm" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5" />
+              Interventions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-md border border-border p-3"
+                >
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-5 w-5 rounded-sm" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-9 w-32 rounded-sm" />
+          <Skeleton className="h-9 w-20 rounded-sm" />
+        </div>
       </div>
     );
   }
@@ -468,7 +547,7 @@ export default function ReferralFormContent({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-normal">
             {isNewReferral ? "Add New Referral" : "Edit Referral"}
           </h1>
           <p className="text-muted-foreground">
@@ -880,7 +959,7 @@ export default function ReferralFormContent({
                                                 key={group.type}
                                                 className="space-y-1.5"
                                               >
-                                                <p className="text-xs font-semibold text-foreground">
+                                                <p className="text-xs font-medium text-foreground">
                                                   {group.type}
                                                 </p>
                                                 <div className="flex flex-wrap gap-x-5 gap-y-1.5">

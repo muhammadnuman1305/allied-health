@@ -24,16 +24,28 @@ public class AHAVacationController : ControllerBase
     [EnableQuery]
     public IActionResult GetMy()
     {
-        var ahaUserId = _userContext.UserId;
+        if (_userContext.UserId is not Guid ahaUserId)
+            return Unauthorized();
         var response = _vacationService.GetMyRequests(ahaUserId);
         return Ok(response);
+    }
+
+    // AHA: check for overlapping vacation requests before submitting
+    [HttpGet("check-overlap")]
+    public async Task<IActionResult> CheckOverlap([FromQuery] DateOnly startDate, [FromQuery] DateOnly endDate)
+    {
+        if (_userContext.UserId is not Guid ahaUserId)
+            return Unauthorized();
+        var result = await _vacationService.CheckOverlap(ahaUserId, startDate, endDate);
+        return Ok(result);
     }
 
     // AHA: submit a new vacation request
     [HttpPost("")]
     public async Task<IActionResult> Create([FromBody] CreateVacationRequestDTO request)
     {
-        var ahaUserId = _userContext.UserId;
+        if (_userContext.UserId is not Guid ahaUserId)
+            return Unauthorized();
         var error = await _vacationService.CreateRequest(ahaUserId, request);
         if (error != null)
             return BadRequest(error);

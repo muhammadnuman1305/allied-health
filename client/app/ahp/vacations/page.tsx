@@ -18,9 +18,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Search,
   CalendarDays,
@@ -28,7 +44,7 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Calendar,
+  MoreHorizontal,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -44,19 +60,19 @@ const statusConfig = {
   1: {
     label: "Pending",
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+      "bg-signature-yellow/30 text-foreground border-signature-mustard",
     icon: Clock,
   },
   2: {
     label: "Approved",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+      "bg-success/10 text-success border-success-border",
     icon: CheckCircle,
   },
   3: {
     label: "Rejected",
     color:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+      "bg-destructive/10 text-destructive border-destructive/30",
     icon: XCircle,
   },
 };
@@ -160,7 +176,7 @@ export default function AHPVacationsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Vacation Requests</h1>
+        <h1 className="text-3xl font-normal">Vacation Requests</h1>
         <p className="text-muted-foreground mt-1">
           Review and manage assistant vacation requests
         </p>
@@ -168,10 +184,30 @@ export default function AHPVacationsPage() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Requests" value={counts.total} icon={CalendarDays} />
-        <StatsCard title="Pending" value={counts.pending} icon={Clock} />
-        <StatsCard title="Approved" value={counts.approved} icon={CheckCircle} />
-        <StatsCard title="Rejected" value={counts.rejected} icon={XCircle} variant="destructive" />
+        <StatsCard
+          title="Total Requests"
+          value={counts.total}
+          icon={CalendarDays}
+          loading={loading}
+        />
+        <StatsCard
+          title="Pending"
+          value={counts.pending}
+          icon={Clock}
+          loading={loading}
+        />
+        <StatsCard
+          title="Approved"
+          value={counts.approved}
+          icon={CheckCircle}
+          loading={loading}
+        />
+        <StatsCard
+          title="Rejected"
+          value={counts.rejected}
+          icon={XCircle}
+          loading={loading}
+        />
       </div>
 
       {/* Filters */}
@@ -198,112 +234,148 @@ export default function AHPVacationsPage() {
         </Select>
       </div>
 
-      {/* List */}
-      {loading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : filteredRequests.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <CalendarDays className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground text-lg">No requests found</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filteredRequests.map((request) => {
-            const cfg = statusConfig[request.status as keyof typeof statusConfig];
-            const StatusIcon = cfg.icon;
-            const days = calculateDays(request.startDate, request.endDate);
+      {/* Requests table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Assistant</TableHead>
+                <TableHead>Date Range</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Reviewed By</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-48" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-20 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="ml-auto h-8 w-8 rounded-sm" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : filteredRequests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    No requests found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRequests.map((request) => {
+                  const cfg = statusConfig[request.status as keyof typeof statusConfig];
+                  const StatusIcon = cfg.icon;
+                  const days = calculateDays(request.startDate, request.endDate);
 
-            return (
-              <Card key={request.id} className="border-l-4 border-l-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0 space-y-3">
-                      {/* Status + Assistant + Date */}
-                      <div className="flex items-center gap-2 flex-wrap">
+                  return (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        <span className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          {request.ahaName}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        {formatDate(request.startDate)} – {formatDate(request.endDate)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {days} {days === 1 ? "day" : "days"}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <p className="truncate text-sm text-muted-foreground">
+                          {request.reason}
+                        </p>
+                      </TableCell>
+                      <TableCell>
                         <Badge className={`${cfg.color} border`} variant="outline">
                           <StatusIcon className="h-3 w-3 mr-1" />
                           {cfg.label}
                         </Badge>
-                        <span className="flex items-center gap-1 text-sm font-medium">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          {request.ahaName}
-                        </span>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Submitted: {formatDate(request.submittedDate)}
-                        </span>
-                      </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        {formatDate(request.submittedDate)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        {request.reviewedByName ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Open actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setIsViewDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
 
-                      {/* Date range */}
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {formatDate(request.startDate)} – {formatDate(request.endDate)}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {days} {days === 1 ? "day" : "days"}
-                        </p>
-                      </div>
-
-                      {/* Reason */}
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                        {request.reason}
-                      </p>
-
-                      {/* Review info */}
-                      {request.reviewedByName && (
-                        <p className="text-xs text-muted-foreground">
-                          Reviewed by {request.reviewedByName}
-                          {request.reviewedDate && ` on ${formatDate(request.reviewedDate)}`}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          setIsViewDialogOpen(true);
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-
-                      {request.status === 1 && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-600 border-green-300 hover:bg-green-50"
-                            onClick={() => handleApprove(request)}
-                            disabled={submitting}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 border-red-300 hover:bg-red-50"
-                            onClick={() => openRejectDialog(request)}
-                            disabled={submitting}
-                          >
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                              {request.status === 1 && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleApprove(request)}
+                                    disabled={submitting}
+                                    className="text-success focus:text-success"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openRejectDialog(request)}
+                                    disabled={submitting}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* View Detail Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
@@ -424,11 +496,11 @@ function RequestDetailView({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label className="text-sm font-medium text-muted-foreground">Start Date</Label>
-          <p className="text-base font-semibold">{formatDate(request.startDate)}</p>
+          <p className="text-base font-medium">{formatDate(request.startDate)}</p>
         </div>
         <div className="space-y-1">
           <Label className="text-sm font-medium text-muted-foreground">End Date</Label>
-          <p className="text-base font-semibold">{formatDate(request.endDate)}</p>
+          <p className="text-base font-medium">{formatDate(request.endDate)}</p>
         </div>
       </div>
 
@@ -473,7 +545,7 @@ function RequestDetailView({
         <div className="flex gap-2 pt-2 border-t">
           <Button
             variant="outline"
-            className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
+            className="flex-1 text-success border-success-border hover:bg-success/10"
             onClick={onApprove}
             disabled={submitting}
           >
@@ -481,7 +553,7 @@ function RequestDetailView({
           </Button>
           <Button
             variant="outline"
-            className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+            className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
             onClick={onReject}
             disabled={submitting}
           >

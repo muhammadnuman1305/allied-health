@@ -110,34 +110,34 @@ const transformTaskToEvent = (task: GetMyTasksDTO): CalendarEvent | null => {
 const typeConfig = {
   appointment: {
     label: "Appointment",
-    bgColor: "bg-blue-500/20 dark:bg-blue-500/30",
-    textColor: "text-blue-700 dark:text-blue-300",
-    borderColor: "border-blue-500/40 dark:border-blue-500/50",
-    barColor: "bg-blue-500",
+    bgColor: "bg-info/10",
+    textColor: "text-info",
+    borderColor: "border-info-border",
+    barColor: "bg-info",
     icon: User,
   },
   task: {
     label: "Task",
-    bgColor: "bg-green-500/20 dark:bg-green-500/30",
-    textColor: "text-green-700 dark:text-green-300",
-    borderColor: "border-green-500/40 dark:border-green-500/50",
-    barColor: "bg-green-500",
+    bgColor: "bg-success/10",
+    textColor: "text-success",
+    borderColor: "border-success-border",
+    barColor: "bg-success",
     icon: FileText,
   },
   referral: {
     label: "Referral",
-    bgColor: "bg-orange-500/20 dark:bg-orange-500/30",
-    textColor: "text-orange-700 dark:text-orange-300",
-    borderColor: "border-orange-500/40 dark:border-orange-500/50",
-    barColor: "bg-orange-500",
+    bgColor: "bg-signature-peach/40",
+    textColor: "text-foreground",
+    borderColor: "border-signature-coral",
+    barColor: "bg-signature-coral",
     icon: ArrowRight,
   },
   meeting: {
     label: "Meeting",
-    bgColor: "bg-purple-500/20 dark:bg-purple-500/30",
-    textColor: "text-purple-700 dark:text-purple-300",
-    borderColor: "border-purple-500/40 dark:border-purple-500/50",
-    barColor: "bg-purple-500",
+    bgColor: "bg-signature-cream",
+    textColor: "text-foreground",
+    borderColor: "border-signature-mustard",
+    barColor: "bg-signature-mustard",
     icon: CalendarIcon,
   },
 };
@@ -145,15 +145,15 @@ const typeConfig = {
 const priorityConfig = {
   low: {
     label: "Low",
-    color: "bg-green-500/10 text-green-700 dark:text-green-400",
+    color: "bg-success/10 text-success",
   },
   medium: {
     label: "Medium",
-    color: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+    color: "bg-signature-yellow/30 text-foreground",
   },
   high: {
     label: "High",
-    color: "bg-red-500/10 text-red-700 dark:text-red-400",
+    color: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -343,7 +343,7 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
+          <h1 className="text-3xl font-normal">Calendar</h1>
           <p className="text-muted-foreground">
             View your healthcare appointments, tasks, and events
           </p>
@@ -380,7 +380,7 @@ export default function CalendarPage() {
               Today
             </Button>
           </div>
-          <div className="text-xl font-semibold text-foreground">
+          <div className="text-xl font-medium text-foreground">
             {getMonthYearString()}
           </div>
         </div>
@@ -394,7 +394,7 @@ export default function CalendarPage() {
             {DAYS_OF_WEEK.map((day) => (
               <div
                 key={day}
-                className="p-3 text-center font-semibold bg-muted text-muted-foreground border-r border-border last:border-r-0"
+                className="p-3 text-center font-medium bg-muted text-muted-foreground border-r border-border last:border-r-0"
               >
                 {day}
               </div>
@@ -424,7 +424,7 @@ export default function CalendarPage() {
                   >
                     <div
                       className={cn(
-                        "text-sm font-bold mb-1.5 w-fit",
+                        "text-sm font-medium mb-1.5 w-fit",
                         isToday(date)
                           ? "bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center"
                           : "text-foreground"
@@ -489,7 +489,7 @@ export default function CalendarPage() {
                                   : event.title
                               }
                             >
-                              <div className="font-semibold truncate">
+                              <div className="font-medium truncate">
                                 {event.title}
                               </div>
                               {event.patientName && (
@@ -548,7 +548,7 @@ export default function CalendarPage() {
       >
         <DialogContent className="max-w-md dark:bg-[#171717] [&>button]:hidden">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <DialogTitle className="text-lg font-semibold">
+            <DialogTitle className="text-lg font-medium">
               Event Details
             </DialogTitle>
             <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">

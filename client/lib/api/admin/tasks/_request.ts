@@ -19,10 +19,16 @@ export interface TaskIntervention {
   components?: TaskInterventionComponent[];
 }
 
+export interface AhaVacationPeriod {
+  startDate: string;
+  endDate: string;
+}
+
 export interface AHAOption {
   id: string;
   name: string;
   specialties: string[];
+  vacations: AhaVacationPeriod[];
 }
 
 export interface DeptOption {

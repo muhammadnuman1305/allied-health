@@ -34,11 +34,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-muted/40 dark:from-background dark:via-muted/5 dark:to-muted/10 p-4 relative">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 dark:bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 dark:bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-transparent rounded-lg opacity-0"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-transparent rounded-lg opacity-0"></div>
       </div>
 
       {/* Theme toggle - top right */}
@@ -46,14 +46,14 @@ export default function ForgotPasswordPage() {
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md shadow-xl dark:shadow-2xl border-border/50 dark:bg-[#171717] dark:border-border/50 relative z-0">
+      <Card className="w-full max-w-md border-border bg-card relative z-0">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-full">
-              <Key className="h-8 w-8 text-primary dark:text-primary" />
+            <div className="p-3 bg-accent rounded-full">
+              <Key className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">
+          <CardTitle className="text-2xl font-normal text-center">
             Reset your password
           </CardTitle>
           <CardDescription className="text-center">
@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
             Remember your password?{" "}
             <Link
               href="/login"
-              className="text-primary hover:underline font-medium"
+              className="text-link hover:text-link-active hover:underline font-medium"
             >
               Back to login
             </Link>

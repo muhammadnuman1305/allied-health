@@ -151,17 +151,17 @@ const priorityConfig = {
   low: {
     label: "Low",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+      "bg-success/10 text-success border-success-border",
   },
   medium: {
     label: "Medium",
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+      "bg-signature-yellow/30 text-foreground border-signature-mustard",
   },
   high: {
     label: "High",
     color:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+      "bg-destructive/10 text-destructive border-destructive/30",
   },
 };
 
@@ -241,7 +241,7 @@ export default function FeedbackPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Feedback</h1>
+        <h1 className="text-3xl font-normal">Feedback</h1>
         <p className="text-muted-foreground mt-1">
           Task feedback and notes received from colleagues
         </p>
@@ -339,7 +339,7 @@ export default function FeedbackPage() {
                             </span>
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold leading-tight mb-1">
+                            <h3 className="text-lg font-medium leading-tight mb-1">
                               {item.taskTitle}
                             </h3>
                             {item.interventionName && (
@@ -501,7 +501,7 @@ function FeedbackDetailView({
         <Label className="text-sm font-medium text-muted-foreground">
           Task
         </Label>
-        <p className="text-base font-semibold">{feedback.taskTitle}</p>
+        <p className="text-base font-medium">{feedback.taskTitle}</p>
         <p className="text-xs text-muted-foreground">
           Task ID: {feedback.taskId}
         </p>

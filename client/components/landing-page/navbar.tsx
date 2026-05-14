@@ -42,15 +42,15 @@ export function Navbar({
   const pathname = usePathname();
 
   return (
-    <div className="h-16 border-b px-4 flex items-center justify-between bg-card">
-      <div className="flex items-center gap-4">
+    <div className="sticky top-0 z-30 h-14 border-b px-3.5 flex items-center justify-between bg-card">
+      <div className="flex items-center gap-3.5">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
           className="lg:flex hidden"
         >
-          <PanelLeft className="h-5 w-5" />
+          <PanelLeft className="h-4 w-4" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
         <Button
@@ -59,12 +59,12 @@ export function Navbar({
           onClick={onToggleSidebar}
           className="lg:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
           <span className="sr-only">Toggle sidebar</span>
         </Button>
         <Breadcrumb />
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3.5">
         <ThemeToggle />
       </div>
     </div>
@@ -135,7 +135,7 @@ function UserNav() {
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-semibold">
+            <AlertDialogTitle className="text-lg font-medium">
               Confirm Logout
             </AlertDialogTitle>
             <AlertDialogDescription>

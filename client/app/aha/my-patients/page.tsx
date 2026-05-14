@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getAll$ as getAHAPatients$ } from "@/lib/api/aha/_request";
 import { AHAPatient } from "@/lib/api/aha/_model";
 import { getSummary$ } from "@/lib/api/admin/patients/_request";
@@ -178,30 +179,11 @@ export default function MyPatientsPage() {
     };
   }, [patients]);
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">My Patients</h1>
-          <p className="text-muted-foreground">
-            Patients you are currently working with
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading patients...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">My Patients</h1>
+          <h1 className="text-3xl font-normal">My Patients</h1>
           <p className="text-muted-foreground">
             Patients you are currently working with
           </p>
@@ -220,7 +202,7 @@ export default function MyPatientsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">My Patients</h1>
+        <h1 className="text-3xl font-normal">My Patients</h1>
         <p className="text-muted-foreground">
           Patients you are currently working with • {displayName}
         </p>
@@ -233,24 +215,28 @@ export default function MyPatientsPage() {
           value={myPatientCounts.total}
           description="Total patients"
           icon={Users}
+          loading={loading}
         />
         <StatsCard
           title="Active Tasks"
           value={summary.activeTasks}
           description="Tasks in progress"
           icon={ClipboardList}
+          loading={loading}
         />
         <StatsCard
           title="With Tasks"
           value={myPatientCounts.withTasks}
           description="Need attention"
           icon={AlertCircle}
+          loading={loading}
         />
         <StatsCard
           title="Recent Updates"
           value={myPatientCounts.recent}
           description="This week"
           icon={Clock}
+          loading={loading}
         />
       </div>
 
@@ -297,7 +283,34 @@ export default function MyPatientsPage() {
       </Card>
 
       {/* Patient Cards Grid */}
-      {filteredPatients.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-sm" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 4 }).map((_, fieldIndex) => (
+                    <div key={fieldIndex} className="space-y-1">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-9 w-full rounded-sm" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : filteredPatients.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">

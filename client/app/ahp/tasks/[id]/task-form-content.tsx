@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   Save,
@@ -780,20 +781,30 @@ export default function TaskFormContent() {
       setAutoAssigning(true);
       setError(null);
       const response = await getAutoAssignSuggestions$({
-        interventionIds: selectedInterventions,
-        startDate,
-        endDate,
+        interventions: selectedInterventions.map((id) => ({
+          id,
+          startDate: interventionSchedules[id]?.startDate || undefined,
+          endDate: interventionSchedules[id]?.endDate || undefined,
+        })),
+        taskStartDate: startDate,
+        taskEndDate: endDate,
+        departmentId: formData.assignedToDepartment || undefined,
       });
       const suggestions: AutoAssignResultDTO[] = response.data;
       const newAssignments = { ...interventionAssignments };
+      const newWardAssignments = { ...interventionWardAssignments };
       let anyAssigned = false;
       suggestions.forEach((s) => {
         if (s.canAssign && s.suggestedAhaId) {
           newAssignments[s.interventionId] = s.suggestedAhaId;
           anyAssigned = true;
         }
+        if (s.suggestedWardId) {
+          newWardAssignments[s.interventionId] = s.suggestedWardId;
+        }
       });
       setInterventionAssignments(newAssignments);
+      setInterventionWardAssignments(newWardAssignments);
       if (!anyAssigned) {
         setError("No available AHAs found for the selected interventions on the given dates.");
       }
@@ -868,16 +879,48 @@ export default function TaskFormContent() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">
-            {isNewTask ? "Create Task" : "Edit Task"}
-          </h1>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading task...</p>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-normal">
+              {isNewTask ? "Create Task" : "Edit Task"}
+            </h1>
+            <Skeleton className="h-4 w-64" />
           </div>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-sm" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5" />
+              Interventions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between rounded-md border border-border p-3"
+              >
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+                <Skeleton className="h-5 w-5 rounded-sm" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -896,7 +939,7 @@ export default function TaskFormContent() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-normal">
               {isNewTask ? "Create Task" : "Edit Task"}
             </h1>
             <p className="text-muted-foreground">
@@ -910,8 +953,8 @@ export default function TaskFormContent() {
 
       {/* Success Message */}
       {success && (
-        <Alert className="bg-green-50 border-green-200">
-          <AlertDescription className="text-green-800">
+        <Alert className="bg-success/10 border-success-border">
+          <AlertDescription className="text-success">
             Task saved successfully! Redirecting...
           </AlertDescription>
         </Alert>
@@ -1167,9 +1210,9 @@ export default function TaskFormContent() {
                 {!isNewTask && (
                   <div className="flex items-center gap-2 mt-1 px-3 py-2 rounded-md bg-muted/50 border text-sm">
                     <span className="text-muted-foreground">Completed:</span>
-                    <span className="font-semibold">{(formData as any).completedRepetitions ?? 0}</span>
+                    <span className="font-medium">{(formData as any).completedRepetitions ?? 0}</span>
                     <span className="text-muted-foreground">/</span>
-                    <span className="font-semibold">{formData.requiredRepetitions ?? 0}</span>
+                    <span className="font-medium">{formData.requiredRepetitions ?? 0}</span>
                     <span className="text-muted-foreground ml-1">repetitions</span>
                   </div>
                 )}
@@ -1303,7 +1346,7 @@ export default function TaskFormContent() {
                     return Object.values(interventionsBySpecialty).map(
                       ({ specialty, interventions: specInterventions }) => (
                         <div key={specialty.id} className="space-y-2">
-                          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                             {specialty.name}
                           </h4>
                           <div className="space-y-2">
@@ -1381,7 +1424,7 @@ export default function TaskFormContent() {
                                       <div className="space-y-3">
                                         {intervention.components.map((group) => (
                                           <div key={group.type} className="space-y-1.5">
-                                            <p className="text-xs font-semibold text-foreground">{group.type}</p>
+                                            <p className="text-xs font-medium text-foreground">{group.type}</p>
                                             <div className="flex flex-wrap gap-x-5 gap-y-1.5">
                                               {group.values.map((val) => {
                                                 const isChecked = (interventionComponents[intervention.id] ?? [])
@@ -1453,11 +1496,27 @@ export default function TaskFormContent() {
                         const interventionSpecialtyId =
                           intervention?.specialtyId;
 
-                        // Filter AHA options to only show those with matching specialty
+                        // Filter AHA options by specialty; flag vacation conflicts with the intervention's date range
+                        const invSchedule = interventionSchedules[interventionId];
+                        const invStart = invSchedule?.startDate;
+                        const invEnd = invSchedule?.endDate;
+
                         const availableAHAs = interventionSpecialtyId
-                          ? ahaOptions.filter((aha) =>
-                              aha.specialties.includes(interventionSpecialtyId)
-                            )
+                          ? ahaOptions
+                              .filter((aha) =>
+                                aha.specialties.includes(interventionSpecialtyId)
+                              )
+                              .map((aha) => {
+                                const vacationConflict =
+                                  invStart && invEnd
+                                    ? (aha.vacations ?? []).find(
+                                        (v) =>
+                                          v.startDate <= invEnd &&
+                                          v.endDate >= invStart
+                                      )
+                                    : undefined;
+                                return { ...aha, vacationConflict };
+                              })
                           : [];
 
                         return (
@@ -1469,12 +1528,12 @@ export default function TaskFormContent() {
                               <div className="flex items-center justify-between gap-3 mb-2">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <div className="w-2 h-2 rounded-full bg-primary shrink-0"></div>
-                                  <Label className="text-base font-semibold text-foreground flex items-center gap-2 min-w-0">
+                                  <Label className="text-base font-medium text-foreground flex items-center gap-2 min-w-0">
                                     <span className="truncate">
                                       {interventionName}
                                     </span>
                                     {/* Order badge */}
-                                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-2 rounded-full bg-primary/10 text-primary text-xs font-semibold shrink-0">
+                                    <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-2 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
                                       {getInterventionExecutionOrder()[
                                         interventionId
                                       ] ?? "-"}
@@ -1562,14 +1621,28 @@ export default function TaskFormContent() {
                                           Loading AHAs...
                                         </SelectItem>
                                       ) : availableAHAs.length > 0 ? (
-                                        availableAHAs.map((aha) => (
-                                          <SelectItem
-                                            key={aha.id}
-                                            value={aha.id}
-                                          >
-                                            {aha.name}
-                                          </SelectItem>
-                                        ))
+                                        availableAHAs.map((aha) => {
+                                          const fmtDate = (d: string) =>
+                                            new Date(d).toLocaleDateString(
+                                              "en-AU",
+                                              {
+                                                day: "2-digit",
+                                                month: "2-digit",
+                                                year: "numeric",
+                                              }
+                                            );
+                                          return (
+                                            <SelectItem
+                                              key={aha.id}
+                                              value={aha.id}
+                                              disabled={!!aha.vacationConflict}
+                                            >
+                                              {aha.vacationConflict
+                                                ? `${aha.name} (on vacation ${fmtDate(aha.vacationConflict.startDate)} – ${fmtDate(aha.vacationConflict.endDate)})`
+                                                : aha.name}
+                                            </SelectItem>
+                                          );
+                                        })
                                       ) : (
                                         <SelectItem value="no-aha" disabled>
                                           No AHAs available for this specialty
@@ -1729,6 +1802,19 @@ export default function TaskFormContent() {
                                         ...interventionSchedules,
                                         [interventionId]: next,
                                       });
+                                      // Clear AHA if new dates conflict with their vacation
+                                      if (next.startDate && next.endDate) {
+                                        const assignedId = interventionAssignments[interventionId];
+                                        const assignedAha = assignedId ? ahaOptions.find((a) => a.id === assignedId) : null;
+                                        if (assignedAha) {
+                                          const conflict = (assignedAha.vacations ?? []).some(
+                                            (v) => v.startDate <= next.endDate! && v.endDate >= next.startDate!
+                                          );
+                                          if (conflict) {
+                                            setInterventionAssignments({ ...interventionAssignments, [interventionId]: "" });
+                                          }
+                                        }
+                                      }
                                     }}
                                     disabled={!startDate || !endDate}
                                   >
@@ -1811,6 +1897,19 @@ export default function TaskFormContent() {
                                         ...interventionSchedules,
                                         [interventionId]: next,
                                       });
+                                      // Clear AHA if new dates conflict with their vacation
+                                      if (next.startDate && next.endDate) {
+                                        const assignedId = interventionAssignments[interventionId];
+                                        const assignedAha = assignedId ? ahaOptions.find((a) => a.id === assignedId) : null;
+                                        if (assignedAha) {
+                                          const conflict = (assignedAha.vacations ?? []).some(
+                                            (v) => v.startDate <= next.endDate! && v.endDate >= next.startDate!
+                                          );
+                                          if (conflict) {
+                                            setInterventionAssignments({ ...interventionAssignments, [interventionId]: "" });
+                                          }
+                                        }
+                                      }
                                     }}
                                     disabled={!startDate || !endDate}
                                   >

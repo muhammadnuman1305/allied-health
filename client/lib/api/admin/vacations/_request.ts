@@ -25,3 +25,11 @@ export const getMyVacationRequests$ = async (): Promise<{ data: VacationRequest[
 export const createVacationRequest$ = async (payload: CreateVacationRequestDTO): Promise<void> => {
   await api.post(AHA_URL, payload);
 };
+
+// AHA: check for overlapping requests before submitting
+export const checkVacationOverlap$ = async (startDate: string, endDate: string): Promise<{ data: VacationRequest[] }> => {
+  const response = await api.get<VacationRequest[]>(`${AHA_URL}/check-overlap`, {
+    params: { startDate, endDate },
+  });
+  return { data: response.data };
+};

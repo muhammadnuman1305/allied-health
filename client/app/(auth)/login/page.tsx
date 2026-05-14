@@ -100,22 +100,22 @@ export default function LoginPage() {
 
   const theme = isProfessional
     ? {
-        iconBg: "bg-purple-50 dark:bg-purple-900/20",
-        iconColor: "text-purple-600 dark:text-purple-400",
-        forgotLink: "text-purple-600 dark:text-purple-400 hover:underline",
-        button: "bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white",
-        activeTab: "bg-purple-50 dark:bg-background text-purple-600 shadow-sm",
+        iconBg: "bg-accent",
+        iconColor: "text-primary",
+        forgotLink: "text-link hover:text-link-active hover:underline",
+        button: "bg-primary hover:bg-primary-active text-primary-foreground",
+        activeTab: "bg-background text-primary",
       }
     : {
-        iconBg: "bg-green-50 dark:bg-green-900/20",
-        iconColor: "text-green-600 dark:text-green-400",
-        forgotLink: "text-green-600 dark:text-green-400 hover:underline",
-        button: "bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white",
-        activeTab: "bg-green-50 dark:bg-background text-green-600 shadow-sm",
+        iconBg: "bg-accent",
+        iconColor: "text-primary",
+        forgotLink: "text-link hover:text-link-active hover:underline",
+        button: "bg-primary hover:bg-primary-active text-primary-foreground",
+        activeTab: "bg-background text-primary",
       };
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center bg-[#fafbfc] dark:bg-background p-4 relative ${isProfessional ? "theme-purple" : ""}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center bg-background p-4 relative ${isProfessional ? "theme-purple" : ""}`}>
       {/* Theme toggle - top right */}
       <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
@@ -123,11 +123,11 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md space-y-5">
         {/* Tab switcher */}
-        <div className="flex bg-white dark:bg-muted rounded-2xl p-1.5 gap-1.5 border border-gray-200 dark:border-border shadow-sm">
+        <div className="flex bg-background rounded-lg p-1.5 gap-1.5 border border-border">
           <button
             type="button"
             onClick={() => setActiveTab("assistant")}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === "assistant"
                 ? theme.activeTab
                 : "text-muted-foreground hover:text-foreground"
@@ -138,7 +138,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setActiveTab("professional")}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-200 ${
               activeTab === "professional"
                 ? theme.activeTab
                 : "text-muted-foreground hover:text-foreground"
@@ -149,14 +149,14 @@ export default function LoginPage() {
         </div>
 
         {/* Login card */}
-        <div className="bg-white dark:bg-[#171717] rounded-2xl shadow-sm border border-gray-100 dark:border-border/50 px-8 py-10">
+        <div className="bg-card rounded-lg border border-border px-8 py-10">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
-              <div className={`inline-flex p-3 rounded-xl ${theme.iconBg}`}>
+              <div className={`inline-flex p-3 rounded-lg ${theme.iconBg}`}>
                 <LogIn className={`h-6 w-6 ${theme.iconColor}`} />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
+              <h1 className="text-2xl font-normal text-foreground">Welcome Back</h1>
             </div>
             <p className="text-muted-foreground text-sm">
               {isProfessional
@@ -176,7 +176,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="h-12 bg-gray-50 dark:bg-muted/50 border-gray-200 dark:border-border rounded-xl"
+                className="h-11 bg-background border-input rounded-sm"
               />
             </div>
 
@@ -197,7 +197,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 bg-gray-50 dark:bg-muted/50 border-gray-200 dark:border-border rounded-xl pr-11"
+                  className="h-11 bg-background border-input rounded-sm pr-11"
                 />
                 <button
                   type="button"
@@ -216,7 +216,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className={`w-full h-12 rounded-xl text-base font-semibold ${theme.button}`}
+              className={`w-full h-12 rounded-lg text-base font-medium ${theme.button}`}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -237,11 +237,11 @@ export default function LoginPage() {
         {/* Footer badges */}
         <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground pt-1">
           <div className="flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+            <ShieldCheck className="h-3.5 w-3.5 text-success" />
             <span>Secure Login</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Lock className="h-3.5 w-3.5 text-blue-500" />
+            <Lock className="h-3.5 w-3.5 text-info" />
             <span>Data Protected</span>
           </div>
         </div>

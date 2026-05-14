@@ -17,7 +17,7 @@ export default function SpecialtyFormPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-normal">
             {isEdit ? "Edit Specialty" : "Create New Specialty"}
           </h1>
           <p className="text-muted-foreground">

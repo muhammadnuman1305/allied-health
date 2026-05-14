@@ -38,7 +38,6 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
@@ -176,34 +175,27 @@ export default function AdminInterventionsSetupPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Interventions</h1>
+        <h1 className="text-3xl font-normal">Interventions</h1>
         <p className="text-muted-foreground">
           Create and manage clinical interventions
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Interventions"
-              value={summary.totalInterventions}
-              description="All interventions"
-              icon={Stethoscope}
-            />
-            <StatsCard
-              title="Active Interventions"
-              value={summary.activeInterventions}
-              description="Currently active"
-              icon={Activity}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Interventions"
+          value={summary.totalInterventions}
+          description="All interventions"
+          icon={Stethoscope}
+          loading={loading}
+        />
+        <StatsCard
+          title="Active Interventions"
+          value={summary.activeInterventions}
+          description="Currently active"
+          icon={Activity}
+          loading={loading}
+        />
       </div>
 
       <Card>
@@ -241,13 +233,6 @@ export default function AdminInterventionsSetupPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={rows}
             columns={columns}
@@ -278,7 +263,7 @@ export default function AdminInterventionsSetupPage() {
                   <DropdownMenuItem
                     onClick={() => handleAction("toggle", row.id)}
                     className={
-                      row.hidden ? "text-green-600" : "text-destructive"
+                      row.hidden ? "text-success" : "text-destructive"
                     }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />{" "}
@@ -288,7 +273,6 @@ export default function AdminInterventionsSetupPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -324,7 +308,7 @@ export default function AdminInterventionsSetupPage() {
               onClick={confirmAction}
               className={
                 actionDialog.action === "restore"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >

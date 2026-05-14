@@ -127,19 +127,19 @@ const statusConfig = {
   pending: {
     label: "Pending",
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+      "bg-signature-yellow/30 text-foreground border-signature-mustard",
     icon: Clock,
   },
   approved: {
     label: "Approved",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+      "bg-success/10 text-success border-success-border",
     icon: CheckCircle,
   },
   rejected: {
     label: "Rejected",
     color:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+      "bg-destructive/10 text-destructive border-destructive/30",
     icon: XCircle,
   },
 };
@@ -235,7 +235,7 @@ export default function RescheduleRequestsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Reschedule Requests</h1>
+          <h1 className="text-3xl font-normal">Reschedule Requests</h1>
           <p className="text-muted-foreground mt-1">
             Request to reschedule tasks and appointments
           </p>
@@ -340,7 +340,7 @@ export default function RescheduleRequestsPage() {
                               {formatDate(request.submittedDate)}
                             </span>
                           </div>
-                          <h3 className="text-lg font-semibold leading-tight mb-1">
+                            <h3 className="text-lg font-medium leading-tight mb-1">
                             {request.taskTitle}
                           </h3>
                           {request.patientName && (
@@ -661,7 +661,7 @@ function RequestDetailView({
         <Label className="text-sm font-medium text-muted-foreground">
           Task
         </Label>
-        <p className="text-base font-semibold">{request.taskTitle}</p>
+        <p className="text-base font-medium">{request.taskTitle}</p>
         <p className="text-xs text-muted-foreground">
           Task ID: {request.taskId}
         </p>
@@ -688,7 +688,7 @@ function RequestDetailView({
           <Label className="text-sm font-medium text-muted-foreground">
             Original Schedule
           </Label>
-          <p className="text-base font-semibold mt-1">
+          <p className="text-base font-medium mt-1">
             {formatDate(request.originalDate)}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -699,7 +699,7 @@ function RequestDetailView({
           <Label className="text-sm font-medium text-muted-foreground">
             Requested Schedule
           </Label>
-          <p className="text-base font-semibold mt-1">
+          <p className="text-base font-medium mt-1">
             {formatDate(request.requestedDate)}
           </p>
           <p className="text-sm text-muted-foreground">

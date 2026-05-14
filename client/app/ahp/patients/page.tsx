@@ -44,7 +44,6 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/ui/stats-card";
 import { DataTable, Column, FilterState } from "@/components/ui/data-table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   getAll$,
@@ -277,7 +276,7 @@ export default function AdminPatientsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Patient Management</h1>
+        <h1 className="text-3xl font-normal">Patient Management</h1>
         <p className="text-muted-foreground">
           Manage patient referrals and interventions
         </p>
@@ -285,41 +284,34 @@ export default function AdminPatientsPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
-          <>
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-            <Skeleton className="h-[120px] rounded-lg" />
-          </>
-        ) : (
-          <>
-            <StatsCard
-              title="Total Patients"
-              value={summary.totalPatients}
-              description="Registered patients"
-              icon={Users}
-            />
-            <StatsCard
-              title="New Patients"
-              value={summary.newPatients}
-              description="Added today"
-              icon={Calendar}
-            />
-            <StatsCard
-              title="Active Tasks"
-              value={summary.activeTasks}
-              description="In progress"
-              icon={ClipboardList}
-            />
-            <StatsCard
-              title="Completed Tasks"
-              value={summary.completedTasks}
-              description="Successfully completed"
-              icon={CheckCircle}
-            />
-          </>
-        )}
+        <StatsCard
+          title="Total Patients"
+          value={summary.totalPatients}
+          description="Registered patients"
+          icon={Users}
+          loading={loading}
+        />
+        <StatsCard
+          title="New Patients"
+          value={summary.newPatients}
+          description="Added today"
+          icon={Calendar}
+          loading={loading}
+        />
+        <StatsCard
+          title="Active Tasks"
+          value={summary.activeTasks}
+          description="In progress"
+          icon={ClipboardList}
+          loading={loading}
+        />
+        <StatsCard
+          title="Completed Tasks"
+          value={summary.completedTasks}
+          description="Successfully completed"
+          icon={CheckCircle}
+          loading={loading}
+        />
       </div>
 
       {/* Patients Table */}
@@ -380,13 +372,6 @@ export default function AdminPatientsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md" />
-              ))}
-            </div>
-          ) : (
           <DataTable
             data={patients}
             columns={columns}
@@ -429,7 +414,7 @@ export default function AdminPatientsPage() {
                   <DropdownMenuItem
                     onClick={() => handlePatientAction("delete", patient.id)}
                     className={
-                      patient.hidden ? "text-green-600" : "text-destructive"
+                      patient.hidden ? "text-success" : "text-destructive"
                     }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -439,7 +424,6 @@ export default function AdminPatientsPage() {
               </DropdownMenu>
             )}
           />
-          )}
         </CardContent>
       </Card>
 
@@ -477,7 +461,7 @@ export default function AdminPatientsPage() {
               onClick={handleConfirmedAction}
               className={
                 actionDialog.action === "restore"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-success hover:bg-success/90"
                   : "bg-destructive hover:bg-destructive/90"
               }
             >

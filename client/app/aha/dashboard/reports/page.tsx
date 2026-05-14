@@ -28,7 +28,7 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+          <h1 className="text-3xl font-normal">Reports & Analytics</h1>
           <p className="text-muted-foreground">Comprehensive reports and analytics for healthcare management</p>
         </div>
         <div className="flex gap-2">
@@ -58,9 +58,9 @@ export default function ReportsPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-medium">156</div>
             <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              <TrendingUp className="inline h-3 w-3 text-success mr-1" />
               +12% from last month
             </p>
           </CardContent>
@@ -71,9 +71,9 @@ export default function ReportsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
+            <div className="text-2xl font-medium">89</div>
             <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              <TrendingUp className="inline h-3 w-3 text-success mr-1" />
               +8% from last month
             </p>
           </CardContent>
@@ -84,9 +84,9 @@ export default function ReportsPage() {
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">67</div>
+            <div className="text-2xl font-medium">67</div>
             <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              <TrendingUp className="inline h-3 w-3 text-success mr-1" />
               +15% from last month
             </p>
           </CardContent>
@@ -97,9 +97,9 @@ export default function ReportsPage() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94%</div>
+            <div className="text-2xl font-medium">94%</div>
             <p className="text-xs text-muted-foreground">
-              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              <TrendingUp className="inline h-3 w-3 text-success mr-1" />
               +3% from last month
             </p>
           </CardContent>
@@ -126,28 +126,28 @@ export default function ReportsPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-success rounded-full"></div>
                       <span className="text-sm">Completed</span>
                     </div>
                     <span className="text-sm font-medium">67 (43%)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-info rounded-full"></div>
                       <span className="text-sm">In Progress</span>
                     </div>
                     <span className="text-sm font-medium">45 (29%)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-signature-mustard rounded-full"></div>
                       <span className="text-sm">Pending</span>
                     </div>
                     <span className="text-sm font-medium">28 (18%)</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                      <div className="w-3 h-3 bg-muted-foreground rounded-full"></div>
                       <span className="text-sm">Not Assigned</span>
                     </div>
                     <span className="text-sm font-medium">16 (10%)</span>
@@ -165,8 +165,8 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Cardiology</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '85%' }}></div>
+                      <div className="w-20 bg-muted rounded-full h-2">
+                        <div className="bg-success h-2 rounded-full" style={{ width: '85%' }}></div>
                       </div>
                       <span className="text-sm font-medium">85%</span>
                     </div>
@@ -174,8 +174,8 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Endocrinology</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '92%' }}></div>
+                      <div className="w-20 bg-muted rounded-full h-2">
+                        <div className="bg-success h-2 rounded-full" style={{ width: '92%' }}></div>
                       </div>
                       <span className="text-sm font-medium">92%</span>
                     </div>
@@ -183,8 +183,8 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Physical Therapy</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '78%' }}></div>
+                      <div className="w-20 bg-muted rounded-full h-2">
+                        <div className="bg-success h-2 rounded-full" style={{ width: '78%' }}></div>
                       </div>
                       <span className="text-sm font-medium">78%</span>
                     </div>
@@ -192,8 +192,8 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Nutrition</span>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '88%' }}></div>
+                      <div className="w-20 bg-muted rounded-full h-2">
+                        <div className="bg-success h-2 rounded-full" style={{ width: '88%' }}></div>
                       </div>
                       <span className="text-sm font-medium">88%</span>
                     </div>
@@ -212,15 +212,15 @@ export default function ReportsPage() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">67</div>
+                  <div className="text-2xl font-medium text-success">67</div>
                   <div className="text-sm text-muted-foreground">Completed Tasks</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">45</div>
+                  <div className="text-2xl font-medium text-info">45</div>
                   <div className="text-sm text-muted-foreground">In Progress</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">28</div>
+                  <div className="text-2xl font-medium text-foreground">28</div>
                   <div className="text-sm text-muted-foreground">Pending</div>
                 </div>
               </div>
@@ -236,15 +236,15 @@ export default function ReportsPage() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">89</div>
+                  <div className="text-2xl font-medium text-success">89</div>
                   <div className="text-sm text-muted-foreground">Active Patients</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600">12</div>
+                  <div className="text-2xl font-medium text-muted-foreground">12</div>
                   <div className="text-sm text-muted-foreground">Inactive</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">5</div>
+                  <div className="text-2xl font-medium text-destructive">5</div>
                   <div className="text-sm text-muted-foreground">Discharged</div>
                 </div>
               </div>
@@ -260,19 +260,19 @@ export default function ReportsPage() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">67</div>
+                  <div className="text-2xl font-medium text-success">67</div>
                   <div className="text-sm text-muted-foreground">Completed</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">23</div>
+                  <div className="text-2xl font-medium text-info">23</div>
                   <div className="text-sm text-muted-foreground">Accepted</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">15</div>
+                  <div className="text-2xl font-medium text-foreground">15</div>
                   <div className="text-sm text-muted-foreground">Pending</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">3</div>
+                  <div className="text-2xl font-medium text-destructive">3</div>
                   <div className="text-sm text-muted-foreground">Rejected</div>
                 </div>
               </div>

@@ -32,7 +32,8 @@ public class VacationController : ControllerBase
     [HttpPut("review")]
     public async Task<IActionResult> Review([FromBody] ReviewVacationRequestDTO request)
     {
-        var reviewerId = _userContext.UserId;
+        if (_userContext.UserId is not Guid reviewerId)
+            return Unauthorized();
         var error = await _vacationService.ReviewRequest(reviewerId, request);
         if (error != null)
             return BadRequest(error);

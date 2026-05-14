@@ -24,7 +24,7 @@
         public static string VacationNotExists { get; set; } = "Vacation request doesn't exist.";
         public static string VacationAlreadyReviewed { get; set; } = "Vacation request has already been reviewed.";
         public static string VacationAhaOnLeave { get; set; } = "The selected assistant is on approved vacation during this period.";
-        public static string VacationDateInvalid { get; set; } = "Start date must be today or later and within 1 month range.";
+        public static string VacationDateInvalid { get; set; } = "Start date must be today or later and end date must be within the current calendar year.";
         public static string VacationOverlap { get; set; } = "You already have a vacation request for an overlapping date range.";
     }
 }

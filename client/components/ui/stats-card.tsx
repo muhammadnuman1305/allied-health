@@ -1,12 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
+import { ReactNode } from "react";
 
 interface StatsCardProps {
   title: string;
-  value: number | string;
+  value: ReactNode;
   description?: string;
   icon?: LucideIcon;
   variant?: "default" | "primary" | "secondary" | "destructive";
+  loading?: boolean;
 }
 
 export function StatsCard({
@@ -15,6 +18,7 @@ export function StatsCard({
   description,
   icon: Icon,
   variant = "default",
+  loading = false,
 }: StatsCardProps) {
   const getVariantStyles = () => {
     switch (variant) {
@@ -36,10 +40,14 @@ export function StatsCard({
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && (
+        <div className="text-2xl font-medium">
+          {loading ? <Skeleton className="h-7 w-12" /> : value}
+        </div>
+        {loading ? (
+          <Skeleton className="mt-1 h-3 w-24" />
+        ) : description ? (
           <p className="text-xs text-muted-foreground">{description}</p>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Search,
   CalendarDays,
@@ -30,37 +40,41 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  Calendar,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  VacationRequest,
-  vacationStatusLabel,
-} from "@/lib/api/admin/vacations/_model";
+import { VacationRequest } from "@/lib/api/admin/vacations/_model";
 import {
   getMyVacationRequests$,
   createVacationRequest$,
+  checkVacationOverlap$,
 } from "@/lib/api/admin/vacations/_request";
 
 const statusConfig = {
   1: {
     label: "Pending",
-    color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+    color: "bg-signature-yellow/30 text-foreground border-signature-mustard",
     icon: Clock,
   },
   2: {
     label: "Approved",
-    color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+    color: "bg-success/10 text-success border-success-border",
     icon: CheckCircle,
   },
   3: {
     label: "Rejected",
-    color:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+    color: "bg-destructive/10 text-destructive border-destructive/30",
     icon: XCircle,
   },
+};
+
+const formatDate = (d: string) =>
+  new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+
+const calculateDays = (start: string, end: string) => {
+  const diff = Math.abs(new Date(end).getTime() - new Date(start).getTime());
+  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
 };
 
 export default function VacationRequestsPage() {
@@ -83,18 +97,15 @@ export default function VacationRequestsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  useEffect(() => { fetchRequests(); }, []);
 
-  const filteredRequests = requests.filter((item) => {
-    const matchesSearch =
-      item.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.startDate.includes(searchTerm) ||
-      item.endDate.includes(searchTerm);
-    const matchesStatus =
-      statusFilter === "all" || item.status === Number(statusFilter);
-    return matchesSearch && matchesStatus;
+  const filtered = requests.filter((r) => {
+    const matchSearch =
+      r.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.startDate.includes(searchTerm) ||
+      r.endDate.includes(searchTerm);
+    const matchStatus = statusFilter === "all" || r.status === Number(statusFilter);
+    return matchSearch && matchStatus;
   });
 
   const counts = {
@@ -104,65 +115,58 @@ export default function VacationRequestsPage() {
     rejected: requests.filter((r) => r.status === 3).length,
   };
 
-  const handleCreateRequest = async (payload: {
-    startDate: string;
-    endDate: string;
-    reason: string;
-  }) => {
-    try {
-      await createVacationRequest$(payload);
-      toast.success("Vacation request submitted successfully");
-      setIsCreateDialogOpen(false);
-      fetchRequests();
-    } catch (err: any) {
-      toast.error(err?.response?.data || "Failed to submit request");
-    }
+  const handleCreate = async (payload: { startDate: string; endDate: string; reason: string }) => {
+    await createVacationRequest$(payload);
+    toast.success("Vacation request submitted");
+    setIsCreateDialogOpen(false);
+    fetchRequests();
   };
-
-  const calculateDays = (start: string, end: string) => {
-    const diff = Math.abs(new Date(end).getTime() - new Date(start).getTime());
-    return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
-  };
-
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Vacation Requests</h1>
-          <p className="text-muted-foreground mt-1">
-            Request and manage your vacation leave
-          </p>
+          <h1 className="text-3xl font-normal">Vacation Requests</h1>
+          <p className="text-muted-foreground mt-1">Request and manage your vacation leave</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Request Leave
-            </Button>
+            <Button><Plus className="h-4 w-4 mr-2" />Request Leave</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Request Vacation or Leave</DialogTitle>
-            </DialogHeader>
-            <CreateRequestForm onSubmit={handleCreateRequest} />
+            <DialogHeader><DialogTitle>Request Vacation Leave</DialogTitle></DialogHeader>
+            <CreateRequestForm onSubmit={handleCreate} />
           </DialogContent>
         </Dialog>
       </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Requests" value={counts.total} icon={CalendarDays} />
-        <StatsCard title="Pending" value={counts.pending} icon={Clock} />
-        <StatsCard title="Approved" value={counts.approved} icon={CheckCircle} />
-        <StatsCard title="Rejected" value={counts.rejected} icon={XCircle} variant="destructive" />
+        <StatsCard
+          title="Total Requests"
+          value={counts.total}
+          icon={CalendarDays}
+          loading={loading}
+        />
+        <StatsCard
+          title="Pending"
+          value={counts.pending}
+          icon={Clock}
+          loading={loading}
+        />
+        <StatsCard
+          title="Approved"
+          value={counts.approved}
+          icon={CheckCircle}
+          loading={loading}
+        />
+        <StatsCard
+          title="Rejected"
+          value={counts.rejected}
+          icon={XCircle}
+          loading={loading}
+        />
       </div>
 
       {/* Filters */}
@@ -189,79 +193,108 @@ export default function VacationRequestsPage() {
         </Select>
       </div>
 
-      {/* List */}
-      {loading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : filteredRequests.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <CalendarDays className="h-16 w-16 text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground text-lg">No requests found</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filteredRequests.map((request) => {
-            const cfg = statusConfig[request.status as keyof typeof statusConfig];
-            const StatusIcon = cfg.icon;
-            const days = calculateDays(request.startDate, request.endDate);
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date Range</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Reviewed By</TableHead>
+                <TableHead className="w-12" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-40" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-48" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-6 w-20 rounded-md" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-8 w-8 rounded-sm" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    No vacation requests found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered.map((r) => {
+                  const cfg = statusConfig[r.status as keyof typeof statusConfig];
+                  const StatusIcon = cfg.icon;
+                  const days = calculateDays(r.startDate, r.endDate);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        {formatDate(r.startDate)} – {formatDate(r.endDate)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {days} {days === 1 ? "day" : "days"}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <p className="truncate text-sm text-muted-foreground">{r.reason}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${cfg.color} border`} variant="outline">
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {cfg.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                        {formatDate(r.submittedDate)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.reviewedByName ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => { setSelectedRequest(r); setIsViewDialogOpen(true); }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-            return (
-              <Card key={request.id} className="border-l-4 border-l-primary/20">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <Badge className={`${cfg.color} border`} variant="outline">
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {cfg.label}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Submitted: {formatDate(request.submittedDate)}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold">
-                            {formatDate(request.startDate)} – {formatDate(request.endDate)}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {days} {days === 1 ? "day" : "days"}
-                          </p>
-                        </div>
-                        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedRequest(request)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Request Details</DialogTitle>
-                            </DialogHeader>
-                            {selectedRequest && (
-                              <RequestDetailView request={selectedRequest} />
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                        {request.reason}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      {/* View Detail Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Request Details</DialogTitle></DialogHeader>
+          {selectedRequest && <RequestDetailView request={selectedRequest} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -269,81 +302,151 @@ export default function VacationRequestsPage() {
 function CreateRequestForm({
   onSubmit,
 }: {
-  onSubmit: (data: { startDate: string; endDate: string; reason: string }) => void;
+  onSubmit: (data: { startDate: string; endDate: string; reason: string }) => Promise<void>;
 }) {
   const today = new Date().toISOString().split("T")[0];
-  const maxDate = new Date();
-  maxDate.setMonth(maxDate.getMonth() + 1);
-  const maxDateStr = maxDate.toISOString().split("T")[0];
+  const endOfYear = `${new Date().getFullYear()}-12-31`;
 
-  const [formData, setFormData] = useState({
-    startDate: "",
-    endDate: "",
-    reason: "",
-  });
+  const [formData, setFormData] = useState({ startDate: "", endDate: "", reason: "" });
+  const [overlapping, setOverlapping] = useState<VacationRequest[]>([]);
+  const [checkingOverlap, setCheckingOverlap] = useState(false);
+  const [datesChecked, setDatesChecked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const runOverlapCheck = useCallback(async (start: string, end: string) => {
+    if (!start || !end || start > end) { setOverlapping([]); setDatesChecked(false); return; }
+    setCheckingOverlap(true);
+    setDatesChecked(false);
+    try {
+      const { data } = await checkVacationOverlap$(start, end);
+      setOverlapping(data);
+      setDatesChecked(true);
+    } catch {
+      setOverlapping([]);
+    } finally {
+      setCheckingOverlap(false);
+    }
+  }, []);
+
+  const handleDateChange = (field: "startDate" | "endDate", value: string) => {
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
+    if (updated.startDate && updated.endDate) {
+      runOverlapCheck(updated.startDate, updated.endDate);
+    } else {
+      setOverlapping([]);
+      setDatesChecked(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.startDate || !formData.endDate || !formData.reason.trim()) {
       toast.error("All fields are required");
       return;
     }
-    if (new Date(formData.startDate) > new Date(formData.endDate)) {
-      toast.error("End date must be after start date");
-      return;
+    setSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } catch (err: any) {
+      toast.error(err?.response?.data || "Failed to submit request");
+    } finally {
+      setSubmitting(false);
     }
-    onSubmit(formData);
   };
+
+  const hasOverlap = overlapping.length > 0;
+  const canSubmit = !submitting && !checkingOverlap && !hasOverlap;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="startDate">Start Date *</Label>
           <Input
             id="startDate"
             type="date"
             value={formData.startDate}
-            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            onChange={(e) => handleDateChange("startDate", e.target.value)}
             required
             min={today}
-            max={maxDateStr}
+            max={endOfYear}
           />
         </div>
-        <div>
+        <div className="space-y-1.5">
           <Label htmlFor="endDate">End Date *</Label>
           <Input
             id="endDate"
             type="date"
             value={formData.endDate}
-            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            onChange={(e) => handleDateChange("endDate", e.target.value)}
             required
             min={formData.startDate || today}
-            max={maxDateStr}
+            max={endOfYear}
           />
         </div>
       </div>
 
-      <div>
+      {/* Overlap feedback */}
+      {checkingOverlap && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Checking for conflicts...
+        </div>
+      )}
+
+      {!checkingOverlap && hasOverlap && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-medium mb-2">
+              {overlapping.length} overlapping request{overlapping.length > 1 ? "s" : ""} already exist{overlapping.length === 1 ? "s" : ""}:
+            </p>
+            <ul className="space-y-1.5">
+              {overlapping.map((v) => {
+                const cfg = statusConfig[v.status as keyof typeof statusConfig];
+                return (
+                  <li key={v.id} className="flex items-center gap-2 text-sm">
+                    <Badge className={`${cfg.color} border text-xs`} variant="outline">
+                      {cfg.label}
+                    </Badge>
+                    <span>{formatDate(v.startDate)} – {formatDate(v.endDate)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-2 text-xs">Adjust your dates to avoid conflicts before submitting.</p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!checkingOverlap && datesChecked && !hasOverlap && (
+        <div className="flex items-center gap-1.5 text-sm text-success">
+          <CheckCircle className="h-4 w-4" />
+          No conflicts for selected dates
+        </div>
+      )}
+
+      <div className="space-y-1.5">
         <Label htmlFor="reason">Reason *</Label>
         <Textarea
           id="reason"
           value={formData.reason}
           onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-          placeholder="Please provide a reason for your leave request..."
+          placeholder="Provide a reason for your leave request..."
           required
           rows={4}
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          Date range: today up to 1 month from today
+        <p className="text-xs text-muted-foreground">
+          Allowed range: today – {endOfYear}
         </p>
       </div>
 
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          Submit Request
-        </Button>
-      </div>
+      <Button type="submit" className="w-full" disabled={!canSubmit}>
+        {submitting
+          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</>
+          : "Submit Request"}
+      </Button>
     </form>
   );
 }
@@ -351,27 +454,13 @@ function CreateRequestForm({
 function RequestDetailView({ request }: { request: VacationRequest }) {
   const cfg = statusConfig[request.status as keyof typeof statusConfig];
   const StatusIcon = cfg.icon;
-
-  const calculateDays = (start: string, end: string) => {
-    const diff = Math.abs(new Date(end).getTime() - new Date(start).getTime());
-    return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
-  };
-
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
   const days = calculateDays(request.startDate, request.endDate);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between pb-4 border-b">
         <Badge className={`${cfg.color} border`} variant="outline">
-          <StatusIcon className="h-3 w-3 mr-1" />
-          {cfg.label}
+          <StatusIcon className="h-3 w-3 mr-1" />{cfg.label}
         </Badge>
         <span className="text-sm text-muted-foreground">
           Submitted: {formatDate(request.submittedDate)}
@@ -381,17 +470,17 @@ function RequestDetailView({ request }: { request: VacationRequest }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label className="text-sm font-medium text-muted-foreground">Start Date</Label>
-          <p className="text-base font-semibold">{formatDate(request.startDate)}</p>
+          <p className="font-medium">{formatDate(request.startDate)}</p>
         </div>
         <div className="space-y-1">
           <Label className="text-sm font-medium text-muted-foreground">End Date</Label>
-          <p className="text-base font-semibold">{formatDate(request.endDate)}</p>
+          <p className="font-medium">{formatDate(request.endDate)}</p>
         </div>
       </div>
 
       <div className="space-y-1">
         <Label className="text-sm font-medium text-muted-foreground">Duration</Label>
-        <p className="text-base">{days} {days === 1 ? "day" : "days"}</p>
+        <p>{days} {days === 1 ? "day" : "days"}</p>
       </div>
 
       <div className="space-y-2">
@@ -402,7 +491,7 @@ function RequestDetailView({ request }: { request: VacationRequest }) {
       </div>
 
       {request.reviewedByName && (
-        <div className="space-y-2 pt-4 border-t">
+        <div className="space-y-3 pt-4 border-t">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Reviewed By</Label>
@@ -416,7 +505,7 @@ function RequestDetailView({ request }: { request: VacationRequest }) {
             )}
           </div>
           {request.rejectionReason && (
-            <div className="space-y-1 mt-4">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Rejection Reason</Label>
               <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                 {request.rejectionReason}

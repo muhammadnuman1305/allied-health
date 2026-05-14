@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/ui/stats-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Filter,
   Clock,
@@ -90,25 +91,25 @@ interface Task {
 const statusConfig = {
   "Not Assigned": {
     label: "Not Assigned",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+    color: "bg-muted text-muted-foreground",
   },
   Assigned: {
     label: "Assigned",
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-info/10 text-info",
   },
   "In Progress": {
     label: "In Progress",
     color:
-      "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+      "bg-signature-peach/50 text-foreground",
   },
   Completed: {
     label: "Completed",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      "bg-success/10 text-success",
   },
   Overdue: {
     label: "Overdue",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -116,16 +117,16 @@ const priorityConfig = {
   Low: {
     label: "Low",
     color:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      "bg-success/10 text-success",
   },
   Medium: {
     label: "Medium",
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      "bg-signature-yellow/30 text-foreground",
   },
   High: {
     label: "High",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    color: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -134,35 +135,35 @@ const interventionStatusConfig = {
     label: "Seen",
     code: "S" as InterventionStatusCode,
     color:
-      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+      "bg-info/10 text-info border-info-border",
     description: "Patient seen by AHA",
   },
   Attempted: {
     label: "Attempted",
     code: "A" as InterventionStatusCode,
     color:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+      "bg-signature-yellow/30 text-foreground border-signature-mustard",
     description: "Attempt made but no intervention took place",
   },
   Declined: {
     label: "Declined",
     code: "D" as InterventionStatusCode,
     color:
-      "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+      "bg-destructive/10 text-destructive border-destructive/30",
     description: "Patient declined intervention",
   },
   Unseen: {
     label: "Unseen",
     code: "U" as InterventionStatusCode,
     color:
-      "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400 border-gray-200 dark:border-gray-800",
+      "bg-muted text-muted-foreground border-border",
     description: "Patient not seen by AHA",
   },
   Handover: {
     label: "Handover",
     code: "X" as InterventionStatusCode,
     color:
-      "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800",
+      "bg-signature-cream text-foreground border-signature-mustard",
     description: "Refer to additional note or handover",
   },
 };
@@ -336,7 +337,7 @@ export default function MyTasksPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">My Tasks</h1>
+        <h1 className="text-3xl font-normal">My Tasks</h1>
         <p className="text-muted-foreground mt-1">
           View and manage your assigned interventions and tasks
         </p>
@@ -348,21 +349,25 @@ export default function MyTasksPage() {
           title="Total Tasks"
           value={taskCounts.total}
           icon={FileText}
+          loading={isLoading}
         />
         <StatsCard
           title="My Interventions"
           value={interventionCounts.total}
           icon={AlertCircle}
+          loading={isLoading}
         />
         <StatsCard
           title="Unseen"
           value={interventionCounts.unseen}
           icon={Clock}
+          loading={isLoading}
         />
         <StatsCard
           title="Seen"
           value={interventionCounts.seen}
           icon={CheckCircle}
+          loading={isLoading}
         />
       </div>
 
@@ -409,12 +414,29 @@ export default function MyTasksPage() {
 
       {/* Tasks List */}
       {isLoading ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-            <p className="text-muted-foreground">Loading tasks...</p>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                  </div>
+                  <Skeleton className="h-6 w-24 rounded-md" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+                <Skeleton className="h-9 w-32 rounded-sm" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : error ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -451,7 +473,7 @@ export default function MyTasksPage() {
             return (
               <Card
                 key={task.id}
-                className="border-l-4 border-l-primary/20 shadow-sm transition-shadow"
+                className="border-l-4 border-l-primary/20 transition-colors"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
@@ -464,7 +486,7 @@ export default function MyTasksPage() {
                           {priority.label}
                         </Badge>
                       </div>
-                      <h3 className="text-xl font-bold mb-2">{task.title}</h3>
+                      <h3 className="text-xl font-medium mb-2">{task.title}</h3>
                       <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                         {task.description}
                       </p>
@@ -538,7 +560,7 @@ export default function MyTasksPage() {
                       </DialogTrigger>
                       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto [&>button]:h-5 [&>button]:w-5 [&>button>svg]:h-5 [&>button>svg]:w-5 [&>button]:top-[1.625rem]">
                         <DialogHeader className="pb-2">
-                          <DialogTitle className="text-xl font-semibold leading-tight">
+                          <DialogTitle className="text-xl font-medium leading-tight">
                             Task Details
                           </DialogTitle>
                         </DialogHeader>
@@ -559,7 +581,7 @@ export default function MyTasksPage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div>
-                      <h4 className="text-sm font-semibold mb-3 text-foreground">
+                      <h4 className="text-sm font-medium mb-3 text-foreground">
                         My Interventions ({userInterventions.length})
                       </h4>
                       {userInterventions.length === 0 ? (
@@ -577,13 +599,13 @@ export default function MyTasksPage() {
                             return (
                               <Card
                                 key={`${task.id}-${intervention.id}-${index}`}
-                                className="border bg-card hover:shadow-sm transition-shadow"
+                                className="border bg-card transition-colors hover:bg-muted/30"
                               >
                                 <CardContent className="p-4">
                                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <div className="flex-1 space-y-3">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <h5 className="font-semibold text-base">
+                                        <h5 className="font-medium text-base">
                                           {intervention.interventionName}
                                         </h5>
                                         <Badge
@@ -605,7 +627,7 @@ export default function MyTasksPage() {
                                       {intervention.outcome && (
                                         <div className="p-3 bg-muted/50 rounded-md border">
                                           <div className="flex items-center gap-2 mb-1.5">
-                                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                                               Outcome
                                             </Label>
                                             {intervention.outcomeDate && (
@@ -635,7 +657,7 @@ export default function MyTasksPage() {
                                         );
                                         return (
                                           <div className="p-3 bg-muted/30 rounded-md border space-y-2">
-                                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                                               Components
                                             </Label>
                                             {Object.entries(groups).map(([type, values]) => (
@@ -1089,7 +1111,7 @@ function TaskDetailView({
                         </Label>
                         {Object.entries(groups).map(([type, values]) => (
                           <div key={type}>
-                            <p className="text-xs font-semibold text-foreground mb-1">{type}</p>
+                            <p className="text-xs font-medium text-foreground mb-1">{type}</p>
                             <div className="flex flex-wrap gap-1.5">
                               {values.map((v) => (
                                 <span key={v} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium bg-background">

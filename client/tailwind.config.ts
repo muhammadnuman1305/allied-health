@@ -15,9 +15,29 @@ const config: Config = {
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
       borderRadius: {
+        xs: '2px',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        sm: '6px',
+        pill: '9999px',
+      },
+      fontFamily: {
+        sans: [
+          'var(--font-space-grotesk)',
+          'Inter',
+          'Arial',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
+        display: [
+          'var(--font-space-grotesk)',
+          'Inter',
+          'Arial',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -33,6 +53,7 @@ const config: Config = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          active: 'hsl(var(--primary-active))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -49,6 +70,27 @@ const config: Config = {
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
+        },
+        signature: {
+          coral: 'hsl(var(--signature-coral))',
+          forest: 'hsl(var(--signature-forest))',
+          cream: 'hsl(var(--signature-cream))',
+          peach: 'hsl(var(--signature-peach))',
+          mint: 'hsl(var(--signature-mint))',
+          yellow: 'hsl(var(--signature-yellow))',
+          mustard: 'hsl(var(--signature-mustard))',
+        },
+        link: {
+          DEFAULT: 'hsl(var(--link))',
+          active: 'hsl(var(--link-active))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          border: 'hsl(var(--info-border))',
+        },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          border: 'hsl(var(--success-border))',
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

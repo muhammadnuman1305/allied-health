@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Pagination,
   PaginationContent,
@@ -122,15 +123,6 @@ export function DataTable<T extends Record<string, any>>({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = totalItems ? data : data.slice(startIndex, endIndex);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Loading...</span>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -235,7 +227,26 @@ export function DataTable<T extends Record<string, any>>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedData.length === 0 ? (
+          {loading ? (
+            Array.from({ length: 5 }).map((_, rowIndex) => (
+              <TableRow key={`loading-${rowIndex}`}>
+                {columns.map((column, columnIndex) => (
+                  <TableCell key={`${String(column.key)}-${columnIndex}`}>
+                    <Skeleton
+                      className={
+                        columnIndex === 0 ? "h-4 w-32" : "h-4 w-24"
+                      }
+                    />
+                  </TableCell>
+                ))}
+                {actions && (
+                  <TableCell>
+                    <Skeleton className="h-8 w-8 rounded-sm" />
+                  </TableCell>
+                )}
+              </TableRow>
+            ))
+          ) : paginatedData.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={columns.length + (actions ? 1 : 0)}
@@ -272,12 +283,20 @@ export function DataTable<T extends Record<string, any>>({
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
-          Showing {startIndex + 1} to{" "}
-          {Math.min(endIndex, totalItems || data.length)} of{" "}
-          {totalItems || data.length} items
+          {loading ? (
+            <Skeleton className="h-4 w-40" />
+          ) : (
+            <>
+              Showing {startIndex + 1} to{" "}
+              {Math.min(endIndex, totalItems || data.length)} of{" "}
+              {totalItems || data.length} items
+            </>
+          )}
         </div>
 
-        {totalPages > 1 && (
+        {loading ? (
+          <Skeleton className="h-9 w-48 rounded-sm" />
+        ) : totalPages > 1 ? (
           <Pagination className="w-auto mx-0">
             <PaginationContent>
               <PaginationItem>
@@ -349,7 +368,7 @@ export function DataTable<T extends Record<string, any>>({
               </PaginationItem>
             </PaginationContent>
           </Pagination>
-        )}
+        ) : null}
       </div>
     </div>
   );

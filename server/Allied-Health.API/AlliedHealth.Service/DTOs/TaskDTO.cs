@@ -118,11 +118,19 @@
         public DateTime ViewedAt { get; set; }
     }
 
+    public class AutoAssignInterventionItem
+    {
+        public Guid Id { get; set; }
+        public DateOnly? StartDate { get; set; }
+        public DateOnly? EndDate { get; set; }
+    }
+
     public class AutoAssignRequestDTO
     {
-        public List<Guid> InterventionIds { get; set; } = new();
-        public DateOnly StartDate { get; set; }
-        public DateOnly EndDate { get; set; }
+        public List<AutoAssignInterventionItem> Interventions { get; set; } = new();
+        public DateOnly TaskStartDate { get; set; }
+        public DateOnly TaskEndDate { get; set; }
+        public Guid? DepartmentId { get; set; }
     }
 
     public class AutoAssignResultDTO
@@ -131,6 +139,8 @@
         public string InterventionName { get; set; }
         public Guid? SuggestedAhaId { get; set; }
         public string? SuggestedAhaName { get; set; }
+        public Guid? SuggestedWardId { get; set; }
+        public string? SuggestedWardName { get; set; }
         public int CurrentDaySlots { get; set; }
         public bool CanAssign { get; set; }
     }

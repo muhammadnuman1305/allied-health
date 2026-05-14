@@ -153,30 +153,30 @@ const mockReferrals: Referral[] = [
 const statusConfig = {
   pending: {
     label: "Pending",
-    color: "bg-yellow-100 text-yellow-800",
+    color: "bg-signature-yellow/30 text-foreground",
     icon: Clock,
   },
   accepted: {
     label: "Accepted",
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-info/10 text-info",
     icon: CheckCircle,
   },
   completed: {
     label: "Completed",
-    color: "bg-green-100 text-green-800",
+    color: "bg-success/10 text-success",
     icon: CheckCircle,
   },
   rejected: {
     label: "Rejected",
-    color: "bg-red-100 text-red-800",
+    color: "bg-destructive/10 text-destructive",
     icon: AlertCircle,
   },
 };
 
 const priorityConfig = {
-  low: { label: "Low", color: "bg-green-100 text-green-800" },
-  medium: { label: "Medium", color: "bg-yellow-100 text-yellow-800" },
-  high: { label: "High", color: "bg-red-100 text-red-800" },
+  low: { label: "Low", color: "bg-success/10 text-success" },
+  medium: { label: "Medium", color: "bg-signature-yellow/30 text-foreground" },
+  high: { label: "High", color: "bg-destructive/10 text-destructive" },
 };
 
 const departments = [
@@ -254,7 +254,7 @@ export default function ReferralsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Referral Management</h1>
+          <h1 className="text-3xl font-normal">Referral Management</h1>
           <p className="text-muted-foreground">
             View patient referrals assigned to you
           </p>

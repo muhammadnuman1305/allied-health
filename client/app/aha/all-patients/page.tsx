@@ -177,30 +177,11 @@ export default function AllPatientsPage() {
   // Check if filters are active
   const hasActiveFilters = filters.mrn || filters.name || filters.sortField;
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Patient Management</h1>
-          <p className="text-muted-foreground">
-            View and manage your assigned patients
-          </p>
-        </div>
-        <div className="flex items-center justify-center py-10">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading patients...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Patient Management</h1>
+          <h1 className="text-3xl font-normal">Patient Management</h1>
           <p className="text-muted-foreground">
             View and manage your assigned patients
           </p>
@@ -218,7 +199,7 @@ export default function AllPatientsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Patient Management</h1>
+        <h1 className="text-3xl font-normal">Patient Management</h1>
         <p className="text-muted-foreground">
           View and manage your assigned patients
         </p>
@@ -231,24 +212,28 @@ export default function AllPatientsPage() {
           value={summary.totalPatients}
           description="Registered patients"
           icon={Users}
+          loading={loading}
         />
         <StatsCard
           title="New Patients"
           value={summary.newPatients}
           description="Added today"
           icon={Calendar}
+          loading={loading}
         />
         <StatsCard
           title="Active Tasks"
           value={summary.activeTasks}
           description="In progress"
           icon={ClipboardList}
+          loading={loading}
         />
         <StatsCard
           title="Completed Tasks"
           value={summary.completedTasks}
           description="Successfully completed"
           icon={CheckCircle}
+          loading={loading}
         />
       </div>
 

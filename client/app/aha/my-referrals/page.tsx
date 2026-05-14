@@ -22,6 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
   Filter,
@@ -113,20 +114,20 @@ const REFERRAL_STATUS_CONFIG: Record<
   pending: {
     label: "Pending",
     className:
-      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      "bg-signature-yellow/30 text-foreground",
   },
   accepted: {
     label: "Accepted",
-    className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+    className: "bg-info/10 text-info",
   },
   completed: {
     label: "Completed",
     className:
-      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      "bg-success/10 text-success",
   },
   rejected: {
     label: "Rejected",
-    className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+    className: "bg-destructive/10 text-destructive",
   },
 };
 
@@ -177,10 +178,12 @@ function StatCard({
   title,
   value,
   Icon,
+  loading = false,
 }: {
   title: string;
   value: number;
   Icon: any;
+  loading?: boolean;
 }) {
   return (
     <Card>
@@ -189,7 +192,9 @@ function StatCard({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-medium">
+          {loading ? <Skeleton className="h-7 w-12" /> : value}
+        </div>
       </CardContent>
     </Card>
   );
@@ -334,7 +339,7 @@ function ReferralCard({
   const statusConfig = REFERRAL_STATUS_CONFIG[referral.status];
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="transition-colors hover:bg-muted/30">
       <CardContent className="p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
@@ -547,23 +552,12 @@ export default function ReferralsPage({ params, searchParams }: PageProps) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading referrals...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Referrals</h1>
+          <h1 className="text-3xl font-normal tracking-tight">My Referrals</h1>
           <p className="text-muted-foreground">
             Track and manage patient referrals across departments
           </p>
@@ -572,10 +566,30 @@ export default function ReferralsPage({ params, searchParams }: PageProps) {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Referrals" value={stats.total} Icon={FileText} />
-        <StatCard title="Incoming" value={stats.incoming} Icon={ArrowRight} />
-        <StatCard title="Outgoing" value={stats.outgoing} Icon={User} />
-        <StatCard title="Pending Action" value={stats.pending} Icon={Clock} />
+        <StatCard
+          title="Total Referrals"
+          value={stats.total}
+          Icon={FileText}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Incoming"
+          value={stats.incoming}
+          Icon={ArrowRight}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Outgoing"
+          value={stats.outgoing}
+          Icon={User}
+          loading={isLoading}
+        />
+        <StatCard
+          title="Pending Action"
+          value={stats.pending}
+          Icon={Clock}
+          loading={isLoading}
+        />
       </div>
 
       {/* Filters */}
@@ -687,26 +701,46 @@ export default function ReferralsPage({ params, searchParams }: PageProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredReferrals.map((referral) => (
-              <ReferralCard
-                key={`${referral.id}-${referral.patientId}`}
-                referral={referral}
-                onAccept={() => {
-                  updateReferralStatus(referral, "accepted");
-                  toast.success("Referral accepted successfully");
-                }}
-                onReject={() => {
-                  updateReferralStatus(referral, "rejected");
-                  toast.error("Referral rejected");
-                }}
-                onComplete={() => {
-                  updateReferralStatus(referral, "completed");
-                  toast.success("Referral marked as completed");
-                }}
-              />
-            ))}
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-md border border-border p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <Skeleton className="h-5 w-40" />
+                        <Skeleton className="h-4 w-56" />
+                      </div>
+                      <Skeleton className="h-6 w-24 rounded-md" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-36" />
+                    </div>
+                  </div>
+                ))
+              : filteredReferrals.map((referral) => (
+                  <ReferralCard
+                    key={`${referral.id}-${referral.patientId}`}
+                    referral={referral}
+                    onAccept={() => {
+                      updateReferralStatus(referral, "accepted");
+                      toast.success("Referral accepted successfully");
+                    }}
+                    onReject={() => {
+                      updateReferralStatus(referral, "rejected");
+                      toast.error("Referral rejected");
+                    }}
+                    onComplete={() => {
+                      updateReferralStatus(referral, "completed");
+                      toast.success("Referral marked as completed");
+                    }}
+                  />
+                ))}
 
-            {filteredReferrals.length === 0 && (
+            {!isLoading && filteredReferrals.length === 0 && (
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No referrals found</h3>
