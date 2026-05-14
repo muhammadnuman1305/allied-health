@@ -1,11 +1,11 @@
-﻿using AlliedHealth.Domain;
-using AlliedHealth.Service.DTOs;
+﻿using AlliedHealth.Common.Enums;
+using AlliedHealth.Domain;
+using AlliedHealth.Domain.Entities;
 using AlliedHealth.Service.Contract;
 using AlliedHealth.Service.Contract.Authentication;
+using AlliedHealth.Service.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using AlliedHealth.Common.Enums;
-using AlliedHealth.Domain.Entities;
 using Task = AlliedHealth.Domain.Entities.Task;
 
 namespace AlliedHealth.Service.Implementation
@@ -202,6 +202,18 @@ namespace AlliedHealth.Service.Implementation
                 Hidden = false
             };
 
+            // Validate no assigned AHA is on approved vacation during the intervention period
+            foreach (var inv in request.Interventions)
+            {
+                var onVacation = await _dbContext.VacationRequests.AnyAsync(v =>
+                    v.AhaUserId == inv.AhaId &&
+                    v.Status == (int)EVacationStatus.Approved &&
+                    v.StartDate <= inv.End &&
+                    v.EndDate >= inv.Start);
+                if (onVacation)
+                    return EMessages.VacationAhaOnLeave;
+            }
+
             await _dbContext.Tasks.AddAsync(newTask);
             await _dbContext.SaveChangesAsync();
 
@@ -304,6 +316,18 @@ namespace AlliedHealth.Service.Implementation
             // Pre-fetch component type lookup
             var compTypeMap = await _dbContext.ComponentTypes
                 .ToDictionaryAsync(ct => ct.Name, ct => ct.Id);
+
+            // Validate no assigned AHA is on approved vacation during the intervention period
+            foreach (var inv in request.Interventions)
+            {
+                var onVacation = await _dbContext.VacationRequests.AnyAsync(v =>
+                    v.AhaUserId == inv.AhaId &&
+                    v.Status == (int)EVacationStatus.Approved &&
+                    v.StartDate <= inv.End &&
+                    v.EndDate >= inv.Start);
+                if (onVacation)
+                    return EMessages.VacationAhaOnLeave;
+            }
 
             // ── Step 3: Upsert interventions and insert fresh SelectedComponents
             foreach (var inv in request.Interventions)

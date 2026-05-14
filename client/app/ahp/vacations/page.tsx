@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -25,21 +24,20 @@ import { StatsCard } from "@/components/ui/stats-card";
 import {
   Search,
   CalendarDays,
-  Plus,
   Clock,
   CheckCircle,
   XCircle,
   Eye,
   Calendar,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   VacationRequest,
-  vacationStatusLabel,
 } from "@/lib/api/admin/vacations/_model";
 import {
-  getMyVacationRequests$,
-  createVacationRequest$,
+  getAllVacationRequests$,
+  reviewVacationRequest$,
 } from "@/lib/api/admin/vacations/_request";
 
 const statusConfig = {
@@ -63,18 +61,21 @@ const statusConfig = {
   },
 };
 
-export default function VacationRequestsPage() {
+export default function AHPVacationsPage() {
   const [requests, setRequests] = useState<VacationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<VacationRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchRequests = async () => {
     try {
-      const { data } = await getMyVacationRequests$();
+      const { data } = await getAllVacationRequests$();
       setRequests(data);
     } catch {
       toast.error("Failed to load vacation requests");
@@ -89,6 +90,7 @@ export default function VacationRequestsPage() {
 
   const filteredRequests = requests.filter((item) => {
     const matchesSearch =
+      item.ahaName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.startDate.includes(searchTerm) ||
       item.endDate.includes(searchTerm);
@@ -104,18 +106,41 @@ export default function VacationRequestsPage() {
     rejected: requests.filter((r) => r.status === 3).length,
   };
 
-  const handleCreateRequest = async (payload: {
-    startDate: string;
-    endDate: string;
-    reason: string;
-  }) => {
+  const handleApprove = async (req: VacationRequest) => {
+    setSubmitting(true);
     try {
-      await createVacationRequest$(payload);
-      toast.success("Vacation request submitted successfully");
-      setIsCreateDialogOpen(false);
+      await reviewVacationRequest$({ id: req.id, approve: true });
+      toast.success(`Approved vacation request for ${req.ahaName}`);
       fetchRequests();
     } catch (err: any) {
-      toast.error(err?.response?.data || "Failed to submit request");
+      toast.error(err?.response?.data || "Failed to approve request");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openRejectDialog = (req: VacationRequest) => {
+    setRejectTarget(req);
+    setRejectionReason("");
+    setIsRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget) return;
+    setSubmitting(true);
+    try {
+      await reviewVacationRequest$({
+        id: rejectTarget.id,
+        approve: false,
+        rejectionReason,
+      });
+      toast.success(`Rejected vacation request for ${rejectTarget.ahaName}`);
+      setIsRejectDialogOpen(false);
+      fetchRequests();
+    } catch (err: any) {
+      toast.error(err?.response?.data || "Failed to reject request");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -134,27 +159,11 @@ export default function VacationRequestsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Vacation Requests</h1>
-          <p className="text-muted-foreground mt-1">
-            Request and manage your vacation leave
-          </p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Request Leave
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Request Vacation or Leave</DialogTitle>
-            </DialogHeader>
-            <CreateRequestForm onSubmit={handleCreateRequest} />
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-3xl font-bold">Vacation Requests</h1>
+        <p className="text-muted-foreground mt-1">
+          Review and manage assistant vacation requests
+        </p>
       </div>
 
       {/* Stats */}
@@ -170,7 +179,7 @@ export default function VacationRequestsPage() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search requests..."
+            placeholder="Search by assistant name, reason..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -210,50 +219,83 @@ export default function VacationRequestsPage() {
               <Card key={request.id} className="border-l-4 border-l-primary/20">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <Badge className={`${cfg.color} border`} variant="outline">
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {cfg.label}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Submitted: {formatDate(request.submittedDate)}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-semibold">
-                            {formatDate(request.startDate)} – {formatDate(request.endDate)}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {days} {days === 1 ? "day" : "days"}
-                          </p>
-                        </div>
-                        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedRequest(request)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Request Details</DialogTitle>
-                            </DialogHeader>
-                            {selectedRequest && (
-                              <RequestDetailView request={selectedRequest} />
-                            )}
-                          </DialogContent>
-                        </Dialog>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      {/* Status + Assistant + Date */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`${cfg.color} border`} variant="outline">
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {cfg.label}
+                        </Badge>
+                        <span className="flex items-center gap-1 text-sm font-medium">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          {request.ahaName}
+                        </span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Submitted: {formatDate(request.submittedDate)}
+                        </span>
                       </div>
+
+                      {/* Date range */}
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          {formatDate(request.startDate)} – {formatDate(request.endDate)}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {days} {days === 1 ? "day" : "days"}
+                        </p>
+                      </div>
+
+                      {/* Reason */}
                       <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
                         {request.reason}
                       </p>
+
+                      {/* Review info */}
+                      {request.reviewedByName && (
+                        <p className="text-xs text-muted-foreground">
+                          Reviewed by {request.reviewedByName}
+                          {request.reviewedDate && ` on ${formatDate(request.reviewedDate)}`}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setIsViewDialogOpen(true);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      {request.status === 1 && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600 border-green-300 hover:bg-green-50"
+                            onClick={() => handleApprove(request)}
+                            disabled={submitting}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            onClick={() => openRejectDialog(request)}
+                            disabled={submitting}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -262,93 +304,88 @@ export default function VacationRequestsPage() {
           })}
         </div>
       )}
+
+      {/* View Detail Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request Details</DialogTitle>
+          </DialogHeader>
+          {selectedRequest && (
+            <RequestDetailView
+              request={selectedRequest}
+              onApprove={() => {
+                setIsViewDialogOpen(false);
+                handleApprove(selectedRequest);
+              }}
+              onReject={() => {
+                setIsViewDialogOpen(false);
+                openRejectDialog(selectedRequest);
+              }}
+              submitting={submitting}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reject Vacation Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {rejectTarget && (
+              <p className="text-sm text-muted-foreground">
+                Rejecting vacation request from <strong>{rejectTarget.ahaName}</strong> for{" "}
+                {new Date(rejectTarget.startDate).toLocaleDateString()} –{" "}
+                {new Date(rejectTarget.endDate).toLocaleDateString()}
+              </p>
+            )}
+            <div>
+              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+              <Textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Provide a reason for rejection (optional)..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={submitting}
+                className="flex-1"
+              >
+                Confirm Reject
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsRejectDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function CreateRequestForm({
-  onSubmit,
+function RequestDetailView({
+  request,
+  onApprove,
+  onReject,
+  submitting,
 }: {
-  onSubmit: (data: { startDate: string; endDate: string; reason: string }) => void;
+  request: VacationRequest;
+  onApprove: () => void;
+  onReject: () => void;
+  submitting: boolean;
 }) {
-  const today = new Date().toISOString().split("T")[0];
-  const maxDate = new Date();
-  maxDate.setMonth(maxDate.getMonth() + 1);
-  const maxDateStr = maxDate.toISOString().split("T")[0];
-
-  const [formData, setFormData] = useState({
-    startDate: "",
-    endDate: "",
-    reason: "",
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.startDate || !formData.endDate || !formData.reason.trim()) {
-      toast.error("All fields are required");
-      return;
-    }
-    if (new Date(formData.startDate) > new Date(formData.endDate)) {
-      toast.error("End date must be after start date");
-      return;
-    }
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="startDate">Start Date *</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={formData.startDate}
-            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-            required
-            min={today}
-            max={maxDateStr}
-          />
-        </div>
-        <div>
-          <Label htmlFor="endDate">End Date *</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={formData.endDate}
-            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-            required
-            min={formData.startDate || today}
-            max={maxDateStr}
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="reason">Reason *</Label>
-        <Textarea
-          id="reason"
-          value={formData.reason}
-          onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-          placeholder="Please provide a reason for your leave request..."
-          required
-          rows={4}
-        />
-        <p className="text-xs text-muted-foreground mt-1">
-          Date range: today up to 1 month from today
-        </p>
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          Submit Request
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function RequestDetailView({ request }: { request: VacationRequest }) {
   const cfg = statusConfig[request.status as keyof typeof statusConfig];
   const StatusIcon = cfg.icon;
 
@@ -369,10 +406,16 @@ function RequestDetailView({ request }: { request: VacationRequest }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-4 border-b">
-        <Badge className={`${cfg.color} border`} variant="outline">
-          <StatusIcon className="h-3 w-3 mr-1" />
-          {cfg.label}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge className={`${cfg.color} border`} variant="outline">
+            <StatusIcon className="h-3 w-3 mr-1" />
+            {cfg.label}
+          </Badge>
+          <span className="text-sm font-medium flex items-center gap-1">
+            <User className="h-3.5 w-3.5 text-muted-foreground" />
+            {request.ahaName}
+          </span>
+        </div>
         <span className="text-sm text-muted-foreground">
           Submitted: {formatDate(request.submittedDate)}
         </span>
@@ -423,6 +466,27 @@ function RequestDetailView({ request }: { request: VacationRequest }) {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {request.status === 1 && (
+        <div className="flex gap-2 pt-2 border-t">
+          <Button
+            variant="outline"
+            className="flex-1 text-green-600 border-green-300 hover:bg-green-50"
+            onClick={onApprove}
+            disabled={submitting}
+          >
+            Approve
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1 text-red-600 border-red-300 hover:bg-red-50"
+            onClick={onReject}
+            disabled={submitting}
+          >
+            Reject
+          </Button>
         </div>
       )}
     </div>

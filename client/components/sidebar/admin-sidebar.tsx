@@ -72,6 +72,7 @@ export function AdminSidebar({
       dashboard: "Dashboard",
       calendar: "Dashboard",
       users: "User Management",
+      vacations: "User Management",
       patients: "Patient Management",
       tasks: "Task Management",
       referrals: "Referral Management",
@@ -102,6 +103,7 @@ export function AdminSidebar({
       icon: <Users className="h-4 w-4" />,
       items: [
         { title: "Users", href: "/ahp/users" },
+        { title: "Vacation Requests", href: "/ahp/vacations" },
       ],
     },
     {

@@ -30,6 +30,7 @@ namespace AlliedHealth.Domain
         public DbSet<TaskInterventionComponent> TaskInterventionComponents => Set<TaskInterventionComponent>();
         public DbSet<TaskViewLog> TaskViewLogs => Set<TaskViewLog>();
         public DbSet<ReferralInterventionComponent> ReferralInterventionComponents => Set<ReferralInterventionComponent>();
+        public DbSet<VacationRequest> VacationRequests => Set<VacationRequest>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
